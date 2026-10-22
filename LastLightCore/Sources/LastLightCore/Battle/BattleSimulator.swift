@@ -55,19 +55,47 @@ private struct Battle {
         }
     }
 
+    /// Casts when the tick-start charge is full, otherwise basic-attacks.
     private mutating func act(_ id: CombatantID, snapshot: [CombatantID: Combatant]) {
         let actor = snapshot[id]!
         let allies = snapshot.values.filter { $0.id.side == id.side }
         let enemies = snapshot.values.filter { $0.id.side != id.side }
+        if actor.charge >= actor.stats.chargeMax {
+            units[id]!.charge = 0
+            let targets = Targeting.targets(for: actor.ability.target, actor: actor, allies: allies, enemies: enemies)
+            events.append(.abilityCast(tick: tick, source: id, abilityID: actor.ability.id, targets: targets))
+            for target in targets { apply(actor.ability.effect, from: id, to: target) }
+            return
+        }
         guard let targetID = Targeting.targets(for: .basicTarget, actor: actor, allies: allies, enemies: enemies).first
         else { return }
         let amount = max(1, units[id]!.stats.attack - units[targetID]!.stats.armor)
         let (_, hpAfter) = applyDamage(amount, to: targetID)
+        units[id]!.charge += units[id]!.stats.chargePerAttack
         events.append(.attack(tick: tick, source: id, target: targetID, damage: amount, hpAfter: hpAfter))
     }
 
-    /// Shield absorbs first; HP never drops below 0. Returns (absorbed, hpAfter).
+    private mutating func apply(_ effect: AbilityEffect, from source: CombatantID, to target: CombatantID) {
+        switch effect {
+        case let .damage(multiplier):
+            let raw = Int((Double(units[source]!.stats.attack) * multiplier).rounded())
+            let amount = max(1, raw - units[target]!.stats.armor)
+            let (absorbed, hpAfter) = applyDamage(amount, to: target)
+            events.append(.damage(tick: tick, source: source, target: target, amount: amount,
+                                  absorbed: absorbed, hpAfter: hpAfter))
+        case let .heal(amount):
+            let healed = min(amount, units[target]!.stats.maxHP - units[target]!.hp)
+            units[target]!.hp += healed
+            events.append(.heal(tick: tick, source: source, target: target, amount: healed, hpAfter: units[target]!.hp))
+        case let .shield(amount):
+            units[target]!.shield += amount
+            events.append(.shield(tick: tick, source: source, target: target, amount: amount))
+        }
+    }
+
+    /// Shield absorbs first; HP never drops below 0; being hit builds the target's charge. Returns (absorbed, hpAfter).
     private mutating func applyDamage(_ amount: Int, to id: CombatantID) -> (Int, Int) {
+        units[id]!.charge += units[id]!.stats.chargePerHitTaken
         let absorbed = min(units[id]!.shield, amount)
         units[id]!.shield -= absorbed
         units[id]!.hp = max(0, units[id]!.hp - (amount - absorbed))
