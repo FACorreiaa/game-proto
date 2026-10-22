@@ -26,6 +26,22 @@ private struct Battle {
             }
         }
         order = units.keys.sorted()
+        applyBonds(BondResolver.active(bonds: setup.bonds, levels: setup.bondLevels, in: setup.player))
+    }
+
+    /// Each active bond adds its bonuses to both members, computed from their base stats so bonds stack additively.
+    private mutating func applyBonds(_ active: [ActiveBond]) {
+        let base = units.mapValues(\.stats)
+        for bond in active {
+            let members = bond.slots.map { CombatantID(side: .player, slot: $0) }
+            for id in members {
+                units[id]!.stats.attack += base[id]!.attack * bond.effect.attackPercent / 100
+                units[id]!.stats.maxHP += base[id]!.maxHP * bond.effect.maxHPPercent / 100
+                units[id]!.stats.chargePerAttack += bond.effect.chargePerAttackBonus
+                units[id]!.hp = units[id]!.stats.maxHP
+            }
+            events.append(.bondActivated(tick: 0, bondID: bond.bondID, members: members))
+        }
     }
 
     mutating func run() -> BattleResult {
