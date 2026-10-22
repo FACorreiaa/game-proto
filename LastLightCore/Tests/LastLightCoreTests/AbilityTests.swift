@@ -34,8 +34,9 @@ private let punchingBag = UnitDefinition.dummy(id: "bag", hp: 1000, attack: 1, i
                                       ability: Ability(id: "mend", target: .lowestHPAlly, effect: .heal(amount: 20)))
     let enemy = UnitDefinition.dummy(id: "e", hp: 1000, attack: 5, chargeMax: noCharge)
     let r = BattleSimulator.run(setup(player: [(ally, .front0), (healer, .back0)], enemy: enemy))
-    // Enemy hits ally to 95 at tick 30; healer casts at 60 before the enemy's tick-60 hit (player acts first).
-    #expect(r.events.contains(.heal(tick: 60, source: .player(.back0), target: .player(.front0), amount: 5, hpAfter: 100)))
+    // Enemy hits ally to 95 at tick 30. Tick 60: the enemy hits again (→ 90) and heals resolve after damage,
+    // so the 20 heal is capped at 10.
+    #expect(r.events.contains(.heal(tick: 60, source: .player(.back0), target: .player(.front0), amount: 10, hpAfter: 100)))
 }
 
 @Test func shieldAbsorbsFirst() {

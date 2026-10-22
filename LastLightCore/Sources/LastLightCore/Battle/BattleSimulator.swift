@@ -9,8 +9,23 @@ public enum BattleSimulator {
     }
 }
 
-/// One fight's mutable state. Actions due on the same tick target from the tick-start snapshot and apply in
-/// `CombatantID` order; deaths are settled once at the end of the tick, so simultaneous kills are draws.
+private struct Hit {
+    let source: CombatantID
+    let target: CombatantID
+    let amount: Int
+    let isBasicAttack: Bool
+}
+
+/// Everything decided on one tick, before any of it is applied.
+private struct TickPlan {
+    var hits: [Hit] = []
+    var heals: [(CombatantID, CombatantID, Int)] = []
+    var shields: [(CombatantID, CombatantID, Int)] = []
+    var chargeDelta: [CombatantID: Int] = [:]
+}
+
+/// One fight's mutable state. Actions due on the same tick are all decided from the tick-start snapshot, then
+/// applied in phases (see `resolve`); deaths are settled once at the end of the tick, so simultaneous kills are draws.
 private struct Battle {
     private var units: [CombatantID: Combatant] = [:]
     private let order: [CombatantID]
@@ -64,58 +79,72 @@ private struct Battle {
             }
         }
         let snapshot = units
-        for id in due { act(id, snapshot: snapshot) }
+        var tickPlan = TickPlan()
+        for id in due { plan(id, snapshot: snapshot, into: &tickPlan) }
+        resolve(tickPlan)
         for id in order where units[id]!.isAlive && units[id]!.hp <= 0 {
             units[id]!.isAlive = false
             events.append(.death(tick: tick, unit: id))
         }
     }
 
-    /// Casts when the tick-start charge is full, otherwise basic-attacks.
-    private mutating func act(_ id: CombatantID, snapshot: [CombatantID: Combatant]) {
+    /// Decides one actor's action from the tick-start snapshot: cast when charge is full, otherwise basic-attack.
+    private mutating func plan(_ id: CombatantID, snapshot: [CombatantID: Combatant], into tickPlan: inout TickPlan) {
         let actor = snapshot[id]!
-        let allies = snapshot.values.filter { $0.id.side == id.side }
-        let enemies = snapshot.values.filter { $0.id.side != id.side }
+        let allies = order.compactMap { snapshot[$0] }.filter { $0.id.side == id.side }
+        let enemies = order.compactMap { snapshot[$0] }.filter { $0.id.side != id.side }
         if actor.charge >= actor.stats.chargeMax {
-            units[id]!.charge = 0
+            tickPlan.chargeDelta[id, default: 0] -= actor.charge
             let targets = Targeting.targets(for: actor.ability.target, actor: actor, allies: allies, enemies: enemies)
             events.append(.abilityCast(tick: tick, source: id, abilityID: actor.ability.id, targets: targets))
-            for target in targets { apply(actor.ability.effect, from: id, to: target) }
+            for target in targets {
+                switch actor.ability.effect {
+                case let .damage(multiplier):
+                    let raw = Int((Double(actor.stats.attack) * multiplier).rounded())
+                    tickPlan.hits.append(Hit(source: id, target: target, amount: max(1, raw - snapshot[target]!.stats.armor),
+                                             isBasicAttack: false))
+                case let .heal(amount):
+                    tickPlan.heals.append((id, target, amount))
+                case let .shield(amount):
+                    tickPlan.shields.append((id, target, amount))
+                }
+            }
             return
         }
-        guard let targetID = Targeting.targets(for: .basicTarget, actor: actor, allies: allies, enemies: enemies).first
+        guard let target = Targeting.targets(for: .basicTarget, actor: actor, allies: allies, enemies: enemies).first
         else { return }
-        let amount = max(1, units[id]!.stats.attack - units[targetID]!.stats.armor)
-        let (_, hpAfter) = applyDamage(amount, to: targetID)
-        units[id]!.charge += units[id]!.stats.chargePerAttack
-        events.append(.attack(tick: tick, source: id, target: targetID, damage: amount, hpAfter: hpAfter))
+        tickPlan.chargeDelta[id, default: 0] += actor.stats.chargePerAttack
+        tickPlan.hits.append(Hit(source: id, target: target, amount: max(1, actor.stats.attack - snapshot[target]!.stats.armor),
+                                 isBasicAttack: true))
     }
 
-    private mutating func apply(_ effect: AbilityEffect, from source: CombatantID, to target: CombatantID) {
-        switch effect {
-        case let .damage(multiplier):
-            let raw = Int((Double(units[source]!.stats.attack) * multiplier).rounded())
-            let amount = max(1, raw - units[target]!.stats.armor)
-            let (absorbed, hpAfter) = applyDamage(amount, to: target)
-            events.append(.damage(tick: tick, source: source, target: target, amount: amount,
-                                  absorbed: absorbed, hpAfter: hpAfter))
-        case let .heal(amount):
-            let healed = min(amount, units[target]!.stats.maxHP - units[target]!.hp)
-            units[target]!.hp += healed
-            events.append(.heal(tick: tick, source: source, target: target, amount: healed, hpAfter: units[target]!.hp))
-        case let .shield(amount):
+    /// Applies a tick's effects in side-independent phases: shields, then all damage, then heals, then charge.
+    /// Each phase's totals don't depend on the order within it, so neither side gets an edge from processing order.
+    private mutating func resolve(_ tickPlan: TickPlan) {
+        var chargeDelta = tickPlan.chargeDelta
+        for (source, target, amount) in tickPlan.shields {
             units[target]!.shield += amount
             events.append(.shield(tick: tick, source: source, target: target, amount: amount))
         }
-    }
-
-    /// Shield absorbs first; HP never drops below 0; being hit builds the target's charge. Returns (absorbed, hpAfter).
-    private mutating func applyDamage(_ amount: Int, to id: CombatantID) -> (Int, Int) {
-        units[id]!.charge += units[id]!.stats.chargePerHitTaken
-        let absorbed = min(units[id]!.shield, amount)
-        units[id]!.shield -= absorbed
-        units[id]!.hp = max(0, units[id]!.hp - (amount - absorbed))
-        return (absorbed, units[id]!.hp)
+        for hit in tickPlan.hits {
+            let absorbed = min(units[hit.target]!.shield, hit.amount)
+            units[hit.target]!.shield -= absorbed
+            units[hit.target]!.hp -= hit.amount - absorbed
+            chargeDelta[hit.target, default: 0] += units[hit.target]!.stats.chargePerHitTaken
+            let hpAfter = max(0, units[hit.target]!.hp)
+            events.append(hit.isBasicAttack
+                ? .attack(tick: tick, source: hit.source, target: hit.target, damage: hit.amount, hpAfter: hpAfter)
+                : .damage(tick: tick, source: hit.source, target: hit.target, amount: hit.amount,
+                          absorbed: absorbed, hpAfter: hpAfter))
+        }
+        for (source, target, amount) in tickPlan.heals {
+            let healed = max(0, min(amount, units[target]!.stats.maxHP - units[target]!.hp))
+            units[target]!.hp += healed
+            events.append(.heal(tick: tick, source: source, target: target, amount: healed,
+                                hpAfter: max(0, units[target]!.hp)))
+        }
+        for (id, delta) in chargeDelta { units[id]!.charge += delta }
+        for id in order { units[id]!.hp = max(0, units[id]!.hp) }
     }
 
     private func outcome() -> BattleOutcome? {
