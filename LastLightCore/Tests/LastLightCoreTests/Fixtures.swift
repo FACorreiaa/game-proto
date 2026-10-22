@@ -70,3 +70,20 @@ extension Formation {
         return f
     }
 }
+
+extension CombatantID {
+    static func player(_ slot: Slot) -> CombatantID { CombatantID(side: .player, slot: slot) }
+    static func enemy(_ slot: Slot) -> CombatantID { CombatantID(side: .enemy, slot: slot) }
+}
+
+extension Combatant {
+    static func test(side: Side, slot: Slot, hp: Int = 100, maxHP: Int = 100, alive: Bool = true) -> Combatant {
+        var stats = StageData.dummy.stats
+        stats.maxHP = maxHP
+        var c = Combatant(id: CombatantID(side: side, slot: slot), unitID: "\(side)-\(slot.column)\(slot.row)",
+                          stats: stats, ability: StageData.dummy.ability)
+        c.hp = hp
+        c.isAlive = alive
+        return c
+    }
+}
