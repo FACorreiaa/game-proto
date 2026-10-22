@@ -87,3 +87,16 @@ extension Combatant {
         return c
     }
 }
+
+extension BattleSetup {
+    static func oneVsOne(player: UnitDefinition, enemy: UnitDefinition,
+                         playerStage: Stage = .one) -> BattleSetup {
+        var p = Formation(side: .player), e = Formation(side: .enemy)
+        try! p.place(UnitInstance(definition: player, stage: playerStage), at: .front0)
+        try! e.place(UnitInstance(definition: enemy, stage: .one), at: .front0)
+        return BattleSetup(player: p, enemy: e)
+    }
+}
+
+/// Never casts its ability within a test's time frame.
+let noCharge = 1_000_000
