@@ -53,3 +53,20 @@ extension UnitInstance {
         UnitInstance(definition: .dummy(id: id), stage: stage)
     }
 }
+
+extension Slot {
+    static let front0 = Slot(column: .front, row: 0)!
+    static let front1 = Slot(column: .front, row: 1)!
+    static let front2 = Slot(column: .front, row: 2)!
+    static let back0 = Slot(column: .back, row: 0)!
+    static let back1 = Slot(column: .back, row: 1)!
+    static let back2 = Slot(column: .back, row: 2)!
+}
+
+extension Formation {
+    static func player(_ placements: [(UnitID, Slot)]) -> Formation {
+        var f = Formation(side: .player)
+        for (id, slot) in placements { try! f.place(.fixture(id), at: slot) }
+        return f
+    }
+}
