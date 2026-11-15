@@ -1,0 +1,90 @@
+# iOS delivery (docs/release.md). Mirrors ScanIt's workflow.
+#
+#   push to main      -> unit tests, then a TestFlight build (fastlane beta)
+#   manual dispatch   -> beta on demand, or seed_signing: registers the App ID if missing and adds
+#                        the app's profile to the shared match repo
+#
+# Required repo secrets (team 84X9WYBF36; signing is shared with Khepri, see LastLight/fastlane/Matchfile):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (base64 of the .p8)  team-wide App Store Connect key
+#   MATCH_PASSWORD                                             Khepri's match password
+#   MATCH_GIT_BASIC_AUTHORIZATION                              base64 "x-access-token:<PAT>", PAT with
+#                                                              Contents read (write for seeding) on
+#                                                              NorthAIProject/north-ios-certificates
+name: iOS beta
+
+on:
+  push:
+    branches: [main]
+    paths: ["LastLight/**", "LastLightCore/**", ".github/workflows/ios-beta.yml"]
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Lane to run
+        required: true
+        type: choice
+        options: [beta, seed_signing]
+        default: beta
+
+concurrency:
+  group: ios-delivery
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: fastlane ${{ inputs.lane || 'beta' }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: LastLight
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.4"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: LastLight
+
+      - name: Unit tests
+        run: bundle exec fastlane test
+
+      - name: Check secrets are configured
+        run: |
+          missing=""
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::TestFlight upload skipped: repo secrets missing:$missing (docs/release.md)"
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+
+      - name: fastlane ${{ inputs.lane || 'beta' }}
+        if: env.SKIP != '1'
+        run: bundle exec fastlane ${{ inputs.lane || 'beta' }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+
+      - name: Keep the build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastlane-logs
+          path: ~/Library/Logs/gym
+          if-no-files-found: ignore
+          retention-days: 7
