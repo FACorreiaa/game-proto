@@ -93,6 +93,27 @@ public struct SelfDestructSpec: Sendable, Equatable {
     }
 }
 
+/// The one ability each hero has besides the shared moves.
+public enum SpecialSpec: Sendable, Equatable {
+    /// Marks an enemy. The partner goes for it and every hit on it does more.
+    case command(range: Double, frames: Int, damageScale: Double, cooldown: Int)
+    /// A short guard. A hit taken during it does nothing, staggers the attacker, and is answered with a counter.
+    case adapt(window: Int, stagger: Int, counterScale: Double, cooldown: Int)
+
+    public var cooldown: Int {
+        switch self {
+        case .command(_, _, _, let cooldown), .adapt(_, _, _, let cooldown): cooldown
+        }
+    }
+
+    public var name: String {
+        switch self {
+        case .command: "COMMAND"
+        case .adapt: "ADAPT"
+        }
+    }
+}
+
 public struct FighterSpec: Sendable {
     public var width: Double
     public var height: Double
@@ -113,6 +134,7 @@ public struct FighterSpec: Sendable {
     public var selfDestruct: SelfDestructSpec?
     public var immortal = false
     public var rooted = false
+    public var special: SpecialSpec?
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.

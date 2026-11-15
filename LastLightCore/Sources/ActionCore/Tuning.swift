@@ -65,6 +65,9 @@ public struct Tuning: Sendable {
     public var partnerFollowDistance = 80.0
     public var partnerEngageRange = 420.0
     public var switchCooldown = 20
+    public var specialBuffer = 8
+    /// How often the AI partner raises its guard instead of dodging, when the guard is ready.
+    public var partnerGuardChance = 0.5
     /// A companion waiting in a level joins when the hero comes this close.
     public var joinRange = 90.0
     /// Further behind than this, or stuck on another floor for `partnerStrandedFrames`, the partner catches up at once.
@@ -88,6 +91,7 @@ public struct Tuning: Sendable {
         s.dodge = DodgeSpec(duration: 16, speed: 560, invulnerable: 1...11, cooldown: 24)
         s.parryWindow = 8
         s.hurtInvulnerable = 40
+        s.special = .command(range: 560, frames: 420, damageScale: 1.4, cooldown: 600)
         s.brain = PartnerBrain()
         return s
     }()
@@ -104,6 +108,7 @@ public struct Tuning: Sendable {
         s.dodge = DodgeSpec(duration: 16, speed: 580, invulnerable: 1...11, cooldown: 22)
         s.parryWindow = 6
         s.hurtInvulnerable = 40
+        s.special = .adapt(window: 34, stagger: 55, counterScale: 2.2, cooldown: 420)
         s.brain = PartnerBrain()
         return s
     }()

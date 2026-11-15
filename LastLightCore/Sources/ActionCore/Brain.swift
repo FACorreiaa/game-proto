@@ -133,6 +133,10 @@ public struct PartnerBrain: Brain {
             // Decide once per incoming attack whether it sees this one coming.
             if me.aiAux != foe.id {
                 me.aiAux = foe.id
+                if case .adapt? = me.spec.special, me.specialCooldown == 0, me.isActionable,
+                   Double.random(in: 0..<1, using: &rng) < tuning.partnerGuardChance {
+                    return InputFrame(moveX: -away * facingNudge, special: true)
+                }
                 if Double.random(in: 0..<1, using: &rng) < tuning.partnerDodgeChance {
                     // Against a shield it dodges through, to come out behind it.
                     return InputFrame(moveX: foe.spec.frontalBlock ? -away : away, dodge: true)
@@ -143,10 +147,18 @@ public struct PartnerBrain: Brain {
 
         // Fight what is near the leader, or near itself when it is alone.
         let anchor = leader ?? me
-        let target = foes
-            .filter { abs($0.pos.x - anchor.pos.x) <= tuning.partnerEngageRange }
-            .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+        let inReach = foes.filter { abs($0.pos.x - anchor.pos.x) <= tuning.partnerEngageRange }
+        // The leader's mark comes before whatever happens to be nearest.
+        let target = inReach.first { $0.markedFrames > 0 }
+            ?? inReach.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
         if let target {
+            // Under AI, Caelen marks a tough enemy when nothing is marked yet.
+            if case .command(let range, _, _, _)? = me.spec.special, me.specialCooldown == 0, me.isActionable,
+               !foes.contains(where: { $0.markedFrames > 0 }), target.hp >= 60,
+               abs(target.pos.x - me.pos.x) <= range {
+                let toward: Double = target.pos.x >= me.pos.x ? 1 : -1
+                return InputFrame(moveX: toward * facingNudge, special: true)
+            }
             let dx = target.pos.x - me.pos.x
             let dir: Double = dx >= 0 ? 1 : -1
             // Hitting a raised shield does nothing, so it stands just out of reach and waits for an opening.

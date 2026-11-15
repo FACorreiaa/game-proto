@@ -16,6 +16,8 @@ final class FighterNode: SKNode {
     /// The Protocol shows where its next attack will land.
     private let zone = SKShapeNode()
     private var zoneAttack = -1
+    /// Shown over an enemy carrying Caelen's mark.
+    private let mark = SKShapeNode()
     private var flashFrames = 0
     /// One arc per swing, even while hit-stop holds the same frame on screen.
     private var arcDrawn = false
@@ -31,6 +33,7 @@ final class FighterNode: SKNode {
         super.init()
         addChild(figure)
         buildMarker()
+        buildMark()
         switch kind {
         case .caelen: buildCaelen()
         case .orion: buildOrion()
@@ -145,6 +148,20 @@ final class FighterNode: SKNode {
         marker.zPosition = 6
         marker.isHidden = true
         addChild(marker)
+    }
+
+    private func buildMark() {
+        let path = CGMutablePath()
+        path.addLines(between: [CGPoint(x: 0, y: 10), CGPoint(x: 9, y: 0), CGPoint(x: 0, y: -10), CGPoint(x: -9, y: 0)])
+        path.closeSubpath()
+        mark.path = path
+        mark.fillColor = .clear
+        mark.strokeColor = Palette.gold
+        mark.lineWidth = 2.5
+        mark.glowWidth = 4
+        mark.zPosition = 7
+        mark.isHidden = true
+        addChild(mark)
     }
 
     private func buildDummy() {
@@ -265,6 +282,11 @@ final class FighterNode: SKNode {
         marker.isHidden = !controlled || !f.isAlive
         marker.position = CGPoint(x: 0, y: f.spec.height + 12 + 2 * sin(CGFloat(frame) * 0.12))
         position = CGPoint(x: f.pos.x, y: f.pos.y)
+        mark.isHidden = f.markedFrames == 0 || !f.isAlive
+        mark.position = CGPoint(x: 0, y: f.spec.height + 22)
+        mark.zRotation = CGFloat(frame) * 0.05
+        // The mark blinks as it runs out.
+        mark.alpha = f.markedFrames < 90 && (frame / 6) % 2 == 0 ? 0.3 : 1
         xScale = f.facing >= 0 ? 1 : -1
 
         var tilt: CGFloat = 0
@@ -288,6 +310,10 @@ final class FighterNode: SKNode {
             opacity = 0.55
         case .hitstun:
             tilt = 0.3
+        case .guardStance:
+            // Braced: low, wide, lit.
+            stretch = CGSize(width: 1.12, height: 0.92)
+            tint = Palette.cyan
         case .staggered:
             tilt = (kind == .theProtocol ? 0.06 : 0.18) + 0.06 * sin(CGFloat(frame) * 0.5)
             tint = Palette.ember

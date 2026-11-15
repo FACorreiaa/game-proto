@@ -16,6 +16,7 @@ final class HUD: SKNode {
     private let bossBack = SKShapeNode(rect: CGRect(x: -160, y: 0, width: 320, height: 9), cornerRadius: 3)
     private let bossFill = SKSpriteNode(color: Palette.red, size: CGSize(width: 316, height: 5))
     private let bossName = SKLabelNode(text: "")
+    private let special = SKLabelNode(text: "")
     private let modeButton = SKLabelNode(text: "MODE")
     private let debugButton = SKLabelNode(text: "DEBUG")
 
@@ -57,6 +58,12 @@ final class HUD: SKNode {
         bossName.verticalAlignmentMode = .top
         bossName.isHidden = true
         addChild(bossName)
+
+        special.fontName = "AvenirNext-DemiBold"
+        special.fontSize = 10
+        special.horizontalAlignmentMode = .left
+        special.verticalAlignmentMode = .center
+        addChild(special)
 
         partnerName.fontName = "AvenirNext-Medium"
         partnerName.fontSize = 10
@@ -119,6 +126,7 @@ final class HUD: SKNode {
         message.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
         hint.position = CGPoint(x: size.width / 2, y: top - 6)
         damage.size = size
+        special.position = CGPoint(x: left, y: top - 54)
         bossBack.position = CGPoint(x: size.width / 2, y: top - 30)
         bossName.position = CGPoint(x: size.width / 2, y: top - 34)
         debugButton.position = CGPoint(x: right, y: top - 26)
@@ -165,6 +173,16 @@ final class HUD: SKNode {
         bossName.fontColor = boss.open ? Palette.gold : Palette.red
         bossFill.xScale = CGFloat(max(0, min(1, boss.health)))
         bossFill.color = boss.open ? Palette.gold : Palette.red
+    }
+
+    /// The controlled hero's special: its name, and how long until it is ready again.
+    func setSpecial(_ info: (name: String, cooldown: Int)?) {
+        special.isHidden = info == nil
+        guard let info else { return }
+        let ready = info.cooldown == 0
+        let text = ready ? "✦ \(info.name)" : "✦ \(info.name)  \(info.cooldown / 60 + 1)s"
+        if special.text != text { special.text = text }
+        special.fontColor = ready ? Palette.gold : Palette.white.withAlphaComponent(0.4)
     }
 
     func setStatus(_ text: String) {
