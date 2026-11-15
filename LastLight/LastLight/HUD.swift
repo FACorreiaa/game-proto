@@ -13,6 +13,9 @@ final class HUD: SKNode {
     private let hint = SKLabelNode(text: "")
     private let damage = SKSpriteNode(color: Palette.red, size: .zero)
     private let debug = SKLabelNode(text: "")
+    private let bossBack = SKShapeNode(rect: CGRect(x: -160, y: 0, width: 320, height: 9), cornerRadius: 3)
+    private let bossFill = SKSpriteNode(color: Palette.red, size: CGSize(width: 316, height: 5))
+    private let bossName = SKLabelNode(text: "")
     private let modeButton = SKLabelNode(text: "MODE")
     private let debugButton = SKLabelNode(text: "DEBUG")
 
@@ -40,6 +43,21 @@ final class HUD: SKNode {
         partnerFill.position = CGPoint(x: 2, y: 2)
         partnerBack.addChild(partnerFill)
         addChild(partnerBack)
+        bossBack.fillColor = Palette.body.withAlphaComponent(0.85)
+        bossBack.strokeColor = Palette.red.withAlphaComponent(0.6)
+        bossBack.lineWidth = 1
+        bossBack.isHidden = true
+        bossFill.anchorPoint = CGPoint(x: 0, y: 0)
+        bossFill.position = CGPoint(x: -158, y: 2)
+        bossBack.addChild(bossFill)
+        addChild(bossBack)
+        bossName.fontName = "AvenirNext-DemiBold"
+        bossName.fontSize = 10
+        bossName.fontColor = Palette.red
+        bossName.verticalAlignmentMode = .top
+        bossName.isHidden = true
+        addChild(bossName)
+
         partnerName.fontName = "AvenirNext-Medium"
         partnerName.fontSize = 10
         partnerName.fontColor = Palette.white.withAlphaComponent(0.6)
@@ -101,6 +119,8 @@ final class HUD: SKNode {
         message.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
         hint.position = CGPoint(x: size.width / 2, y: top - 6)
         damage.size = size
+        bossBack.position = CGPoint(x: size.width / 2, y: top - 30)
+        bossName.position = CGPoint(x: size.width / 2, y: top - 34)
         debugButton.position = CGPoint(x: right, y: top - 26)
         modeButton.position = CGPoint(x: right - 56, y: top - 26)
         debug.position = CGPoint(x: right, y: top - 36)
@@ -133,6 +153,18 @@ final class HUD: SKNode {
         if partnerName.text != text { partnerName.text = text }
         partnerFill.xScale = CGFloat(max(0, min(1, partner.health)))
         partnerFill.color = partner.health < 0.3 ? Palette.red : Palette.cyan
+    }
+
+    /// The boss bar, top centre. Nil hides it.
+    func setBoss(_ boss: (name: String, health: Double, open: Bool)?) {
+        bossBack.isHidden = boss == nil
+        bossName.isHidden = boss == nil
+        guard let boss else { return }
+        let text = boss.open ? "\(boss.name)   OPEN" : boss.name
+        if bossName.text != text { bossName.text = text }
+        bossName.fontColor = boss.open ? Palette.gold : Palette.red
+        bossFill.xScale = CGFloat(max(0, min(1, boss.health)))
+        bossFill.color = boss.open ? Palette.gold : Palette.red
     }
 
     func setStatus(_ text: String) {

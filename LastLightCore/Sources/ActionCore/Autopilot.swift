@@ -15,6 +15,10 @@ public struct Autopilot: Sendable {
         var inp = InputFrame(moveX: 1, jumpHeld: jumpHeld > 0)
         if jumpHeld > 0 { jumpHeld -= 1 }
 
+        if let boss = world.boss {
+            return boss.isAlive ? bossInput(me, boss, frame: world.frame) : .neutral
+        }
+
         if fights {
             let foe = world.fighters
                 .filter { $0.team == .enemy && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - me.pos.y) < 70 }
@@ -78,6 +82,26 @@ public struct Autopilot: Sendable {
             }
         }
         return inp
+    }
+
+    /// Against a boss: stay close, dodge each attack just before it lands, and strike only while it is open.
+    private func bossInput(_ me: Fighter, _ boss: Fighter, frame: Int) -> InputFrame {
+        let dx = boss.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        let gap = abs(dx) - boss.spec.width / 2 - me.spec.width / 2
+        guard boss.awake else { return InputFrame(moveX: dir) }
+
+        if let attack = boss.currentAttack, boss.attackPhase == .windup {
+            let inFront = (me.pos.x - boss.pos.x) * boss.facing >= 0
+            if inFront, attack.windup - boss.stateFrame <= 4 { return InputFrame(moveX: dir, dodge: true) }
+            return InputFrame(moveX: gap > 30 ? dir : dir * 0.02)
+        }
+        if boss.isOpen {
+            let reach = me.spec.attacks.first?.reach ?? 0
+            if gap > reach - 12 { return InputFrame(moveX: dir) }
+            return InputFrame(moveX: dir * 0.02, attack: frame % 8 == 0)
+        }
+        return InputFrame(moveX: gap > 45 ? dir : (gap < 25 ? -dir : dir * 0.02))
     }
 
     private mutating func jump(_ inp: inout InputFrame) {

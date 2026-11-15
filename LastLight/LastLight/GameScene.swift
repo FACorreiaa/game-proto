@@ -47,7 +47,10 @@ final class GameScene: SKScene {
     private var level: Level { levels[levelIndex] }
 
     /// World units are scaled so about the same slice of the level shows on a phone, a tablet and a Mac window.
-    private var zoom: CGFloat { max(0.5, min(size.height / 402, size.width / 700)) }
+    /// A boss room is seen from further back, so the boss fits under the bars at the top.
+    private var zoom: CGFloat {
+        max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.8 : 1)
+    }
 
     init(demo: Bool, mode: Mode = .level) {
         self.demo = demo
@@ -87,6 +90,8 @@ final class GameScene: SKScene {
         showHint()
         if let hero = world.controlled { cameraX = hero.pos.x }
     }
+
+    private let bossHint = "Strike only when the core opens.  Jump the surge.  Dodge the charge."
 
     private func showHint() {
         if demo {
@@ -241,6 +246,8 @@ final class GameScene: SKScene {
             pickupNodes[pickup.id] = shard
         }
 
+        // A boss room has no way out until the boss falls.
+        guard level.boss == nil else { return }
         let gate = SKShapeNode(rect: CGRect(x: level.exitX, y: 0, width: 70, height: 170), cornerRadius: 35)
         gate.fillColor = Palette.white.withAlphaComponent(0.12)
         gate.strokeColor = Palette.gold
@@ -387,6 +394,12 @@ final class GameScene: SKScene {
                 partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
         }
         drawLevel()
+        if let boss = world.boss, boss.awake, boss.isAlive {
+            hud.setBoss((boss.kind == .theProtocol ? "THE PROTOCOL" : boss.kind.rawValue.uppercased(),
+                         boss.hp / boss.spec.maxHP, boss.isOpen))
+        } else {
+            hud.setBoss(nil)
+        }
 
         shake *= 0.86
         let jolt = shake < 0.3 ? CGPoint.zero : CGPoint(
@@ -432,10 +445,15 @@ final class GameScene: SKScene {
     private func debugText() -> String {
         guard let f = world.controlled else { return "" }
         let ground = f.onGround ? "ground" + (f.groundIndex.map { " #\($0)" } ?? "") : "air"
-        return String(
+        var text = String(
             format: "pos %6.0f %5.0f\nvel %6.0f %5.0f\n%@  coyote %d\n%@ f%d\nhitstop %d  frame %d",
             f.pos.x, f.pos.y, f.vel.x, f.vel.y, ground, f.coyote, String(describing: f.state), f.stateFrame,
             world.hitStop, world.frame)
+        if let boss = world.boss {
+            text += String(format: "\nboss %.0f  %@ f%d  %@", boss.hp, String(describing: boss.state), boss.stateFrame,
+                           boss.isOpen ? "open" : "armoured")
+        }
+        return text
     }
 
     // MARK: Events
@@ -516,7 +534,12 @@ final class GameScene: SKScene {
                 if secret { popup("SECRET", at: at, color: Palette.gold, size: 14) }
                 haptics.light(0.7)
             case .woke(let id):
-                if let f = world.fighter(id) {
+                if id == world.bossID {
+                    hud.announce("THE PROTOCOL")
+                    hud.showHint(bossHint)
+                    shake = max(shake, 10)
+                    haptics.heavy()
+                } else if let f = world.fighter(id) {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.red, size: 16)
                 }
             case .joined(let id):
@@ -526,6 +549,15 @@ final class GameScene: SKScene {
                           color: Palette.cyan, size: 16)
                 }
                 haptics.rigid()
+            case .bossDefeated(let id):
+                if let f = world.fighter(id) {
+                    let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)
+                    sparks(at: centre, color: Palette.gold, count: 30)
+                    ring(at: centre, radius: 220, color: Palette.gold)
+                    ring(at: centre, radius: 120, color: Palette.white)
+                }
+                shake = max(shake, 16)
+                haptics.heavy()
             case .regrouped(_, let at):
                 ring(at: at, radius: 50, color: Palette.cyan)
             case .levelComplete:

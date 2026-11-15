@@ -27,4 +27,5 @@ public enum GameEvent: Equatable, Sendable {
     case joined(id: Int)
     /// A companion left behind catches up in one step.
     case regrouped(id: Int, at: Vec2)
+    case bossDefeated(id: Int)
 }
