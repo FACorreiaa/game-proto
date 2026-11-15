@@ -39,6 +39,7 @@ final class GameScene: SKScene {
 
     private let groundY: CGFloat = 104
     private let haptics = Haptics()
+    private let sound = Sound()
     private let levels = Level.all
     /// Which level is being played. Remembered between launches.
     private var levelIndex: Int {
@@ -355,6 +356,7 @@ final class GameScene: SKScene {
         }
         if steps == 4 { accumulator = 0 }
 
+        sound.advance()
         draw()
     }
 
@@ -465,6 +467,7 @@ final class GameScene: SKScene {
                 nodes[target]?.flash()
                 let heroHurt = world.fighter(target)?.team == .hero
                 sparks(at: at, color: heroHurt ? Palette.red : Palette.cyan, count: heroHurt ? 10 : Int(4 + damage / 3))
+                sound.play(heroHurt ? .hurt : (damage >= 20 ? .heavyHit : .hit))
                 if heroHurt {
                     shake = max(shake, 9)
                     haptics.heavy()
@@ -477,21 +480,25 @@ final class GameScene: SKScene {
             case .blocked(_, _, let at):
                 sparks(at: at, color: Palette.steel, count: 4)
                 popup("BLOCKED", at: at, color: Palette.steel, size: 13)
+                sound.play(.blocked)
                 haptics.rigid(0.5)
             case .parried(_, let attacker, let at):
                 ring(at: at, radius: 70, color: Palette.white)
                 sparks(at: at, color: Palette.white, count: 14)
                 popup("PARRY", at: at, color: Palette.cyan, size: 20)
+                sound.play(.parry)
                 nodes[attacker]?.flash()
                 shake = max(shake, 5)
                 haptics.rigid()
             case .exploded(let id, let at, let radius):
                 ring(at: at, radius: radius, color: Palette.ember)
                 sparks(at: at, color: Palette.ember, count: 18)
+                sound.play(.explosion)
                 shake = max(shake, 10)
                 nodes[id]?.vanish()
                 haptics.heavy()
             case .fuseLit(let id):
+                sound.play(.fuse)
                 if let f = world.fighter(id) {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + 60), color: Palette.red, size: 22)
                 }
@@ -512,8 +519,10 @@ final class GameScene: SKScene {
                     popup("BACK UP", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.cyan, size: 14)
                 }
             case .heroDown:
+                sound.play(.down)
                 hud.showMessage(demo ? "DOWN" : "DOWN\ntap to try again")
             case .fell:
+                sound.play(.fall)
                 shake = max(shake, 8)
                 haptics.heavy()
                 hud.flashDamage()
@@ -526,16 +535,19 @@ final class GameScene: SKScene {
                     ring(at: Vec2(c.x, c.y + 78), radius: 50, color: Palette.cyan)
                     popup("CHECKPOINT", at: Vec2(c.x, c.y + 90), color: Palette.cyan, size: 13)
                 }
+                sound.play(.checkpoint)
                 haptics.light()
             case .collected(let id, let secret, let at):
                 pickupNodes[id]?.removeFromParent()
                 pickupNodes[id] = nil
                 sparks(at: at, color: secret ? Palette.gold : Palette.cyan, count: 8)
                 if secret { popup("SECRET", at: at, color: Palette.gold, size: 14) }
+                sound.play(secret ? .secret : .pickup)
                 haptics.light(0.7)
             case .woke(let id):
                 if id == world.bossID {
                     hud.announce("THE PROTOCOL")
+                    sound.play(.bossWake)
                     hud.showHint(bossHint)
                     shake = max(shake, 10)
                     haptics.heavy()
@@ -543,6 +555,7 @@ final class GameScene: SKScene {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.red, size: 16)
                 }
             case .joined(let id):
+                sound.play(.join)
                 if let f = world.fighter(id) {
                     ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 90, color: Palette.cyan)
                     popup("\(f.kind.rawValue.uppercased()) JOINS", at: Vec2(f.pos.x, f.pos.y + f.spec.height),
@@ -557,15 +570,30 @@ final class GameScene: SKScene {
                     ring(at: centre, radius: 120, color: Palette.white)
                 }
                 shake = max(shake, 16)
+                sound.play(.bossDown)
                 haptics.heavy()
             case .regrouped(_, let at):
                 ring(at: at, radius: 50, color: Palette.cyan)
             case .levelComplete:
+                sound.play(.clear)
                 let total = world.level?.pickups.count ?? 0
                 let next = levelIndex + 1 < levels.count ? "tap to continue" : "tap to start over"
                 hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
                 haptics.rigid()
-            case .spawned, .swing, .evaded, .jumped, .landed, .dodged:
+            case .swing(let id, let index):
+                if id == world.bossID {
+                    sound.play(.warning)
+                } else if let f = world.fighter(id) {
+                    let heavy = f.team == .enemy || index == f.spec.attacks.count - 1
+                    sound.play(heavy ? .heavySwing : .swing, volume: f.id == world.controlledID ? 1 : 0.5)
+                }
+            case .jumped(let id):
+                if id == world.controlledID { sound.play(.jump) }
+            case .landed(let id):
+                if id == world.controlledID { sound.play(.land) }
+            case .dodged(let id):
+                sound.play(.dodge, volume: id == world.controlledID ? 1 : 0.5)
+            case .spawned, .evaded:
                 break
             }
         }
