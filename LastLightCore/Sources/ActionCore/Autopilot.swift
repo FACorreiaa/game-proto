@@ -101,6 +101,11 @@ public struct Autopilot: Sendable {
             if gap > reach - 12 { return InputFrame(moveX: dir) }
             return InputFrame(moveX: dir * 0.02, attack: frame % 8 == 0)
         }
+        // Between attacks: mark it when Command is ready.
+        if case .command(let range, _, _, _)? = me.spec.special, me.specialCooldown == 0, boss.markedFrames == 0,
+           abs(dx) <= range {
+            return InputFrame(moveX: dir * 0.02, special: true)
+        }
         return InputFrame(moveX: gap > 45 ? dir : (gap < 25 ? -dir : dir * 0.02))
     }
 

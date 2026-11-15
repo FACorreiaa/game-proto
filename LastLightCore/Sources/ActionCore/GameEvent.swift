@@ -28,6 +28,12 @@ public enum GameEvent: Equatable, Sendable {
     /// A companion left behind catches up in one step.
     case regrouped(id: Int, at: Vec2)
     case bossDefeated(id: Int)
+    /// Caelen's Command put a mark on an enemy.
+    case commanded(by: Int, target: Int)
+    /// Orion's Adapt: the guard went up.
+    case guarded(id: Int)
+    /// A hit landed on the guard and did nothing.
+    case absorbed(by: Int, attacker: Int, at: Vec2)
     /// A story scene is due. The simulation only says so; showing it is the app's work.
     case scene(id: String)
 }

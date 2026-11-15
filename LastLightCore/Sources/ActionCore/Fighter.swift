@@ -7,6 +7,8 @@ public enum FighterState: Equatable, Sendable {
     case hitstun
     case staggered
     case fuse
+    /// Orion's Adapt: braced for a hit.
+    case guardStance
     case dead
 }
 
@@ -40,6 +42,15 @@ public struct Fighter: Sendable, Identifiable {
     public var aiAux = 0
     /// Which attack starts on the next attack press. Brains of fighters with several separate attacks set it.
     public var nextAttack = 0
+    /// Frames until the special can be used again.
+    public internal(set) var specialCooldown = 0
+    /// Frames left on Caelen's mark. While it lasts, hits on this fighter do more.
+    public internal(set) var markedFrames = 0
+    var markScale = 1.0
+    /// Damage multiplier of the swing in progress; above 1 for the counter after an absorbed hit.
+    var swingScale = 1.0
+    var specialBuffer = 0
+    var wantsCommand = false
 
     /// False for a placed enemy that has not noticed a hero yet; it patrols instead of fighting.
     public var awake = true

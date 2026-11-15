@@ -187,6 +187,7 @@ public struct World: Sendable {
             fighters[i] = f
         }
 
+        resolveCommands(&events)
         resolveHits(&events)
         for id in explosions { explode(id, &events) }
         levelRules(&events)
@@ -234,6 +235,7 @@ public struct World: Sendable {
         if inp.attack { f.attackBuffer = tuning.attackBuffer }
         if inp.jump { f.jumpBuffer = tuning.jumpBuffer }
         if inp.dodge { f.dodgeBuffer = tuning.dodgeBuffer }
+        if inp.special { f.specialBuffer = tuning.specialBuffer }
     }
 
     // MARK: State machine
@@ -245,6 +247,8 @@ public struct World: Sendable {
         f.sinceHit += 1
         if f.dodgeCooldown > 0 { f.dodgeCooldown -= 1 }
         if f.invulnerable > 0 { f.invulnerable -= 1 }
+        if f.specialCooldown > 0 { f.specialCooldown -= 1 }
+        if f.markedFrames > 0 { f.markedFrames -= 1 }
 
         switch f.state {
         case .dead:
@@ -257,6 +261,10 @@ public struct World: Sendable {
         case .staggered:
             if f.onGround { f.vel.x *= tuning.hitstunFriction }
             if f.stateFrame >= f.stateDuration { f.enter(.idle) }
+
+        case .guardStance:
+            if f.onGround { f.vel.x = 0 }
+            if f.stateFrame >= f.stateDuration { f.enter(f.onGround ? .idle : .air) }
 
         case .fuse:
             let sd = f.spec.selfDestruct!
@@ -301,7 +309,19 @@ public struct World: Sendable {
             // Momentum is for the hand on the stick. Brains steer in small corrections and get exact speed.
             let change = f.id == controlledID ? rate / Tuning.framesPerSecond : .infinity
             f.vel.x += max(-change, min(change, target - f.vel.x))
-            if canDodge(f) {
+            if f.specialBuffer > 0, f.specialCooldown == 0, let special = f.spec.special {
+                f.specialBuffer = 0
+                switch special {
+                case .command:
+                    // Marking needs the other fighters, so the world does it after everyone has moved.
+                    f.wantsCommand = true
+                case .adapt(let window, _, _, let cooldown):
+                    if abs(inp.moveX) > 0.01 { f.facing = inp.moveX > 0 ? 1 : -1 }
+                    f.specialCooldown = cooldown
+                    f.enter(.guardStance, duration: window)
+                    events.append(.guarded(id: f.id))
+                }
+            } else if canDodge(f) {
                 startDodge(&f, inp, &events)
             } else if f.attackBuffer > 0, !f.spec.attacks.isEmpty {
                 startAttack(&f, f.spec.boss ? min(f.nextAttack, f.spec.attacks.count - 1) : 0, inp, &events)
@@ -321,6 +341,7 @@ public struct World: Sendable {
         if f.attackBuffer > 0 { f.attackBuffer -= 1 }
         if f.jumpBuffer > 0 { f.jumpBuffer -= 1 }
         if f.dodgeBuffer > 0 { f.dodgeBuffer -= 1 }
+        if f.specialBuffer > 0 { f.specialBuffer -= 1 }
         return explodes
     }
 
@@ -332,6 +353,7 @@ public struct World: Sendable {
         if abs(inp.moveX) > 0.01 { f.facing = inp.moveX > 0 ? 1 : -1 }
         f.attackBuffer = 0
         f.hitIDs = []
+        f.swingScale = 1
         f.enter(.attack(index))
         events.append(.swing(id: f.id, index: index))
     }
@@ -500,6 +522,33 @@ public struct World: Sendable {
         platformBoxes.contains { $0.minX <= x && x <= $0.maxX && $0.maxY <= y + 1 && $0.maxY >= y - 8 }
     }
 
+    // MARK: Specials
+
+    /// Caelen's Command: marks the nearest enemy in front, or the nearest at all when none is in front.
+    private mutating func resolveCommands(_ events: inout [GameEvent]) {
+        for i in fighters.indices where fighters[i].wantsCommand {
+            fighters[i].wantsCommand = false
+            let me = fighters[i]
+            guard case .command(let range, let frames, let scale, let cooldown)? = me.spec.special else { continue }
+            let near = fighters.indices.filter {
+                let f = fighters[$0]
+                return f.team != me.team && f.isAlive && !f.spec.immortal && abs(f.pos.x - me.pos.x) <= range
+                    && abs(f.pos.y - me.pos.y) <= 220
+            }
+            let ahead = near.filter { (fighters[$0].pos.x - me.pos.x) * me.facing >= 0 }
+            let pick = (ahead.isEmpty ? near : ahead).min {
+                abs(fighters[$0].pos.x - me.pos.x) < abs(fighters[$1].pos.x - me.pos.x)
+            }
+            // With nobody to mark the ability is not spent.
+            guard let pick else { continue }
+            for t in fighters.indices where fighters[t].team != me.team { fighters[t].markedFrames = 0 }
+            fighters[pick].markedFrames = frames
+            fighters[pick].markScale = scale
+            fighters[i].specialCooldown = cooldown
+            events.append(.commanded(by: me.id, target: fighters[pick].id))
+        }
+    }
+
     // MARK: Hits
 
     private mutating func resolveHits(_ events: inout [GameEvent]) {
@@ -530,6 +579,24 @@ public struct World: Sendable {
         }
         if target.invulnerable > 0 { return }
 
+        if target.state == .guardStance, case .adapt(_, let stagger, let counterScale, _)? = target.spec.special {
+            // The hit is taken on the guard: the attacker reels and the counter starts at once.
+            fighters[a].enter(.staggered, duration: stagger)
+            fighters[a].vel.x = -attacker.facing * 120
+            var me = target
+            me.facing = attacker.pos.x >= me.pos.x ? 1 : -1
+            me.hitIDs = []
+            me.attackBuffer = 0
+            me.enter(.attack(me.spec.attacks.count - 1))
+            me.swingScale = counterScale
+            me.invulnerable = max(me.invulnerable, me.spec.attacks.last?.total ?? 0)
+            fighters[t] = me
+            hitStop = max(hitStop, tuning.parryHitStop)
+            events.append(.absorbed(by: target.id, attacker: attacker.id, at: contact))
+            events.append(.swing(id: target.id, index: target.spec.attacks.count - 1))
+            return
+        }
+
         if target.isParrying, attacker.team == .enemy {
             fighters[a].enter(.staggered, duration: tuning.parryStagger)
             fighters[a].vel.x = -attacker.facing * 120
@@ -546,7 +613,7 @@ public struct World: Sendable {
 
         let push: Double = attacker.pos.x == target.pos.x ? attacker.facing : (target.pos.x > attacker.pos.x ? 1 : -1)
         let ai = attacker.team == .hero && attacker.id != controlledID
-        hurt(t, damage: attack.damage * (ai ? tuning.partnerDamageScale : 1), by: attacker.id, at: contact, push: push * attack.knockback,
+        hurt(t, damage: attack.damage * attacker.swingScale * (ai ? tuning.partnerDamageScale : 1), by: attacker.id, at: contact, push: push * attack.knockback,
              hitstun: attack.hitstun, &events)
         hitStop = max(hitStop, target.team == .hero ? tuning.heroHurtHitStop : attack.hitStop)
     }
@@ -556,7 +623,7 @@ public struct World: Sendable {
         _ events: inout [GameEvent]
     ) {
         var f = fighters[t]
-        let damage = base * (f.state == .staggered ? tuning.staggerDamageBonus : 1)
+        let damage = base * (f.state == .staggered ? tuning.staggerDamageBonus : 1) * (f.markedFrames > 0 ? f.markScale : 1)
         f.hp = f.spec.immortal ? max(1, f.hp - damage) : f.hp - damage
         f.sinceHit = 0
         events.append(.hit(attacker: attackerID, target: f.id, damage: damage, at: contact))
@@ -607,6 +674,10 @@ public struct World: Sendable {
                 continue
             }
             if target.invulnerable > 0 { continue }
+            if target.state == .guardStance {
+                events.append(.absorbed(by: target.id, attacker: id, at: box.center))
+                continue
+            }
             let push: Double = target.pos.x >= centre.x ? 1 : -1
             hurt(t, damage: sd.damage, by: id, at: box.center, push: push * 300, hitstun: 18, &events)
             hitStop = max(hitStop, tuning.heroHurtHitStop)

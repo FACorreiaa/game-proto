@@ -7,6 +7,7 @@ final class TouchControls: SKNode {
         case dodge
         case jump
         case switchHero
+        case special
     }
 
     private(set) var moveX = 0.0
@@ -39,7 +40,8 @@ final class TouchControls: SKNode {
         addChild(stickBase)
         addChild(stickKnob)
 
-        for (button, radius, glyph) in [(Button.attack, 42.0, "⚔︎"), (.dodge, 32.0, "»"), (.jump, 32.0, "▲"), (.switchHero, 26.0, "⇄")] {
+        for (button, radius, glyph) in [(Button.attack, 42.0, "⚔︎"), (.dodge, 32.0, "»"), (.jump, 32.0, "▲"), (.switchHero, 26.0, "⇄"),
+                                        (.special, 28.0, "✦")] {
             let node = SKShapeNode(circleOfRadius: radius)
             node.strokeColor = Palette.white.withAlphaComponent(0.3)
             node.lineWidth = 2
@@ -71,6 +73,14 @@ final class TouchControls: SKNode {
         buttonNodes[.jump]?.position = CGPoint(x: edge - 158, y: bottom + 50)
         buttonNodes[.dodge]?.position = CGPoint(x: edge - 82, y: bottom + 156)
         buttonNodes[.switchHero]?.position = CGPoint(x: edge - 176, y: bottom + 138)
+        buttonNodes[.special]?.position = CGPoint(x: edge - 238, y: bottom + 92)
+    }
+
+    /// The special button glows when the ability is ready and dims while it cools down.
+    func setSpecial(ready: Bool) {
+        guard let node = buttonNodes[.special] else { return }
+        node.strokeColor = ready ? Palette.gold : Palette.white.withAlphaComponent(0.12)
+        node.alpha = ready ? 1 : 0.45
     }
 
     func takePresses() -> Set<Button> {

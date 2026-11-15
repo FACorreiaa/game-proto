@@ -114,7 +114,7 @@ final class GameScene: SKScene {
             ? "Reach the gate.  Dodge passes through arcs.  ⇄ switches hero."
             : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         #else
-        hud.showHint("A/D move   Space jump   J attack   K dodge   L switch   R restart   M mode   P debug")
+        hud.showHint("A/D move   Space jump   J attack   K dodge   I special   L switch   R restart   M mode   P debug")
         #endif
     }
 
@@ -358,6 +358,7 @@ final class GameScene: SKScene {
         input.jump = reading.jump || presses.contains(.jump)
         input.attack = reading.attack || presses.contains(.attack)
         input.dodge = reading.dodge || presses.contains(.dodge)
+        input.special = reading.special || presses.contains(.special)
         input.switchHero = reading.switchHero || presses.contains(.switchHero)
 
         let step = 1 / Tuning.framesPerSecond
@@ -369,6 +370,7 @@ final class GameScene: SKScene {
             input.jump = false
             input.attack = false
             input.dodge = false
+            input.special = false
             input.switchHero = false
             accumulator -= step
             steps += 1
@@ -410,6 +412,8 @@ final class GameScene: SKScene {
             let lift = max(-40, hero.pos.y - 70)
             cameraY += (lift - cameraY) * 0.08
             let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id && $0.awake }
+            hud.setSpecial(hero.spec.special.map { ($0.name, hero.specialCooldown) })
+            controls.setSpecial(ready: hero.spec.special != nil && hero.specialCooldown == 0)
             hud.setHeroes(
                 lead: (hero.kind.rawValue.uppercased(), hero.hp / hero.spec.maxHP),
                 partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
@@ -612,6 +616,27 @@ final class GameScene: SKScene {
                 if id == world.controlledID { sound.play(.land) }
             case .dodged(let id):
                 sound.play(.dodge, volume: id == world.controlledID ? 1 : 0.5)
+            case .commanded(_, let target):
+                if let f = world.fighter(target) {
+                    let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)
+                    ring(at: centre, radius: 80, color: Palette.gold)
+                    popup("MARKED", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.gold, size: 14)
+                }
+                sound.play(.checkpoint)
+                haptics.rigid(0.7)
+            case .guarded(let id):
+                if let f = world.fighter(id) {
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 46, color: Palette.cyan)
+                }
+                sound.play(.dodge)
+            case .absorbed(_, let attacker, let at):
+                ring(at: at, radius: 80, color: Palette.cyan)
+                sparks(at: at, color: Palette.cyan, count: 14)
+                popup("ADAPT", at: at, color: Palette.cyan, size: 20)
+                nodes[attacker]?.flash()
+                shake = max(shake, 5)
+                sound.play(.parry)
+                haptics.rigid()
             case .scene(let id):
                 // The demo bot does not read.
                 if !demo { story.begin(id) }
