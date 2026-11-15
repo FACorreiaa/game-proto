@@ -36,7 +36,7 @@ public struct Autopilot: Sendable {
         let waitForHazard = level.hazards.contains { h in
             let ahead = h.box.minX - (me.pos.x + half)
             guard ahead > -(h.box.maxX - h.box.minX) - me.spec.width, ahead < 50 else { return false }
-            return h.isOn(at: world.frame) || h.period - world.frame % h.period < 45
+            return h.isOn(at: world.frame) || h.framesUntilOn(at: world.frame) < 45
         }
         if waitForHazard {
             inp.moveX = 0

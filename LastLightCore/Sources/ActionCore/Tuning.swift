@@ -55,6 +55,12 @@ public struct Tuning: Sendable {
     public var partnerFollowDistance = 80.0
     public var partnerEngageRange = 420.0
     public var switchCooldown = 20
+    /// A companion waiting in a level joins when the hero comes this close.
+    public var joinRange = 90.0
+    /// Further behind than this, or stuck on another floor for `partnerStrandedFrames`, the partner catches up at once.
+    public var partnerRegroupDistance = 560.0
+    public var partnerStrandedHeight = 60.0
+    public var partnerStrandedFrames = 150
     /// A fallen hero gets back up with this fraction of health when a wave is cleared.
     public var reviveFraction = 0.4
 

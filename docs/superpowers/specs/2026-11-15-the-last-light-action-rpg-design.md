@@ -180,5 +180,9 @@ Later the same day the owner gave a fuller brief. Where it differs from the sect
   (2) Chapter 1 segments A and B. (3) The Protocol, first phase. (4) Story architecture with one
   small example. Art and the other characters follow.
 
-The AI partner and control switching (old stage 2) are built and stay in the training room. The brief
-does not mention them, so the Chapter 1 slice is played as Caelen alone until the owner decides.
+**The companion stays** (owner, 2026-11-15). Orion fights beside the lead inside levels. A level
+either starts with him or places him further in, where he waits and joins when reached. He jumps the
+gaps and walls he can clear and catches up in one step when left behind.
+
+**Levels** are an ordered list (`Level.all`): the Foundry Yard (movement test), then Chapter 1:
+Awakening, The Machine Hall, and next The Protocol. Clearing one leads to the next.

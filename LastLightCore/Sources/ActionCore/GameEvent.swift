@@ -23,4 +23,8 @@ public enum GameEvent: Equatable, Sendable {
     case collected(id: Int, secret: Bool, at: Vec2)
     case woke(id: Int)
     case levelComplete
+    /// A companion found in the level starts fighting at the hero's side.
+    case joined(id: Int)
+    /// A companion left behind catches up in one step.
+    case regrouped(id: Int, at: Vec2)
 }

@@ -65,6 +65,11 @@ public struct World: Sendable {
         checkpointIndex = min(fromCheckpoint, level.checkpoints.count - 1)
         let origin = checkpointIndex >= 0 ? level.checkpoints[checkpointIndex] : level.start
         control(spawn(hero, x: origin.x, y: origin.y, facing: 1))
+        if let p = level.partner {
+            let joined = p.pos.x <= origin.x + 130
+            spawn(p.kind, x: joined ? origin.x - 50 : p.pos.x, y: joined ? origin.y : p.pos.y, facing: 1)
+            fighters[fighters.count - 1].awake = joined
+        }
         // After a retry, what was behind the checkpoint stays gone.
         for e in level.enemies where checkpointIndex < 0 || e.pos.x > origin.x - 100 || tuning.spec(for: e.kind).immortal {
             spawn(e.kind, x: e.pos.x, y: e.pos.y, facing: -1)
@@ -129,9 +134,17 @@ public struct World: Sendable {
             var inp = InputFrame.neutral
             if f.id == controlledID {
                 inp = input
+            } else if f.isAlive, !f.awake, f.team == .hero {
+                // A companion waiting to be found.
+                if let lead = snapshot.first(where: { $0.id == controlledID }), lead.isAlive,
+                   abs(lead.pos.x - f.pos.x) <= tuning.joinRange, abs(lead.pos.y - f.pos.y) <= 120 {
+                    f.awake = true
+                    f.facing = lead.facing
+                    events.append(.joined(id: f.id))
+                }
             } else if f.isAlive, !f.awake {
                 let noticed = snapshot.contains {
-                    $0.team == .hero && $0.isAlive && abs($0.pos.x - f.pos.x) <= tuning.wakeRange
+                    $0.team == .hero && $0.isAlive && $0.awake && abs($0.pos.x - f.pos.x) <= tuning.wakeRange
                         && abs($0.pos.y - f.pos.y) <= tuning.wakeHeight
                 }
                 if noticed {
@@ -151,9 +164,13 @@ public struct World: Sendable {
                 let sight = f.team == .enemy ? tuning.enemySightHeight : .infinity
                 let foes = snapshot.filter {
                     $0.team != f.team && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - f.pos.y) <= sight
+                        && ($0.team == .enemy || $0.awake)
                 }
                 let allies = snapshot.filter { $0.team == f.team && $0.isAlive }
                 inp = brain.think(me: &f, foes: foes, allies: allies, tuning: tuning, rng: &rng)
+                if f.team == .hero, level != nil {
+                    navigate(&f, &inp, leader: snapshot.first { $0.id == controlledID })
+                }
                 latch(&f, inp)
             }
             if update(&f, inp, &events) { explosions.append(f.id) }
@@ -175,7 +192,7 @@ public struct World: Sendable {
 
     /// The living hero the player is not controlling, if there is one.
     private func otherHero() -> Int? {
-        fighters.first { $0.team == .hero && $0.isAlive && $0.id != controlledID }?.id
+        fighters.first { $0.team == .hero && $0.isAlive && $0.awake && $0.id != controlledID }?.id
     }
 
     private mutating func passControl(to id: Int, _ events: inout [GameEvent]) {
@@ -381,6 +398,75 @@ public struct World: Sendable {
         }
     }
 
+    /// Gets the AI partner over the level: it jumps the walls and gaps it can clear, waits for hazards,
+    /// and does not step into a pit. What it cannot cross it skips by regrouping.
+    private func navigate(_ f: inout Fighter, _ inp: inout InputFrame, leader: Fighter?) {
+        guard let level, f.onGround, f.isActionable else { return }
+        let half = f.spec.width / 2
+        let y = f.pos.y
+
+        // The leader is on a floor just above: try to jump up to it.
+        if let leader, leader.onGround, leader.pos.y - y > 40, abs(leader.pos.x - f.pos.x) < 140, f.spec.jumpSpeed > 0 {
+            inp.jump = true
+            return
+        }
+        guard abs(inp.moveX) > 0.1 else { return }
+        let dir: Double = inp.moveX > 0 ? 1 : -1
+
+        for h in level.hazards {
+            let near = dir > 0 ? h.box.minX - (f.pos.x + half) : (f.pos.x - half) - h.box.maxX
+            guard near > -(h.box.maxX - h.box.minX) - f.spec.width, near < 50 else { continue }
+            if h.isOn(at: frame) || h.framesUntilOn(at: frame) < 45 {
+                inp.moveX = 0
+                return
+            }
+        }
+
+        for (i, b) in platformBoxes.enumerated() where !platforms[i].oneWay && b.maxY > y + 1 && b.minY < y + f.spec.height {
+            let gap = dir > 0 ? b.minX - (f.pos.x + half) : (f.pos.x - half) - b.maxX
+            guard gap >= -1, gap < 34 else { continue }
+            if b.maxY - y <= 105, f.spec.jumpSpeed > 0 { inp.jump = true } else { inp.moveX = 0 }
+            return
+        }
+
+        func surface(_ near: Double, _ far: Double, above: Double, below: Double) -> Bool {
+            let x0 = min(f.pos.x + dir * near, f.pos.x + dir * far)
+            let x1 = max(f.pos.x + dir * near, f.pos.x + dir * far)
+            return platformBoxes.contains { $0.maxX > x0 && $0.minX < x1 && $0.maxY <= y + above && $0.maxY >= y - below }
+        }
+        if !hasGround(atX: f.pos.x + dir * (half + 26), y: y) {
+            if surface(70, 165, above: 60, below: 200), f.spec.jumpSpeed > 0 {
+                inp.jump = true
+            } else if !surface(half, 60, above: 1, below: 400) {
+                inp.moveX = 0
+            }
+        }
+    }
+
+    /// Puts a partner that was left behind next to the leader.
+    private mutating func regroupPartner(_ events: inout [GameEvent]) {
+        guard let lead = controlled, lead.isAlive, lead.onGround, let spot = lead.lastSafe else { return }
+        for i in fighters.indices where fighters[i].team == .hero && fighters[i].id != controlledID
+            && fighters[i].isAlive && fighters[i].awake {
+            var f = fighters[i]
+            let apart = abs(f.pos.y - lead.pos.y) > tuning.partnerStrandedHeight && f.onGround
+            f.strandedFrames = apart ? f.strandedFrames + 1 : 0
+            let lost = abs(f.pos.x - lead.pos.x) > tuning.partnerRegroupDistance
+                || f.strandedFrames >= tuning.partnerStrandedFrames || f.pos.y < (level?.killY ?? -.infinity) + 40
+            if lost {
+                f.pos = spot
+                f.vel = .zero
+                f.onGround = false
+                f.groundIndex = nil
+                f.strandedFrames = 0
+                if f.state != .hitstun { f.enter(.idle) }
+                f.invulnerable = max(f.invulnerable, 30)
+                events.append(.regrouped(id: f.id, at: Vec2(spot.x, spot.y + f.spec.height / 2)))
+            }
+            fighters[i] = f
+        }
+    }
+
     private func hasGround(atX x: Double, y: Double) -> Bool {
         platformBoxes.contains { $0.minX <= x && x <= $0.maxX && $0.maxY <= y + 1 && $0.maxY >= y - 8 }
     }
@@ -391,7 +477,7 @@ public struct World: Sendable {
         for a in fighters.indices {
             guard let box = fighters[a].hitbox, let attack = fighters[a].currentAttack else { continue }
             for t in fighters.indices where t != a {
-                guard fighters[t].team != fighters[a].team, fighters[t].isAlive,
+                guard fighters[t].team != fighters[a].team, fighters[t].isAlive, fighters[t].awake || fighters[t].team == .enemy,
                       !fighters[a].hitIDs.contains(fighters[t].id),
                       box.intersects(fighters[t].hurtbox) else { continue }
                 fighters[a].hitIDs.insert(fighters[t].id)
@@ -481,6 +567,7 @@ public struct World: Sendable {
 
         for t in fighters.indices where fighters[t].team != source.team && fighters[t].isAlive {
             let target = fighters[t]
+            if target.team == .hero, !target.awake { continue }
             let box = target.hurtbox
             let dx = max(box.minX - centre.x, 0, centre.x - box.maxX)
             let dy = max(box.minY - centre.y, 0, centre.y - box.maxY)
@@ -501,6 +588,7 @@ public struct World: Sendable {
     /// Pits, hazards, checkpoints, pickups and the exit. Does nothing in the training room.
     private mutating func levelRules(_ events: inout [GameEvent]) {
         guard let level else { return }
+        regroupPartner(&events)
 
         for i in fighters.indices where fighters[i].pos.y < level.killY {
             var f = fighters[i]
@@ -532,7 +620,7 @@ public struct World: Sendable {
         }
 
         for hazard in level.hazards where hazard.isOn(at: frame) {
-            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive {
+            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && fighters[i].awake {
                 let f = fighters[i]
                 guard f.invulnerable == 0, !f.isDodgeInvulnerable, hazard.box.intersects(f.hurtbox) else { continue }
                 let push: Double = f.pos.x >= hazard.box.center.x ? 1 : -1

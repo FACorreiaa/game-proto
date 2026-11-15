@@ -39,7 +39,12 @@ final class GameScene: SKScene {
 
     private let groundY: CGFloat = 104
     private let haptics = Haptics()
-    private let level = Level.foundryYard
+    private let levels = Level.all
+    /// Which level is being played. Remembered between launches.
+    private var levelIndex: Int {
+        didSet { UserDefaults.standard.set(levelIndex, forKey: "levelIndex") }
+    }
+    private var level: Level { levels[levelIndex] }
 
     /// World units are scaled so about the same slice of the level shows on a phone, a tablet and a Mac window.
     private var zoom: CGFloat { max(0.5, min(size.height / 402, size.width / 700)) }
@@ -47,7 +52,12 @@ final class GameScene: SKScene {
     init(demo: Bool, mode: Mode = .level) {
         self.demo = demo
         self.mode = mode
-        world = mode == .level ? World(level: .foundryYard, seed: 1) : World.partnerSlice(seed: 1)
+        // `-level 2` starts on the third level, for checking one without playing up to it.
+        let args = ProcessInfo.processInfo.arguments
+        let asked = args.firstIndex(of: "-level").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil }
+        let saved = asked ?? (demo ? 0 : UserDefaults.standard.integer(forKey: "levelIndex"))
+        levelIndex = min(max(saved, 0), Level.all.count - 1)
+        world = mode == .level ? World(level: Level.all[levelIndex], seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
         backgroundColor = Palette.sky
@@ -85,7 +95,7 @@ final class GameScene: SKScene {
         }
         #if os(iOS)
         hud.showHint(mode == .level
-            ? "Reach the gate.  Dodge passes through the arc.  Stand on the lift."
+            ? "Reach the gate.  Dodge passes through the arc.  ⇄ switches hero.  MODE changes level."
             : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         #else
         hud.showHint("A/D move   Space jump   J attack   K dodge   L switch   R restart   M mode   P debug")
@@ -111,6 +121,8 @@ final class GameScene: SKScene {
             kills = 0
             world = World.partnerSlice(seed: seed)
         case .level:
+            // Clearing a level moves on to the next one; the last one loops back to the first.
+            if !fresh, world.isComplete { levelIndex = (levelIndex + 1) % levels.count }
             let resume = !fresh && world.level != nil && !world.isComplete
             if !resume { kills = 0 }
             world = World(level: level, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
@@ -123,15 +135,24 @@ final class GameScene: SKScene {
         buildScenery()
         if let hero = world.controlled {
             cameraX = hero.pos.x
-            cameraY = 0
+            cameraY = max(-40, hero.pos.y - 70)
         }
+        if mode == .level, world.checkpointIndex < 0 { hud.announce(level.name.uppercased()) }
     }
 
+    /// Steps through every level and then the training room.
     private func toggleMode() {
-        mode = mode == .level ? .room : .level
+        if mode == .room {
+            mode = .level
+            levelIndex = 0
+        } else if levelIndex + 1 < levels.count {
+            levelIndex += 1
+        } else {
+            mode = .room
+        }
         restart(fresh: true)
         showHint()
-        hud.announce(mode == .level ? level.name.uppercased() : "TRAINING ROOM")
+        if mode == .room { hud.announce("TRAINING ROOM") }
     }
 
     // MARK: Scenery
@@ -342,6 +363,8 @@ final class GameScene: SKScene {
                 return created
             }()
             node.sync(f, frame: world.frame, controlled: f.id == world.controlledID)
+            // A companion that has not joined yet stands dark.
+            if f.team == .hero, !f.awake { node.alpha = 0.4 }
         }
         for (id, node) in nodes where !seen.contains(id) {
             node.removeFromParent()
@@ -358,7 +381,7 @@ final class GameScene: SKScene {
             // The camera only climbs once the hero is well off the floor, and never chases a fall into a pit.
             let lift = max(-40, hero.pos.y - 70)
             cameraY += (lift - cameraY) * 0.08
-            let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id }
+            let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id && $0.awake }
             hud.setHeroes(
                 lead: (hero.kind.rawValue.uppercased(), hero.hp / hero.spec.maxHP),
                 partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
@@ -496,9 +519,19 @@ final class GameScene: SKScene {
                 if let f = world.fighter(id) {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.red, size: 16)
                 }
+            case .joined(let id):
+                if let f = world.fighter(id) {
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 90, color: Palette.cyan)
+                    popup("\(f.kind.rawValue.uppercased()) JOINS", at: Vec2(f.pos.x, f.pos.y + f.spec.height),
+                          color: Palette.cyan, size: 16)
+                }
+                haptics.rigid()
+            case .regrouped(_, let at):
+                ring(at: at, radius: 50, color: Palette.cyan)
             case .levelComplete:
                 let total = world.level?.pickups.count ?? 0
-                hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\ntap to play again")
+                let next = levelIndex + 1 < levels.count ? "tap to continue" : "tap to start over"
+                hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
                 haptics.rigid()
             case .spawned, .swing, .evaded, .jumped, .landed, .dodged:
                 break

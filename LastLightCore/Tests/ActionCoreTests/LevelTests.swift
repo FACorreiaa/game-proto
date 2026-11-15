@@ -1,4 +1,4 @@
-import ActionCore
+@testable import ActionCore
 import Testing
 
 private func run(_ world: inout World, frames: Int, input: InputFrame = .neutral) -> [GameEvent] {
@@ -225,10 +225,108 @@ private func traverse(_ level: Level, seed: UInt64, frames: Int, fights: Bool = 
     return (world, events)
 }
 
-@Test func theYardCanBeFinishedWhileFighting() {
-    for seed in 1...4 {
-        let result = traverse(.foundryYard, seed: UInt64(seed), frames: 60 * 180, fights: true)
-        #expect(result.world.isComplete, "seed \(seed) stopped at x \(hero(result.world).pos.x)")
+@Test func everyLevelCanBeFinishedWhileFighting() {
+    for level in Level.all {
+        for seed in 1...3 {
+            let result = traverse(level, seed: UInt64(seed), frames: 60 * 240, fights: true)
+            #expect(result.world.isComplete, "\(level.name) seed \(seed) stopped at x \(hero(result.world).pos.x)")
+        }
+    }
+}
+
+@Test func everyLevelCanBeFinishedWithoutFalling() {
+    for level in Level.all {
+        let result = traverse(level, seed: 1, frames: 60 * 240)
+        #expect(result.world.isComplete, "\(level.name) stopped at x \(hero(result.world).pos.x)")
+        #expect(!result.events.contains(.fell(id: result.world.controlledID)), "\(level.name)")
+        #expect(result.events.filter { if case .checkpoint = $0 { true } else { false } }.count == level.checkpoints.count,
+                "\(level.name)")
+    }
+}
+
+// MARK: The companion in a level
+
+private func partner(_ world: World) -> Fighter {
+    world.fighters.first { $0.team == .hero && $0.id != world.controlledID }!
+}
+
+@Test func aCompanionPlacedAtTheStartFightsFromTheFirstStep() {
+    let world = World(level: .foundryYard, seed: 1)
+    #expect(partner(world).kind == .orion)
+    #expect(partner(world).awake)
+}
+
+@Test func aCompanionFurtherInWaitsAndJoinsWhenReached() {
+    var world = World(level: flat { $0.partner = Placement(.orion, x: 600) }, seed: 1)
+    let orion = partner(world).id
+    _ = run(&world, frames: 60)
+    #expect(world.fighter(orion)?.awake == false)
+    #expect(world.fighter(orion)?.pos.x == 600)
+    // It cannot be switched to before it has joined.
+    let early = world.step(InputFrame(switchHero: true))
+    #expect(!early.contains(.controlChanged(id: orion)))
+
+    var events: [GameEvent] = []
+    for _ in 0..<300 where !events.contains(.joined(id: orion)) { events += world.step(InputFrame(moveX: 1)) }
+    #expect(world.fighter(orion)?.awake == true)
+    _ = run(&world, frames: 30)
+    #expect(world.step(InputFrame(switchHero: true)).contains(.controlChanged(id: orion)))
+}
+
+@Test func aWaitingCompanionIsLeftAloneByMachines() {
+    let level = flat {
+        $0.partner = Placement(.orion, x: 700)
+        $0.enemies.append(Placement(.scrapDrone, x: 760))
+    }
+    var tuning = Tuning()
+    tuning.wakeRange = 0
+    var world = World(level: level, tuning: tuning, seed: 1)
+    let orion = partner(world).id
+    world.fighters[world.fighters.firstIndex { $0.kind == .scrapDrone }!].awake = true
+    let events = run(&world, frames: 400)
+    #expect(world.fighter(orion)?.hp == world.fighter(orion)?.spec.maxHP)
+    #expect(!events.contains { if case .hit(_, orion, _, _) = $0 { true } else { false } })
+}
+
+@Test func theCompanionJumpsAGapToKeepUp() {
+    var level = Level(name: "test", width: 3000, start: Vec2(200, 0), exitX: 9000)
+    level.ground(-200, 600)
+    level.ground(700, 2000)
+    level.partner = Placement(.orion, x: 150)
+    var world = World(level: level, seed: 1)
+    var pilot = Autopilot()
+    var events: [GameEvent] = []
+    for _ in 0..<360 { events += world.step(pilot.input(for: world)) }
+    #expect(hero(world).pos.x > 900)
+    #expect(partner(world).pos.x > 700)
+    #expect(partner(world).onGround)
+    #expect(!events.contains { if case .regrouped = $0 { true } else { false } })
+}
+
+@Test func theCompanionCatchesUpWhenLeftOnAnotherFloor() {
+    let level = flat {
+        $0.ground(600, 2200, top: 300)
+        $0.ledge(480, 590, top: 0, travel: Vec2(0, 320), period: 240)
+        $0.partner = Placement(.orion, x: 60)
+    }
+    var tuning = Tuning()
+    tuning.caelen.maxHP = 100_000
+    var world = World(level: level, tuning: tuning, seed: 1)
+    var pilot = Autopilot()
+    var events: [GameEvent] = []
+    for _ in 0..<(60 * 20) where hero(world).pos.x < 1200 { events += world.step(pilot.input(for: world)) }
+    events += run(&world, frames: 240)
+    #expect(hero(world).pos.y == 300)
+    #expect(partner(world).pos.y == 300)
+    #expect(abs(partner(world).pos.x - hero(world).pos.x) < 200)
+}
+
+@Test func theCompanionIsStillThereAtTheEndOfEveryLevel() {
+    for level in Level.all {
+        let result = traverse(level, seed: 2, frames: 60 * 240)
+        let p = partner(result.world)
+        #expect(p.awake, "\(level.name)")
+        #expect(abs(p.pos.x - hero(result.world).pos.x) < 600, "\(level.name)")
     }
 }
 

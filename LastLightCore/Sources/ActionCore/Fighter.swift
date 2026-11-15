@@ -45,6 +45,7 @@ public struct Fighter: Sendable, Identifiable {
     public internal(set) var groundIndex: Int?
     public internal(set) var coyote = 0
     var patrolFrames = 0
+    var strandedFrames = 0
     var lastSafe: Vec2?
     var attackBuffer = 0
     var jumpBuffer = 0

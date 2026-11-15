@@ -33,23 +33,31 @@ public struct Hazard: Sendable, Equatable {
     /// Frames for one on-and-off cycle. Zero means always on.
     public var period: Int
     public var onFrames: Int
+    /// Shifts the cycle, so two hazards with the same period can alternate.
+    public var phase: Int
     /// Frames of warning shown before it switches on.
     public var warning: Int
 
-    public init(_ box: Box, damage: Double, period: Int = 0, onFrames: Int = 0, warning: Int = 30) {
+    public init(_ box: Box, damage: Double, period: Int = 0, onFrames: Int = 0, phase: Int = 0, warning: Int = 30) {
         self.box = box
         self.damage = damage
         self.period = period
         self.onFrames = onFrames
+        self.phase = phase
         self.warning = warning
     }
 
     public func isOn(at frame: Int) -> Bool {
-        period == 0 || frame % period < onFrames
+        period == 0 || (frame + phase) % period < onFrames
     }
 
     public func isWarning(at frame: Int) -> Bool {
-        period > 0 && !isOn(at: frame) && frame % period >= period - warning
+        period > 0 && !isOn(at: frame) && (frame + phase) % period >= period - warning
+    }
+
+    /// Frames until it next switches on. Zero while it is on.
+    public func framesUntilOn(at frame: Int) -> Int {
+        isOn(at: frame) ? 0 : period - (frame + phase) % period
     }
 }
 
@@ -87,6 +95,9 @@ public struct Level: Sendable, Equatable {
     public var checkpoints: [Vec2] = []
     public var pickups: [Pickup] = []
     public var enemies: [Placement] = []
+    /// The companion. Placed next to the start it fights from the first step; placed further in, it
+    /// waits there and joins when the hero reaches it.
+    public var partner: Placement?
     /// Reaching this x on the ground finishes the level.
     public var exitX: Double
     /// Falling below this is falling out of the level.
@@ -115,6 +126,7 @@ extension Level {
     /// with room to repeat each. Jump reach with default tuning is about 114 high and 170 across.
     public static let foundryYard: Level = {
         var l = Level(name: "Foundry Yard", width: 4400, start: Vec2(120, 0), exitX: 4300)
+        l.partner = Placement(.orion, x: 60)
 
         // Run, and a dummy to hit.
         l.ground(-200, 900)
@@ -160,4 +172,93 @@ extension Level {
         l.enemies.append(Placement(.forgedSoldier, x: 4080))
         return l
     }()
+}
+
+extension Level {
+    /// Chapter 1, segment A. No words: the floor teaches running, the step teaches jumping, the gap
+    /// teaches distance. Orion is found standing dormant halfway, and the first machine comes after.
+    public static let awakening: Level = {
+        var l = Level(name: "Awakening", width: 3500, start: Vec2(120, 0), exitX: 3380)
+
+        l.ground(-200, 1100)
+        l.ground(520, 700, top: 60)
+        l.pickups.append(Pickup(id: 1, at: Vec2(470, 95)))
+
+        // First gap, with a shard hanging where the jump should peak.
+        l.ground(1200, 1800)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1150, 90)))
+        // Optional climb.
+        l.ledge(1300, 1420, top: 85)
+        l.ledge(1470, 1590, top: 165)
+        l.pickups.append(Pickup(id: 3, at: Vec2(1530, 210)))
+
+        // Up onto the gantry where Orion waits.
+        l.ground(1700, 1800, top: 90)
+        l.ground(1800, 2400, top: 180)
+        l.partner = Placement(.orion, x: 2080, y: 180)
+        l.checkpoints.append(Vec2(1900, 180))
+
+        // Down to the lower floor and the first machine.
+        l.ground(2520, 3700)
+        l.pickups.append(Pickup(id: 4, at: Vec2(2460, 150)))
+        l.checkpoints.append(Vec2(2620, 0))
+        l.enemies.append(Placement(.scrapDrone, x: 3000))
+        return l
+    }()
+
+    /// Chapter 1, segment B. Machines in numbers, arcs that alternate, platforms over pits, one secret.
+    public static let machineHall: Level = {
+        var l = Level(name: "The Machine Hall", width: 5900, start: Vec2(120, 0), exitX: 5780)
+        l.partner = Placement(.orion, x: 60)
+
+        l.ground(-200, 800)
+        l.enemies.append(Placement(.scrapDrone, x: 520))
+        l.enemies.append(Placement(.scrapDrone, x: 640))
+
+        // A pit crossed on a moving platform.
+        l.ledge(820, 940, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(1200, 2600)
+        l.checkpoints.append(Vec2(1270, 0))
+        l.enemies.append(Placement(.forgedSoldier, x: 1600))
+
+        // Two arcs that take turns.
+        l.hazards.append(Hazard(Box(minX: 1830, minY: 0, maxX: 1862, maxY: 150), damage: 12, period: 160, onFrames: 80))
+        l.hazards.append(Hazard(Box(minX: 1940, minY: 0, maxX: 1972, maxY: 150), damage: 12, period: 160, onFrames: 80,
+                                phase: 80))
+        l.pickups.append(Pickup(id: 1, at: Vec2(1900, 40)))
+
+        // A raised walkway, and above it the secret.
+        l.ground(2080, 2600, top: 80)
+        l.ledge(2200, 2320, top: 165)
+        l.ledge(2380, 2500, top: 250)
+        l.pickups.append(Pickup(id: 2, at: Vec2(2440, 295), secret: true))
+
+        // The swarm.
+        l.ground(2720, 3500)
+        l.checkpoints.append(Vec2(2790, 0))
+        l.enemies.append(Placement(.scrapDrone, x: 2980))
+        l.enemies.append(Placement(.scrapDrone, x: 3080))
+        l.enemies.append(Placement(.scrapDrone, x: 3180))
+        l.pickups.append(Pickup(id: 3, at: Vec2(3250, 40)))
+
+        // Up the lift, then over the long pit on a slow platform.
+        l.ledge(3390, 3490, top: 0, travel: Vec2(0, 170), period: 240)
+        l.ground(3500, 3700, top: 150)
+        l.pickups.append(Pickup(id: 4, at: Vec2(3600, 195)))
+        l.ledge(3720, 3840, top: 150, travel: Vec2(340, 0), period: 320)
+        l.ground(4200, 4400, top: 150)
+
+        // The gate guard.
+        l.ground(4400, 6100)
+        l.checkpoints.append(Vec2(4300, 150))
+        l.hazards.append(Hazard(Box(minX: 4640, minY: 0, maxX: 4672, maxY: 150), damage: 12, period: 150, onFrames: 80))
+        l.enemies.append(Placement(.forgedSoldier, x: 4950))
+        l.enemies.append(Placement(.scrapDrone, x: 5120))
+        l.enemies.append(Placement(.scrapDrone, x: 5260))
+        l.pickups.append(Pickup(id: 5, at: Vec2(5500, 40)))
+        return l
+    }()
+
+    /// Every level, in play order. The yard is the movement test; the rest is Chapter 1.
+    public static let all: [Level] = [.foundryYard, .awakening, .machineHall]
 }
