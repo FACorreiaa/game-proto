@@ -2,7 +2,8 @@ import ActionCore
 import GameController
 
 /// Keyboard and controller, polled once per rendered frame.
-/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, L switches hero, R restarts.
+/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, L switches hero, R restarts,
+/// M changes between the level and the training room, P shows or hides the debug overlay.
 struct HardwareInput {
     private var wasDown: Set<String> = []
 
@@ -14,6 +15,8 @@ struct HardwareInput {
         var dodge = false
         var switchHero = false
         var restart = false
+        var mode = false
+        var debug = false
     }
 
     mutating func poll() -> Reading {
@@ -29,6 +32,8 @@ struct HardwareInput {
             if held(.keyK) || held(.leftShift) { down.insert("dodge") }
             if held(.keyL) || held(.tab) { down.insert("switch") }
             if held(.keyR) { down.insert("restart") }
+            if held(.keyM) { down.insert("mode") }
+            if held(.keyP) { down.insert("debug") }
         }
 
         if let pad = GCController.current?.extendedGamepad {
@@ -50,6 +55,8 @@ struct HardwareInput {
         reading.dodge = down.contains("dodge") && !wasDown.contains("dodge")
         reading.switchHero = down.contains("switch") && !wasDown.contains("switch")
         reading.restart = down.contains("restart") && !wasDown.contains("restart")
+        reading.mode = down.contains("mode") && !wasDown.contains("mode")
+        reading.debug = down.contains("debug") && !wasDown.contains("debug")
         wasDown = down
         return reading
     }

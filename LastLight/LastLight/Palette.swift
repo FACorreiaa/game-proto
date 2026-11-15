@@ -12,5 +12,6 @@ enum Palette {
     static let ember = SKColor(red: 1.0, green: 0.55, blue: 0.2, alpha: 1)
     static let plate = SKColor(red: 0.74, green: 0.78, blue: 0.82, alpha: 1)
     static let steel = SKColor(red: 0.62, green: 0.66, blue: 0.72, alpha: 1)
+    static let gold = SKColor(red: 1.0, green: 0.82, blue: 0.4, alpha: 1)
     static let white = SKColor.white
 }

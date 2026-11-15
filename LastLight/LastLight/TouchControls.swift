@@ -14,10 +14,10 @@ final class TouchControls: SKNode {
     /// Presses since the last time they were taken.
     private var pressed: Set<Button> = []
 
-    private var stickTouch: UITouch?
+    private var stickTouch: ObjectIdentifier?
     private var stickOrigin = CGPoint.zero
     private var stickRest = CGPoint.zero
-    private var buttonTouches: [UITouch: Button] = [:]
+    private var buttonTouches: [ObjectIdentifier: Button] = [:]
 
     private let stickBase = SKShapeNode(circleOfRadius: 52)
     private let stickKnob = SKShapeNode(circleOfRadius: 24)
@@ -58,7 +58,7 @@ final class TouchControls: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func layout(size: CGSize, insets: UIEdgeInsets) {
+    func layout(size: CGSize, insets: Insets) {
         sceneSize = size
         let left = max(insets.left, 16)
         let right = max(insets.right, 16)
@@ -78,9 +78,9 @@ final class TouchControls: SKNode {
         return pressed
     }
 
-    // MARK: Touches (locations are in scene coordinates)
+    // MARK: Touches (locations are in scene coordinates; a touch is known by its identity)
 
-    func began(_ touch: UITouch, at point: CGPoint) {
+    func began(_ touch: ObjectIdentifier, at point: CGPoint) {
         if let button = button(at: point) {
             buttonTouches[touch] = button
             pressed.insert(button)
@@ -93,8 +93,8 @@ final class TouchControls: SKNode {
         }
     }
 
-    func moved(_ touch: UITouch, to point: CGPoint) {
-        guard touch === stickTouch else { return }
+    func moved(_ touch: ObjectIdentifier, to point: CGPoint) {
+        guard touch == stickTouch else { return }
         let dx = point.x - stickOrigin.x
         let dy = point.y - stickOrigin.y
         // The base follows a thumb that drags past its edge, so reversing direction is always quick.
@@ -105,8 +105,8 @@ final class TouchControls: SKNode {
         showStick(at: stickOrigin, knob: CGPoint(x: stickOrigin.x + x, y: stickOrigin.y + clampedY))
     }
 
-    func ended(_ touch: UITouch) {
-        if touch === stickTouch {
+    func ended(_ touch: ObjectIdentifier) {
+        if touch == stickTouch {
             stickTouch = nil
             moveX = 0
             showStick(at: stickRest, knob: stickRest)
