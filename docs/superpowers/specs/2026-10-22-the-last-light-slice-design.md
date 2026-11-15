@@ -1,6 +1,7 @@
 # The Last Light — Vertical Slice Design
 
-*Working title. Date: 2026-10-22. Status: draft for approval.*
+*Working title. Date: 2026-10-22. Status: **superseded on 2026-11-15** by
+`2026-11-15-the-last-light-action-rpg-design.md` (pivot to an action RPG). Kept for reference.*
 
 ## 1. Intent
 

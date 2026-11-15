@@ -4,3 +4,8 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 .DS_Store
+fastlane/build/
+fastlane/report.xml
+fastlane/README.md
+*.ipa
+*.dSYM.zip

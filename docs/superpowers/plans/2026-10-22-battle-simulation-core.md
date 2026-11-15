@@ -1,5 +1,7 @@
 # Battle Simulation Core Implementation Plan
 
+> **Superseded on 2026-11-15.** The game pivoted to an action RPG (see `docs/superpowers/specs/2026-11-15-the-last-light-action-rpg-design.md`). This plan was completed and merged; its code is kept but unused by the new game.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a deterministic, unit-tested pure-Swift battle simulator for The Last Light. It covers formation, targeting, auto-attacks, charge and abilities, adjacency bonds and evolution stages, plus a balance CLI that flags dominant units.

@@ -1,0 +1,20 @@
+/// What happened during a step. The renderer and the sound layer react to these; they never decide outcomes.
+public enum GameEvent: Equatable, Sendable {
+    case spawned(id: Int, kind: FighterKind)
+    case swing(id: Int, index: Int)
+    case hit(attacker: Int, target: Int, damage: Double, at: Vec2)
+    case blocked(attacker: Int, target: Int, at: Vec2)
+    case parried(by: Int, attacker: Int, at: Vec2)
+    case evaded(id: Int)
+    case jumped(id: Int)
+    case landed(id: Int)
+    case dodged(id: Int)
+    case fuseLit(id: Int)
+    case exploded(id: Int, at: Vec2, radius: Double)
+    case died(id: Int)
+    case waveStarted(number: Int)
+    case waveCleared(number: Int)
+    case controlChanged(id: Int)
+    case revived(id: Int)
+    case heroDown
+}
