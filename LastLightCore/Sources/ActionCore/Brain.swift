@@ -96,7 +96,8 @@ public struct PartnerBrain: Brain {
             if me.aiAux != foe.id {
                 me.aiAux = foe.id
                 if Double.random(in: 0..<1, using: &rng) < tuning.partnerDodgeChance {
-                    return InputFrame(moveX: away, dodge: true)
+                    // Against a shield it dodges through, to come out behind it.
+                    return InputFrame(moveX: foe.spec.frontalBlock ? -away : away, dodge: true)
                 }
             }
         }
@@ -110,6 +111,14 @@ public struct PartnerBrain: Brain {
         if let target {
             let dx = target.pos.x - me.pos.x
             let dir: Double = dx >= 0 ? 1 : -1
+            // Hitting a raised shield does nothing, so it stands just out of reach and waits for an opening.
+            let shielded = target.isGuarding && (me.pos.x - target.pos.x) * target.facing >= 0
+            if shielded, let swing = target.spec.attacks.first {
+                let standoff = target.spec.width / 2 + swing.reach + me.spec.width / 2 + 24
+                if abs(dx) < standoff { return InputFrame(moveX: -dir) }
+                if abs(dx) > standoff + 30 { return InputFrame(moveX: dir) }
+                return InputFrame(moveX: dir * facingNudge)
+            }
             if abs(dx) > strikeDistance(me, target) { return InputFrame(moveX: dir) }
             if me.aiCooldown == 0 {
                 me.aiCooldown = Int.random(in: tuning.partnerAttackGap, using: &rng)

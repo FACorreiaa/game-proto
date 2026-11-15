@@ -95,18 +95,37 @@ private let switchPress = InputFrame(switchHero: true)
     #expect(world.fighter(orion)?.isAlive == true)
 }
 
-@Test func thePartnerCanClearASmallGroupWhileTheLeaderStandsIdle() {
+/// A leader who stands still and cannot be worn down, so the outcome is the partner's work.
+private func stoicLeader() -> FighterSpec {
+    var spec = Tuning().caelen
+    spec.maxHP = 100_000
+    return spec
+}
+
+@Test func thePartnerClearsDronesOnItsOwn() {
     for seed in 1...5 {
         var world = World(seed: UInt64(seed))
-        world.control(world.spawn(.caelen, x: 300, facing: 1))
+        world.control(world.spawn(.caelen, x: 300, facing: 1, spec: stoicLeader()))
         world.spawn(.orion, x: 380, facing: 1)
         world.spawn(.scrapDrone, x: 800)
         world.spawn(.scrapDrone, x: 900)
-        world.spawn(.forgedSoldier, x: 1000)
-        _ = run(&world, frames: 5400)
-        let enemiesLeft = world.fighters.filter { $0.team == .enemy && $0.isAlive }.count
-        #expect(enemiesLeft == 0, "seed \(seed)")
-        #expect(!world.isOver, "seed \(seed)")
+        _ = run(&world, frames: 3600)
+        #expect(!world.fighters.contains { $0.team == .enemy && $0.isAlive }, "seed \(seed)")
+        #expect(world.fighters.contains { $0.kind == .orion && $0.isAlive }, "seed \(seed)")
+    }
+}
+
+@Test func thePartnerPunishesAShieldedSoldierThatIsBusyWithTheLeader() {
+    for seed in 1...5 {
+        var world = World(seed: UInt64(seed))
+        world.control(world.spawn(.caelen, x: 300, facing: 1, spec: stoicLeader()))
+        let orion = world.spawn(.orion, x: 250, facing: 1)
+        let soldier = world.spawn(.forgedSoldier, x: 520)
+        let events = run(&world, frames: 5400)
+        #expect(world.fighter(soldier)?.isAlive != true, "seed \(seed)")
+        // It waits for openings rather than hammering the shield.
+        let blocked = events.filter { if case .blocked(orion, _, _) = $0 { true } else { false } }.count
+        #expect(blocked <= 3, "seed \(seed): \(blocked) blocked hits")
     }
 }
 
