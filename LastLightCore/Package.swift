@@ -6,11 +6,14 @@ let package = Package(
     platforms: [.iOS(.v18), .macOS(.v15)],
     products: [
         .library(name: "LastLightCore", targets: ["LastLightCore"]),
+        .library(name: "ActionCore", targets: ["ActionCore"]),
         .executable(name: "lastlight-sim", targets: ["lastlight-sim"]),
     ],
     targets: [
         .target(name: "LastLightCore"),
+        .target(name: "ActionCore", dependencies: ["LastLightCore"]),
         .executableTarget(name: "lastlight-sim", dependencies: ["LastLightCore"]),
         .testTarget(name: "LastLightCoreTests", dependencies: ["LastLightCore"]),
+        .testTarget(name: "ActionCoreTests", dependencies: ["ActionCore"]),
     ]
 )
