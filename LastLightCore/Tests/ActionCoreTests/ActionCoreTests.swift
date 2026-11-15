@@ -6,7 +6,9 @@ import Testing
 private struct ScriptBrain: Brain {
     var attackOn: Set<Int>
 
-    func think(me: inout Fighter, foes: [Fighter], tuning: Tuning, rng: inout SeededRandom) -> InputFrame {
+    func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
         defer { me.aiAux += 1 }
         return InputFrame(attack: attackOn.contains(me.aiAux))
     }

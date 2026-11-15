@@ -3,8 +3,18 @@ public enum Team: Sendable, Equatable {
     case enemy
 }
 
+extension FighterKind {
+    public var team: Team {
+        switch self {
+        case .caelen, .orion: .hero
+        case .dummy, .scrapDrone, .forgedSoldier: .enemy
+        }
+    }
+}
+
 public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case caelen
+    case orion
     case dummy
     case scrapDrone
     case forgedSoldier

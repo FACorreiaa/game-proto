@@ -14,5 +14,7 @@ public enum GameEvent: Equatable, Sendable {
     case died(id: Int)
     case waveStarted(number: Int)
     case waveCleared(number: Int)
+    case controlChanged(id: Int)
+    case revived(id: Int)
     case heroDown
 }

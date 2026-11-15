@@ -3,7 +3,9 @@ import LastLightCore
 /// Decides what a fighter wants to do this frame. Enemies use it now; the AI partner will use the same
 /// interface, so handing control to the player is only a matter of whose input a fighter reads.
 public protocol Brain: Sendable {
-    func think(me: inout Fighter, foes: [Fighter], tuning: Tuning, rng: inout SeededRandom) -> InputFrame
+    func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame
 }
 
 /// A tiny stick push: enough to turn and face a target without really moving.
@@ -22,7 +24,9 @@ private func strikeDistance(_ me: Fighter, _ target: Fighter) -> Double {
 public struct DroneBrain: Brain {
     public init() {}
 
-    public func think(me: inout Fighter, foes: [Fighter], tuning: Tuning, rng: inout SeededRandom) -> InputFrame {
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
         guard let target = nearest(foes, to: me) else { return .neutral }
         let dx = target.pos.x - me.pos.x
         let dir: Double = dx >= 0 ? 1 : -1
@@ -44,7 +48,9 @@ public struct DroneBrain: Brain {
 public struct SoldierBrain: Brain {
     public init() {}
 
-    public func think(me: inout Fighter, foes: [Fighter], tuning: Tuning, rng: inout SeededRandom) -> InputFrame {
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
         guard let target = nearest(foes, to: me) else { return .neutral }
         let dx = target.pos.x - me.pos.x
         let dir: Double = dx >= 0 ? 1 : -1
@@ -62,5 +68,60 @@ public struct SoldierBrain: Brain {
             return InputFrame(moveX: dir * facingNudge, attack: true)
         }
         return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
+/// The hero the player is not controlling: stays near the leader, fights what is near the leader,
+/// and gets out of the way of attacks it can see coming, most of the time.
+public struct PartnerBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        let leader = allies.first { $0.id != me.id }
+
+        // Threats first.
+        var threatened = false
+        for foe in foes {
+            let dx = foe.pos.x - me.pos.x
+            let away: Double = dx >= 0 ? -1 : 1
+            if foe.state == .fuse, abs(dx) < 170 { return InputFrame(moveX: away) }
+            guard let attack = foe.currentAttack, foe.attackPhase == .windup,
+                  attack.windup - foe.stateFrame <= 6,
+                  abs(dx) < me.spec.width / 2 + foe.spec.width / 2 + attack.reach + 50 else { continue }
+            threatened = true
+            // Decide once per incoming attack whether it sees this one coming.
+            if me.aiAux != foe.id {
+                me.aiAux = foe.id
+                if Double.random(in: 0..<1, using: &rng) < tuning.partnerDodgeChance {
+                    return InputFrame(moveX: away, dodge: true)
+                }
+            }
+        }
+        if !threatened { me.aiAux = 0 }
+
+        // Fight what is near the leader, or near itself when it is alone.
+        let anchor = leader ?? me
+        let target = foes
+            .filter { abs($0.pos.x - anchor.pos.x) <= tuning.partnerEngageRange }
+            .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+        if let target {
+            let dx = target.pos.x - me.pos.x
+            let dir: Double = dx >= 0 ? 1 : -1
+            if abs(dx) > strikeDistance(me, target) { return InputFrame(moveX: dir) }
+            if me.aiCooldown == 0 {
+                me.aiCooldown = Int.random(in: tuning.partnerAttackGap, using: &rng)
+                return InputFrame(moveX: dir * facingNudge, attack: true)
+            }
+            return InputFrame(moveX: dir * facingNudge)
+        }
+
+        // Nothing to fight: fall in behind the leader.
+        guard let leader else { return .neutral }
+        let dx = leader.pos.x - leader.facing * tuning.partnerFollowDistance - me.pos.x
+        if abs(dx) < 30 { return .neutral }
+        return InputFrame(moveX: max(-1, min(1, dx / 60)))
     }
 }

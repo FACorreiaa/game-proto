@@ -26,6 +26,7 @@ public struct World: Sendable {
     var waves: [[Spawn]] = []
     var waveLive = false
     var waveDelay = 0
+    var switchCooldown = 0
     var rng: SeededRandom
     var nextID = 1
 
@@ -47,10 +48,9 @@ public struct World: Sendable {
     public mutating func spawn(_ kind: FighterKind, x: Double, facing: Double? = nil, spec: FighterSpec? = nil) -> Int {
         let id = nextID
         nextID += 1
-        let team: Team = kind == .caelen ? .hero : .enemy
         let mid = (arena.lowerBound + arena.upperBound) / 2
         fighters.append(Fighter(
-            id: id, kind: kind, team: team, spec: spec ?? tuning.spec(for: kind),
+            id: id, kind: kind, team: kind.team, spec: spec ?? tuning.spec(for: kind),
             pos: Vec2(x, 0), facing: facing ?? (x <= mid ? 1 : -1)))
         return id
     }
@@ -76,6 +76,10 @@ public struct World: Sendable {
 
         var events: [GameEvent] = []
         var explosions: [Int] = []
+        if switchCooldown > 0 { switchCooldown -= 1 }
+        if input.switchHero, switchCooldown == 0, let other = otherHero() {
+            passControl(to: other, &events)
+        }
         let snapshot = fighters
         for i in fighters.indices {
             var f = fighters[i]
@@ -84,7 +88,8 @@ public struct World: Sendable {
                 inp = input
             } else if f.isAlive, let brain = f.spec.brain {
                 let foes = snapshot.filter { $0.team != f.team && $0.isAlive && !$0.spec.immortal }
-                inp = brain.think(me: &f, foes: foes, tuning: tuning, rng: &rng)
+                let allies = snapshot.filter { $0.team == f.team && $0.isAlive }
+                inp = brain.think(me: &f, foes: foes, allies: allies, tuning: tuning, rng: &rng)
                 latch(&f, inp)
             }
             if update(&f, inp, &events) { explosions.append(f.id) }
@@ -101,6 +106,17 @@ public struct World: Sendable {
 
     private func index(of id: Int) -> Int? {
         fighters.firstIndex { $0.id == id }
+    }
+
+    /// The living hero the player is not controlling, if there is one.
+    private func otherHero() -> Int? {
+        fighters.first { $0.team == .hero && $0.isAlive && $0.id != controlledID }?.id
+    }
+
+    private mutating func passControl(to id: Int, _ events: inout [GameEvent]) {
+        controlledID = id
+        switchCooldown = tuning.switchCooldown
+        events.append(.controlChanged(id: id))
     }
 
     /// Remembers a press for a few frames, so pressing slightly early still counts.
@@ -281,7 +297,8 @@ public struct World: Sendable {
         }
 
         let push: Double = attacker.pos.x == target.pos.x ? attacker.facing : (target.pos.x > attacker.pos.x ? 1 : -1)
-        hurt(t, damage: attack.damage, by: attacker.id, at: contact, push: push * attack.knockback,
+        let ai = attacker.team == .hero && attacker.id != controlledID
+        hurt(t, damage: attack.damage * (ai ? tuning.partnerDamageScale : 1), by: attacker.id, at: contact, push: push * attack.knockback,
              hitstun: attack.hitstun, &events)
         hitStop = max(hitStop, target.team == .hero ? tuning.heroHurtHitStop : attack.hitStop)
     }
@@ -356,9 +373,13 @@ public struct World: Sendable {
         }
 
         if let hero = controlled, !hero.isAlive {
-            isOver = true
-            events.append(.heroDown)
-            return
+            if let other = otherHero() {
+                passControl(to: other, &events)
+            } else {
+                isOver = true
+                events.append(.heroDown)
+                return
+            }
         }
 
         guard !waves.isEmpty else { return }
@@ -367,8 +388,15 @@ public struct World: Sendable {
             waveLive = false
             waveDelay = tuning.waveDelay
             events.append(.waveCleared(number: waveNumber))
-            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive {
-                fighters[i].hp = min(fighters[i].spec.maxHP, fighters[i].hp + tuning.waveClearHeal)
+            for i in fighters.indices where fighters[i].team == .hero {
+                if fighters[i].isAlive {
+                    fighters[i].hp = min(fighters[i].spec.maxHP, fighters[i].hp + tuning.waveClearHeal)
+                } else {
+                    fighters[i].hp = fighters[i].spec.maxHP * tuning.reviveFraction
+                    fighters[i].enter(.idle)
+                    fighters[i].invulnerable = fighters[i].spec.hurtInvulnerable
+                    events.append(.revived(id: fighters[i].id))
+                }
             }
         } else if !waveLive, !remaining {
             if waveDelay > 0 {
@@ -404,6 +432,13 @@ extension World {
             [Spawn(.forgedSoldier, x: 0.94), Spawn(.scrapDrone, x: 0.02), Spawn(.scrapDrone, x: 0.99),
              Spawn(.scrapDrone, x: 0.86)],
         ], firstDelay: 240)
+        return world
+    }
+
+    /// Stage 2: the same room with Orion at Caelen's side. The player can switch between them.
+    public static func partnerSlice(seed: UInt64, tuning: Tuning = Tuning()) -> World {
+        var world = feelSlice(seed: seed, tuning: tuning)
+        world.spawn(.orion, x: 290, facing: 1)
         return world
     }
 }

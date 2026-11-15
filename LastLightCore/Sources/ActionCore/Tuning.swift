@@ -26,6 +26,17 @@ public struct Tuning: Sendable {
     public var soldierAttackGap = 50...90
     public var soldierTurnDelay = 28
 
+    /// The AI partner hits softer than the player does, so it helps without taking the fight over.
+    public var partnerDamageScale = 0.6
+    public var partnerAttackGap = 22...50
+    /// How often the partner reacts to a telegraphed attack by dodging.
+    public var partnerDodgeChance = 0.6
+    public var partnerFollowDistance = 80.0
+    public var partnerEngageRange = 420.0
+    public var switchCooldown = 20
+    /// A fallen hero gets back up with this fraction of health when a wave is cleared.
+    public var reviveFraction = 0.4
+
     public var caelen: FighterSpec = {
         var s = FighterSpec(width: 36, height: 84, maxHP: 100, runSpeed: 270)
         s.jumpSpeed = 660
@@ -40,6 +51,23 @@ public struct Tuning: Sendable {
         s.dodge = DodgeSpec(duration: 16, speed: 560, invulnerable: 1...11, cooldown: 24)
         s.parryWindow = 8
         s.hurtInvulnerable = 40
+        s.brain = PartnerBrain()
+        return s
+    }()
+
+    public var orion: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 86, maxHP: 90, runSpeed: 285)
+        s.jumpSpeed = 660
+        s.attacks = [
+            AttackSpec(windup: 2, active: 3, recovery: 9, damage: 7, reach: 50, height: 66, yOffset: 12,
+                       knockback: 110, lunge: 120, hitstun: 12, hitStop: 2),
+            AttackSpec(windup: 3, active: 4, recovery: 14, damage: 11, reach: 56, height: 70, yOffset: 10,
+                       knockback: 220, lunge: 150, hitstun: 18, hitStop: 4),
+        ]
+        s.dodge = DodgeSpec(duration: 16, speed: 580, invulnerable: 1...11, cooldown: 22)
+        s.parryWindow = 6
+        s.hurtInvulnerable = 40
+        s.brain = PartnerBrain()
         return s
     }()
 
@@ -78,6 +106,7 @@ public struct Tuning: Sendable {
     public func spec(for kind: FighterKind) -> FighterSpec {
         switch kind {
         case .caelen: caelen
+        case .orion: orion
         case .dummy: dummy
         case .scrapDrone: scrapDrone
         case .forgedSoldier: forgedSoldier
