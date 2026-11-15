@@ -30,6 +30,9 @@ public struct World: Sendable {
     public private(set) var checkpointIndex = -1
     public private(set) var collected: Set<Int> = []
     public private(set) var isComplete = false
+    public private(set) var bossID: Int?
+    var bossDownFrames = 0
+    var firedScenes: Set<String> = []
     var platformDeltas: [Vec2]
 
     var waves: [[Spawn]] = []
@@ -75,9 +78,14 @@ public struct World: Sendable {
             spawn(e.kind, x: e.pos.x, y: e.pos.y, facing: -1)
             fighters[fighters.count - 1].awake = tuning.spec(for: e.kind).brain == nil
         }
+        if let b = level.boss {
+            bossID = spawn(b.kind, x: b.pos.x, y: b.pos.y, facing: -1)
+            fighters[fighters.count - 1].awake = false
+        }
     }
 
     public var controlled: Fighter? { fighter(controlledID) }
+    public var boss: Fighter? { bossID.flatMap(fighter) }
 
     public func fighter(_ id: Int) -> Fighter? {
         fighters.first { $0.id == id }
@@ -150,8 +158,9 @@ public struct World: Sendable {
                 if noticed {
                     f.awake = true
                     f.aiAux = 0
+                    if f.spec.wakeDelay > 0 { f.aiCooldown = f.spec.wakeDelay }
                     events.append(.woke(id: f.id))
-                } else if f.spec.runSpeed > 0, !f.spec.rooted {
+                } else if f.spec.runSpeed > 0, !f.spec.rooted, !f.spec.boss {
                     // Paces back and forth until a hero comes close.
                     f.patrolFrames += 1
                     if f.patrolFrames >= tuning.patrolTurnFrames {
@@ -182,8 +191,27 @@ public struct World: Sendable {
         for id in explosions { explode(id, &events) }
         levelRules(&events)
         housekeeping(&events)
+        cueScenes(&events)
         frame += 1
         return events
+    }
+
+    /// Announces each story scene once, when what sets it off happens.
+    private mutating func cueScenes(_ events: inout [GameEvent]) {
+        guard let level, firedScenes.count < level.scenes.count else { return }
+        for trigger in level.scenes where !firedScenes.contains(trigger.scene) {
+            let due: Bool = switch trigger.cue {
+            case .start: true
+            case .reach(let x): (controlled?.pos.x ?? -.infinity) >= x
+            case .partnerJoins: events.contains { if case .joined = $0 { true } else { false } }
+            case .bossWakes: bossID.map { events.contains(.woke(id: $0)) } ?? false
+            case .complete: events.contains(.levelComplete)
+            }
+            if due {
+                firedScenes.insert(trigger.scene)
+                events.append(.scene(id: trigger.scene))
+            }
+        }
     }
 
     private func index(of id: Int) -> Int? {
@@ -248,9 +276,10 @@ public struct World: Sendable {
         case .attack(let i):
             let a = f.spec.attacks[i]
             if f.onGround {
-                f.vel.x = f.stateFrame < a.windup + a.active ? f.facing * a.lunge : 0
+                let moving = f.stateFrame < a.windup + a.active && !(a.holdsStill && f.stateFrame < a.windup)
+                f.vel.x = moving ? f.facing * a.lunge : 0
             }
-            if f.stateFrame >= a.chainFrom, f.attackBuffer > 0, i + 1 < f.spec.attacks.count, f.onGround {
+            if !f.spec.boss, f.stateFrame >= a.chainFrom, f.attackBuffer > 0, i + 1 < f.spec.attacks.count, f.onGround {
                 startAttack(&f, i + 1, inp, &events)
             } else if f.stateFrame >= a.windup + a.active, canDodge(f) {
                 startDodge(&f, inp, &events)
@@ -275,7 +304,7 @@ public struct World: Sendable {
             if canDodge(f) {
                 startDodge(&f, inp, &events)
             } else if f.attackBuffer > 0, !f.spec.attacks.isEmpty {
-                startAttack(&f, 0, inp, &events)
+                startAttack(&f, f.spec.boss ? min(f.nextAttack, f.spec.attacks.count - 1) : 0, inp, &events)
             } else {
                 if f.jumpBuffer > 0, f.spec.jumpSpeed > 0, f.onGround || f.coyote > 0 {
                     f.jumpBuffer = 0
@@ -510,7 +539,7 @@ public struct World: Sendable {
         }
 
         let fromFront = (attacker.pos.x - target.pos.x) * target.facing >= 0
-        if target.isGuarding, fromFront {
+        if !target.isOpen || (target.isGuarding && fromFront) {
             events.append(.blocked(attacker: attacker.id, target: target.id, at: contact))
             return
         }
@@ -537,11 +566,12 @@ public struct World: Sendable {
             f.vel.x = push
             f.enter(.dead)
             events.append(.died(id: f.id))
+            if f.spec.boss { events.append(.bossDefeated(id: f.id)) }
         } else {
             if let sd = f.spec.selfDestruct, f.state != .fuse, f.hp <= f.spec.maxHP * sd.threshold {
                 f.enter(.fuse)
                 events.append(.fuseLit(id: f.id))
-            } else if f.state == .fuse || f.state == .staggered || f.spec.rooted {
+            } else if f.state == .fuse || f.state == .staggered || f.spec.rooted || f.spec.armored {
                 // Keeps doing what it was doing.
             } else if f.spec.poise, case .attack = f.state {
                 // Finishes its swing.
@@ -648,7 +678,14 @@ public struct World: Sendable {
             fighters[i].hp = min(hero.spec.maxHP, hero.hp + tuning.checkpointHeal)
             events.append(.checkpoint(index: n))
         }
-        if hero.onGround, hero.pos.x >= level.exitX {
+        if let bossID, let b = index(of: bossID), !fighters[b].isAlive {
+            bossDownFrames += 1
+            if bossDownFrames >= tuning.bossVictoryFrames {
+                isComplete = true
+                isOver = true
+                events.append(.levelComplete)
+            }
+        } else if hero.onGround, hero.pos.x >= level.exitX {
             isComplete = true
             isOver = true
             events.append(.levelComplete)
@@ -660,7 +697,7 @@ public struct World: Sendable {
     private mutating func housekeeping(_ events: inout [GameEvent]) {
         guard !isComplete else { return }
         let corpseFrames = tuning.corpseFrames
-        fighters.removeAll { $0.team == .enemy && $0.state == .dead && $0.stateFrame >= corpseFrames }
+        fighters.removeAll { $0.team == .enemy && $0.state == .dead && $0.stateFrame >= corpseFrames && !$0.spec.boss }
         for i in fighters.indices where fighters[i].spec.immortal && fighters[i].sinceHit > tuning.dummyRegenFrames {
             fighters[i].hp = fighters[i].spec.maxHP
         }

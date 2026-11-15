@@ -7,7 +7,7 @@ extension FighterKind {
     public var team: Team {
         switch self {
         case .caelen, .orion: .hero
-        case .dummy, .scrapDrone, .forgedSoldier: .enemy
+        case .dummy, .scrapDrone, .forgedSoldier, .theProtocol: .enemy
         }
     }
 }
@@ -18,6 +18,7 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case dummy
     case scrapDrone
     case forgedSoldier
+    case theProtocol
 }
 
 /// One swing. All durations are in frames at 60 per second.
@@ -35,6 +36,8 @@ public struct AttackSpec: Sendable, Equatable {
     public var lunge: Double
     public var hitstun: Int
     public var hitStop: Int
+    /// Stands still through the windup and moves only while striking: a charge.
+    public var holdsStill = false
 
     public var total: Int { windup + active + recovery }
     /// First frame on which a buffered attack press chains into the next swing.
@@ -110,6 +113,12 @@ public struct FighterSpec: Sendable {
     public var selfDestruct: SelfDestructSpec?
     public var immortal = false
     public var rooted = false
+    /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
+    public var armored = false
+    /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.
+    public var boss = false
+    /// Frames it takes to rise after noticing a hero, before its first move.
+    public var wakeDelay = 0
     public var brain: (any Brain)?
 
     public init(width: Double, height: Double, maxHP: Double, runSpeed: Double) {

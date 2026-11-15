@@ -12,6 +12,10 @@ final class FighterNode: SKNode {
     private var weapon: SKShapeNode?
     private var eye: SKShapeNode?
     private var shield: SKShapeNode?
+    private var core: SKShapeNode?
+    /// The Protocol shows where its next attack will land.
+    private let zone = SKShapeNode()
+    private var zoneAttack = -1
     private var flashFrames = 0
     /// One arc per swing, even while hit-stop holds the same frame on screen.
     private var arcDrawn = false
@@ -33,6 +37,7 @@ final class FighterNode: SKNode {
         case .dummy: buildDummy()
         case .scrapDrone: buildDrone()
         case .forgedSoldier: buildSoldier()
+        case .theProtocol: buildProtocol()
         }
     }
 
@@ -179,6 +184,70 @@ final class FighterNode: SKNode {
         shield = plate
     }
 
+    /// The Protocol: a tower of plate on two pillars, a red visor, and a core in its chest that opens.
+    private func buildProtocol() {
+        leg(x: -40, hipY: 96, length: 96, width: 34)
+        leg(x: 40, hipY: 96, length: 96, width: 34)
+        _ = part(CGPath(roundedRect: CGRect(x: -75, y: 84, width: 150, height: 120), cornerWidth: 14, cornerHeight: 14, transform: nil))
+        let shoulders = CGMutablePath()
+        shoulders.addLines(between: [
+            CGPoint(x: -92, y: 176), CGPoint(x: -60, y: 214), CGPoint(x: 60, y: 214), CGPoint(x: 92, y: 176),
+            CGPoint(x: 70, y: 160), CGPoint(x: -70, y: 160),
+        ])
+        shoulders.closeSubpath()
+        _ = part(shoulders, z: 1)
+        _ = part(CGPath(roundedRect: CGRect(x: -30, y: 204, width: 64, height: 46), cornerWidth: 8, cornerHeight: 8, transform: nil), z: 1)
+        let arm = part(CGPath(roundedRect: CGRect(x: 52, y: 70, width: 30, height: 100), cornerWidth: 10, cornerHeight: 10, transform: nil), z: 2)
+        arm.strokeColor = Palette.red.withAlphaComponent(0.6)
+        let visor = SKShapeNode(rect: CGRect(x: -2, y: 226, width: 34, height: 6))
+        light(visor, color: Palette.red, glow: 5)
+        figure.addChild(visor)
+        eye = visor
+        let heart = SKShapeNode(circleOfRadius: 20)
+        heart.position = CGPoint(x: 6, y: 138)
+        heart.lineWidth = 3
+        heart.zPosition = 3
+        figure.addChild(heart)
+        core = heart
+
+        zone.lineWidth = 2
+        zone.zPosition = -3
+        zone.isHidden = true
+        addChild(zone)
+    }
+
+    /// Where the attack will land, drawn faint through the warning and bright on the strike.
+    private func animateZone(_ f: Fighter) {
+        guard kind == .theProtocol else { return }
+        guard case .attack(let index) = f.state, let a = f.currentAttack, f.attackPhase != .recovery else {
+            zone.isHidden = true
+            zoneAttack = -1
+            return
+        }
+        if zoneAttack != index {
+            zoneAttack = index
+            let travel = a.holdsStill ? a.lunge * Double(a.active) / Tuning.framesPerSecond : 0
+            let far = f.spec.width / 2 + a.reach + travel
+            zone.path = CGPath(rect: CGRect(x: 0, y: a.yOffset, width: far, height: a.height), transform: nil)
+        }
+        zone.isHidden = false
+        let striking = f.attackPhase == .active
+        let t = CGFloat(f.stateFrame) / CGFloat(max(a.windup, 1))
+        let last = a.windup - f.stateFrame <= 8
+        zone.fillColor = Palette.red.withAlphaComponent(striking ? 0.55 : (last ? 0.3 : 0.05 + 0.13 * t))
+        zone.strokeColor = Palette.red.withAlphaComponent(striking ? 1 : 0.25 + 0.5 * t)
+        zone.glowWidth = striking ? 6 : 0
+    }
+
+    private func animateCore(_ f: Fighter, frame: Int) {
+        guard let core else { return }
+        let open = f.isOpen && f.isAlive
+        core.fillColor = open ? Palette.gold : Palette.body
+        core.strokeColor = open ? Palette.white : Palette.red.withAlphaComponent(f.awake ? 0.7 : 0.2)
+        core.glowWidth = open ? 10 : 0
+        core.setScale(open ? 1.15 + 0.12 * sin(CGFloat(frame) * 0.4) : 1)
+    }
+
     // MARK: Per-frame
 
     func flash() {
@@ -212,14 +281,15 @@ final class FighterNode: SKNode {
         case .air:
             stretch = f.vel.y > 0 ? CGSize(width: 0.94, height: 1.06) : CGSize(width: 1.04, height: 0.97)
         case .attack:
-            tilt = f.attackPhase == .windup ? 0.06 : -0.1
+            let lean: CGFloat = kind == .theProtocol ? 0.5 : 1
+            tilt = (f.attackPhase == .windup ? 0.06 : -0.1) * lean
         case .dodge:
             stretch = CGSize(width: 1.3, height: 0.8)
             opacity = 0.55
         case .hitstun:
             tilt = 0.3
         case .staggered:
-            tilt = 0.18 + 0.06 * sin(CGFloat(frame) * 0.5)
+            tilt = (kind == .theProtocol ? 0.06 : 0.18) + 0.06 * sin(CGFloat(frame) * 0.5)
             tint = Palette.ember
         case .fuse:
             // Blinks faster as the fuse runs down.
@@ -228,9 +298,17 @@ final class FighterNode: SKNode {
             let pulse = 1 + 0.12 * sin(CGFloat(f.stateFrame) * 0.6)
             stretch = CGSize(width: pulse, height: pulse)
         case .dead:
-            let t = min(1, CGFloat(f.stateFrame) / 30)
-            tilt = 1.4 * t
-            opacity = 1 - t
+            if kind == .theProtocol {
+                // Too heavy to tumble: it sinks to its knees and goes dark.
+                let t = min(1, CGFloat(f.stateFrame) / 80)
+                stretch.height = 1 - 0.3 * t
+                tilt = 0.12 * t
+                opacity = 1 - 0.5 * t
+            } else {
+                let t = min(1, CGFloat(f.stateFrame) / 30)
+                tilt = 1.4 * t
+                opacity = 1 - t
+            }
         }
 
         if f.invulnerable > 0, f.team == .hero, f.state != .dead, (frame / 3) % 2 == 0 { opacity *= 0.4 }
@@ -248,6 +326,16 @@ final class FighterNode: SKNode {
         animateLegs(f, frame: frame)
         animateWeapon(f)
         animateTelegraph(f)
+        animateZone(f)
+        animateCore(f, frame: frame)
+        if kind == .theProtocol, !f.awake {
+            // Dormant: slumped and dark until a hero comes near.
+            figure.yScale = 0.88
+            figure.alpha = 0.55
+            eye?.alpha = 0.15
+        } else if kind == .theProtocol {
+            eye?.alpha = 1
+        }
 
         if flashFrames > 0 { flashFrames -= 1 }
         let fill = flashFrames > 0 ? Palette.white : (tint ?? baseFill)

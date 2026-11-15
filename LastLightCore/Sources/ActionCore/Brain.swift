@@ -71,6 +71,43 @@ public struct SoldierBrain: Brain {
     }
 }
 
+/// The Protocol: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
+/// It slams what stands close; from further away it charges or sends a surge along the floor.
+public struct ProtocolBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < tuning.protocolTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        if me.aiCooldown == 0 {
+            let enraged = me.hp <= me.spec.maxHP * tuning.protocolEnrageAt
+            let wait = Double(Int.random(in: tuning.protocolAttackGap, using: &rng))
+            me.aiCooldown = Int(wait * (enraged ? tuning.protocolEnrageGapScale : 1))
+            // Up close it mostly slams, but not always, so standing at its feet is never one pattern.
+            let close = gap < me.spec.attacks[0].reach - 15
+            if close, Double.random(in: 0..<1, using: &rng) < tuning.protocolSlamChance {
+                me.nextAttack = 0
+            } else {
+                me.nextAttack = Bool.random(using: &rng) ? 1 : 2
+            }
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        return InputFrame(moveX: gap > 50 ? dir : dir * facingNudge)
+    }
+}
+
 /// The hero the player is not controlling: stays near the leader, fights what is near the leader,
 /// and gets out of the way of attacks it can see coming, most of the time.
 public struct PartnerBrain: Brain {
@@ -90,7 +127,8 @@ public struct PartnerBrain: Brain {
             if foe.state == .fuse, abs(dx) < 170 { return InputFrame(moveX: away) }
             guard let attack = foe.currentAttack, foe.attackPhase == .windup,
                   attack.windup - foe.stateFrame <= 6,
-                  abs(dx) < me.spec.width / 2 + foe.spec.width / 2 + attack.reach + 50 else { continue }
+                  abs(dx) < me.spec.width / 2 + foe.spec.width / 2 + attack.reach + 50
+                      + (attack.holdsStill ? attack.lunge * Double(attack.active) / 60 : 0) else { continue }
             threatened = true
             // Decide once per incoming attack whether it sees this one coming.
             if me.aiAux != foe.id {

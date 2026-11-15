@@ -38,6 +38,8 @@ public struct Fighter: Sendable, Identifiable {
     /// Scratch space for brains.
     public var aiCooldown = 0
     public var aiAux = 0
+    /// Which attack starts on the next attack press. Brains of fighters with several separate attacks set it.
+    public var nextAttack = 0
 
     /// False for a placed enemy that has not noticed a hero yet; it patrols instead of fighting.
     public var awake = true
@@ -101,6 +103,11 @@ public struct Fighter: Sendable, Identifiable {
     /// True while a frontal hit would be stopped by its shield.
     public var isGuarding: Bool {
         spec.frontalBlock && (state == .idle || state == .run)
+    }
+
+    /// True while an armoured fighter can be hurt: after its own attack, or staggered by a parry.
+    public var isOpen: Bool {
+        !spec.armored || attackPhase == .recovery || state == .staggered
     }
 
     var isActionable: Bool { state == .idle || state == .run || state == .air }

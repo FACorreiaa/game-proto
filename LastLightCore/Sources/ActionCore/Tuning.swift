@@ -46,6 +46,16 @@ public struct Tuning: Sendable {
     public var droneAttackGap = 40...85
     public var soldierAttackGap = 50...90
     public var soldierTurnDelay = 28
+    public var protocolAttackGap = 70...110
+    /// Below this fraction of health The Protocol attacks more often.
+    public var protocolEnrageAt = 0.5
+    public var protocolEnrageGapScale = 0.65
+    /// Frames it needs to turn around, which is the time a hero behind it has.
+    public var protocolTurnDelay = 26
+    /// How often it slams a hero standing close, rather than charging or sending a surge.
+    public var protocolSlamChance = 0.6
+    /// Frames between the boss falling and the level ending.
+    public var bossVictoryFrames = 110
 
     /// The AI partner hits softer than the player does, so it helps without taking the fight over.
     public var partnerDamageScale = 0.6
@@ -128,6 +138,25 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Protocol. Attack 0 is the slam (close), 1 the charge (dodge through it), 2 the floor surge (jump it).
+    public var theProtocol: FighterSpec = {
+        var s = FighterSpec(width: 150, height: 250, maxHP: 460, runSpeed: 55)
+        var slam = AttackSpec(windup: 48, active: 6, recovery: 72, damage: 22, reach: 115, height: 130,
+                              knockback: 420, lunge: 0, hitstun: 22, hitStop: 7)
+        var charge = AttackSpec(windup: 56, active: 24, recovery: 84, damage: 20, reach: 40, height: 150,
+                                knockback: 460, lunge: 520, hitstun: 22, hitStop: 7)
+        charge.holdsStill = true
+        var surge = AttackSpec(windup: 62, active: 8, recovery: 76, damage: 16, reach: 640, height: 34,
+                               knockback: 240, lunge: 0, hitstun: 18, hitStop: 5)
+        s.attacks = [slam, charge, surge]
+        s.armored = true
+        s.boss = true
+        s.poise = true
+        s.wakeDelay = 110
+        s.brain = ProtocolBrain()
+        return s
+    }()
+
     public init() {}
 
     public func spec(for kind: FighterKind) -> FighterSpec {
@@ -137,6 +166,7 @@ public struct Tuning: Sendable {
         case .dummy: dummy
         case .scrapDrone: scrapDrone
         case .forgedSoldier: forgedSoldier
+        case .theProtocol: theProtocol
         }
     }
 }

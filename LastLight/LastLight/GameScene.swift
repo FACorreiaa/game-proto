@@ -12,6 +12,7 @@ final class GameScene: SKScene {
     }
 
     private let demo: Bool
+    private let story: StoryPresenter
     private var mode: Mode
     private var world: World
     private var pilot = Autopilot(fights: true)
@@ -39,6 +40,7 @@ final class GameScene: SKScene {
 
     private let groundY: CGFloat = 104
     private let haptics = Haptics()
+    private let sound = Sound()
     private let levels = Level.all
     /// Which level is being played. Remembered between launches.
     private var levelIndex: Int {
@@ -47,10 +49,14 @@ final class GameScene: SKScene {
     private var level: Level { levels[levelIndex] }
 
     /// World units are scaled so about the same slice of the level shows on a phone, a tablet and a Mac window.
-    private var zoom: CGFloat { max(0.5, min(size.height / 402, size.width / 700)) }
+    /// A boss room is seen from further back, so the boss fits under the bars at the top.
+    private var zoom: CGFloat {
+        max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.8 : 1)
+    }
 
-    init(demo: Bool, mode: Mode = .level) {
+    init(demo: Bool, mode: Mode = .level, story: StoryPresenter) {
         self.demo = demo
+        self.story = story
         self.mode = mode
         // `-level 2` starts on the third level, for checking one without playing up to it.
         let args = ProcessInfo.processInfo.arguments
@@ -60,6 +66,7 @@ final class GameScene: SKScene {
         world = mode == .level ? World(level: Level.all[levelIndex], seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
+        if mode == .level { story.forget(Level.all[levelIndex].scenes.map(\.scene)) }
         backgroundColor = Palette.sky
     }
 
@@ -86,7 +93,16 @@ final class GameScene: SKScene {
         layout()
         showHint()
         if let hero = world.controlled { cameraX = hero.pos.x }
+        // `-scene awakening.orion 2` opens that scene two lines in, for checking the dialogue panel.
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-scene"), i + 1 < args.count {
+            story.forget([args[i + 1]])
+            story.begin(args[i + 1])
+            for _ in 0..<(i + 2 < args.count ? Int(args[i + 2]) ?? 0 : 0) { story.advance() }
+        }
     }
+
+    private let bossHint = "Strike only when the core opens.  Jump the surge.  Dodge the charge."
 
     private func showHint() {
         if demo {
@@ -95,7 +111,7 @@ final class GameScene: SKScene {
         }
         #if os(iOS)
         hud.showHint(mode == .level
-            ? "Reach the gate.  Dodge passes through the arc.  ⇄ switches hero.  MODE changes level."
+            ? "Reach the gate.  Dodge passes through arcs.  ⇄ switches hero."
             : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         #else
         hud.showHint("A/D move   Space jump   J attack   K dodge   L switch   R restart   M mode   P debug")
@@ -128,6 +144,8 @@ final class GameScene: SKScene {
             world = World(level: level, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
                           collected: resume ? world.collected : [])
             pilot = Autopilot(fights: true)
+            // A level started over plays its scenes again; a retry from a checkpoint does not.
+            if !resume { story.forget(level.scenes.map(\.scene)) }
         }
         nodes.values.forEach { $0.removeFromParent() }
         nodes = [:]
@@ -241,6 +259,8 @@ final class GameScene: SKScene {
             pickupNodes[pickup.id] = shard
         }
 
+        // A boss room has no way out until the boss falls.
+        guard level.boss == nil else { return }
         let gate = SKShapeNode(rect: CGRect(x: level.exitX, y: 0, width: 70, height: 170), cornerRadius: 35)
         gate.fillColor = Palette.white.withAlphaComponent(0.12)
         gate.strokeColor = Palette.gold
@@ -313,6 +333,13 @@ final class GameScene: SKScene {
 
         let reading = hardware.poll()
         var presses = controls.takePresses()
+        // While someone is speaking the game holds still. Attack or jump moves the scene on.
+        if story.isActive {
+            if reading.attack || reading.jump { story.advance() }
+            accumulator = 0
+            draw()
+            return
+        }
         if reading.mode { toggleMode() }
         if reading.debug { showDebug.toggle() }
         if reading.restart {
@@ -335,7 +362,7 @@ final class GameScene: SKScene {
 
         let step = 1 / Tuning.framesPerSecond
         var steps = 0
-        while accumulator >= step, steps < 4 {
+        while accumulator >= step, steps < 4, !story.isActive {
             let frameInput = !demo ? input : (mode == .level ? pilot.input(for: world) : DemoBot.input(for: world))
             react(to: world.step(frameInput))
             // A press belongs to one simulation frame only.
@@ -348,6 +375,7 @@ final class GameScene: SKScene {
         }
         if steps == 4 { accumulator = 0 }
 
+        sound.advance()
         draw()
     }
 
@@ -387,6 +415,12 @@ final class GameScene: SKScene {
                 partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
         }
         drawLevel()
+        if let boss = world.boss, boss.awake, boss.isAlive {
+            hud.setBoss((boss.kind == .theProtocol ? "THE PROTOCOL" : boss.kind.rawValue.uppercased(),
+                         boss.hp / boss.spec.maxHP, boss.isOpen))
+        } else {
+            hud.setBoss(nil)
+        }
 
         shake *= 0.86
         let jolt = shake < 0.3 ? CGPoint.zero : CGPoint(
@@ -432,10 +466,15 @@ final class GameScene: SKScene {
     private func debugText() -> String {
         guard let f = world.controlled else { return "" }
         let ground = f.onGround ? "ground" + (f.groundIndex.map { " #\($0)" } ?? "") : "air"
-        return String(
+        var text = String(
             format: "pos %6.0f %5.0f\nvel %6.0f %5.0f\n%@  coyote %d\n%@ f%d\nhitstop %d  frame %d",
             f.pos.x, f.pos.y, f.vel.x, f.vel.y, ground, f.coyote, String(describing: f.state), f.stateFrame,
             world.hitStop, world.frame)
+        if let boss = world.boss {
+            text += String(format: "\nboss %.0f  %@ f%d  %@", boss.hp, String(describing: boss.state), boss.stateFrame,
+                           boss.isOpen ? "open" : "armoured")
+        }
+        return text
     }
 
     // MARK: Events
@@ -447,6 +486,7 @@ final class GameScene: SKScene {
                 nodes[target]?.flash()
                 let heroHurt = world.fighter(target)?.team == .hero
                 sparks(at: at, color: heroHurt ? Palette.red : Palette.cyan, count: heroHurt ? 10 : Int(4 + damage / 3))
+                sound.play(heroHurt ? .hurt : (damage >= 20 ? .heavyHit : .hit))
                 if heroHurt {
                     shake = max(shake, 9)
                     haptics.heavy()
@@ -459,21 +499,25 @@ final class GameScene: SKScene {
             case .blocked(_, _, let at):
                 sparks(at: at, color: Palette.steel, count: 4)
                 popup("BLOCKED", at: at, color: Palette.steel, size: 13)
+                sound.play(.blocked)
                 haptics.rigid(0.5)
             case .parried(_, let attacker, let at):
                 ring(at: at, radius: 70, color: Palette.white)
                 sparks(at: at, color: Palette.white, count: 14)
                 popup("PARRY", at: at, color: Palette.cyan, size: 20)
+                sound.play(.parry)
                 nodes[attacker]?.flash()
                 shake = max(shake, 5)
                 haptics.rigid()
             case .exploded(let id, let at, let radius):
                 ring(at: at, radius: radius, color: Palette.ember)
                 sparks(at: at, color: Palette.ember, count: 18)
+                sound.play(.explosion)
                 shake = max(shake, 10)
                 nodes[id]?.vanish()
                 haptics.heavy()
             case .fuseLit(let id):
+                sound.play(.fuse)
                 if let f = world.fighter(id) {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + 60), color: Palette.red, size: 22)
                 }
@@ -494,8 +538,10 @@ final class GameScene: SKScene {
                     popup("BACK UP", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.cyan, size: 14)
                 }
             case .heroDown:
+                sound.play(.down)
                 hud.showMessage(demo ? "DOWN" : "DOWN\ntap to try again")
             case .fell:
+                sound.play(.fall)
                 shake = max(shake, 8)
                 haptics.heavy()
                 hud.flashDamage()
@@ -508,32 +554,68 @@ final class GameScene: SKScene {
                     ring(at: Vec2(c.x, c.y + 78), radius: 50, color: Palette.cyan)
                     popup("CHECKPOINT", at: Vec2(c.x, c.y + 90), color: Palette.cyan, size: 13)
                 }
+                sound.play(.checkpoint)
                 haptics.light()
             case .collected(let id, let secret, let at):
                 pickupNodes[id]?.removeFromParent()
                 pickupNodes[id] = nil
                 sparks(at: at, color: secret ? Palette.gold : Palette.cyan, count: 8)
                 if secret { popup("SECRET", at: at, color: Palette.gold, size: 14) }
+                sound.play(secret ? .secret : .pickup)
                 haptics.light(0.7)
             case .woke(let id):
-                if let f = world.fighter(id) {
+                if id == world.bossID {
+                    hud.announce("THE PROTOCOL")
+                    sound.play(.bossWake)
+                    hud.showHint(bossHint)
+                    shake = max(shake, 10)
+                    haptics.heavy()
+                } else if let f = world.fighter(id) {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.red, size: 16)
                 }
             case .joined(let id):
+                sound.play(.join)
                 if let f = world.fighter(id) {
                     ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 90, color: Palette.cyan)
                     popup("\(f.kind.rawValue.uppercased()) JOINS", at: Vec2(f.pos.x, f.pos.y + f.spec.height),
                           color: Palette.cyan, size: 16)
                 }
                 haptics.rigid()
+            case .bossDefeated(let id):
+                if let f = world.fighter(id) {
+                    let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)
+                    sparks(at: centre, color: Palette.gold, count: 30)
+                    ring(at: centre, radius: 220, color: Palette.gold)
+                    ring(at: centre, radius: 120, color: Palette.white)
+                }
+                shake = max(shake, 16)
+                sound.play(.bossDown)
+                haptics.heavy()
             case .regrouped(_, let at):
                 ring(at: at, radius: 50, color: Palette.cyan)
             case .levelComplete:
+                sound.play(.clear)
                 let total = world.level?.pickups.count ?? 0
                 let next = levelIndex + 1 < levels.count ? "tap to continue" : "tap to start over"
                 hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
                 haptics.rigid()
-            case .spawned, .swing, .evaded, .jumped, .landed, .dodged:
+            case .swing(let id, let index):
+                if id == world.bossID {
+                    sound.play(.warning)
+                } else if let f = world.fighter(id) {
+                    let heavy = f.team == .enemy || index == f.spec.attacks.count - 1
+                    sound.play(heavy ? .heavySwing : .swing, volume: f.id == world.controlledID ? 1 : 0.5)
+                }
+            case .jumped(let id):
+                if id == world.controlledID { sound.play(.jump) }
+            case .landed(let id):
+                if id == world.controlledID { sound.play(.land) }
+            case .dodged(let id):
+                sound.play(.dodge, volume: id == world.controlledID ? 1 : 0.5)
+            case .scene(let id):
+                // The demo bot does not read.
+                if !demo { story.begin(id) }
+            case .spawned, .evaded:
                 break
             }
         }
