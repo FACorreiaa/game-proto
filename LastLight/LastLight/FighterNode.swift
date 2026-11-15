@@ -16,15 +16,20 @@ final class FighterNode: SKNode {
     /// One arc per swing, even while hit-stop holds the same frame on screen.
     private var arcDrawn = false
     private var rim: SKColor
+    private var baseFill = Palette.body
+    private let marker = SKShapeNode()
     private var gone = false
 
     init(kind: FighterKind) {
         self.kind = kind
-        rim = kind == .caelen ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
+        rim = kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
+        if kind == .orion { baseFill = Palette.plate }
         super.init()
         addChild(figure)
+        buildMarker()
         switch kind {
         case .caelen: buildCaelen()
+        case .orion: buildOrion()
         case .dummy: buildDummy()
         case .scrapDrone: buildDrone()
         case .forgedSoldier: buildSoldier()
@@ -38,7 +43,7 @@ final class FighterNode: SKNode {
 
     private func part(_ path: CGPath, z: CGFloat = 0) -> SKShapeNode {
         let node = SKShapeNode(path: path)
-        node.fillColor = Palette.body
+        node.fillColor = baseFill
         node.strokeColor = rim.withAlphaComponent(0.45)
         node.lineWidth = 1.5
         node.zPosition = z
@@ -98,6 +103,45 @@ final class FighterNode: SKNode {
         blade(length: 60, color: Palette.cyan, at: CGPoint(x: 6, y: 54))
     }
 
+    /// Orion: pale plating, cyan eye and chest core, a torn cloak, a short blade.
+    private func buildOrion() {
+        leg(x: -6, hipY: 34, length: 34, width: 7)
+        leg(x: 6, hipY: 34, length: 34, width: 7)
+        let cloak = CGMutablePath()
+        cloak.addLines(between: [
+            CGPoint(x: -9, y: 68), CGPoint(x: 4, y: 68), CGPoint(x: -4, y: 40),
+            CGPoint(x: -20, y: 20), CGPoint(x: -24, y: 34), CGPoint(x: -16, y: 52),
+        ])
+        cloak.closeSubpath()
+        _ = part(cloak, z: -1)
+        _ = part(CGPath(roundedRect: CGRect(x: -10, y: 32, width: 20, height: 36), cornerWidth: 6, cornerHeight: 6, transform: nil))
+        _ = part(CGPath(ellipseIn: CGRect(x: -8, y: 68, width: 18, height: 18), transform: nil), z: 1)
+        let core = SKShapeNode(circleOfRadius: 3.5)
+        core.position = CGPoint(x: 4, y: 54)
+        light(core, color: Palette.cyan, glow: 3)
+        figure.addChild(core)
+        let dot = SKShapeNode(circleOfRadius: 2.4)
+        dot.position = CGPoint(x: 6, y: 78)
+        light(dot, color: Palette.cyan, glow: 3)
+        figure.addChild(dot)
+        eye = dot
+        blade(length: 44, color: Palette.cyan, at: CGPoint(x: 6, y: 52))
+    }
+
+    /// A small arrow over the hero the player is controlling.
+    private func buildMarker() {
+        let path = CGMutablePath()
+        path.addLines(between: [CGPoint(x: -7, y: 8), CGPoint(x: 7, y: 8), CGPoint(x: 0, y: 0)])
+        path.closeSubpath()
+        marker.path = path
+        marker.fillColor = Palette.cyan
+        marker.strokeColor = .clear
+        marker.glowWidth = 2
+        marker.zPosition = 6
+        marker.isHidden = true
+        addChild(marker)
+    }
+
     private func buildDummy() {
         _ = part(CGPath(rect: CGRect(x: -4, y: 0, width: 8, height: 70), transform: nil))
         _ = part(CGPath(rect: CGRect(x: -20, y: 50, width: 40, height: 8), transform: nil))
@@ -147,8 +191,10 @@ final class FighterNode: SKNode {
         removeFromParent()
     }
 
-    func sync(_ f: Fighter, frame: Int) {
+    func sync(_ f: Fighter, frame: Int, controlled: Bool = false) {
         guard !gone else { return }
+        marker.isHidden = !controlled || !f.isAlive
+        marker.position = CGPoint(x: 0, y: f.spec.height + 12 + 2 * sin(CGFloat(frame) * 0.12))
         position = CGPoint(x: f.pos.x, y: f.pos.y)
         xScale = f.facing >= 0 ? 1 : -1
 
@@ -204,7 +250,7 @@ final class FighterNode: SKNode {
         animateTelegraph(f)
 
         if flashFrames > 0 { flashFrames -= 1 }
-        let fill = flashFrames > 0 ? Palette.white : (tint ?? Palette.body)
+        let fill = flashFrames > 0 ? Palette.white : (tint ?? baseFill)
         for p in bodyParts where p.fillColor != fill { p.fillColor = fill }
         shield?.alpha = f.isGuarding ? 1 : 0.35
     }
@@ -222,15 +268,17 @@ final class FighterNode: SKNode {
     /// Blade angles are measured from straight up; negative swings forward.
     private func animateWeapon(_ f: Fighter) {
         guard weapon != nil else { return }
-        let rest: CGFloat = kind == .caelen ? -2.5 : -2.75
+        let rest: CGFloat = kind.team == .hero ? -2.5 : -2.75
         if f.attackPhase != .active { arcDrawn = false }
         guard case .attack(let index) = f.state, let a = f.currentAttack else {
             weaponPivot.zRotation = rest
             return
         }
-        let sweeps: [(CGFloat, CGFloat)] = kind == .caelen
-            ? [(0.9, -2.0), (-2.7, 0.2), (1.7, -2.5)]
-            : [(1.1, -2.3)]
+        let sweeps: [(CGFloat, CGFloat)] = switch kind {
+        case .caelen: [(0.9, -2.0), (-2.7, 0.2), (1.7, -2.5)]
+        case .orion: [(-0.4, -2.2), (-2.6, 0.4)]
+        default: [(1.1, -2.3)]
+        }
         let (from, to) = sweeps[index % sweeps.count]
         let frame = CGFloat(f.stateFrame)
         switch f.attackPhase {
@@ -250,14 +298,14 @@ final class FighterNode: SKNode {
         }
     }
 
-    private var weaponLength: CGFloat { kind == .caelen ? 62 : 76 }
+    private var weaponLength: CGFloat { kind == .caelen ? 62 : (kind == .orion ? 46 : 76) }
 
     private func drawArc(from: CGFloat, to: CGFloat, radius: CGFloat) {
         let path = CGMutablePath()
         path.addArc(center: .zero, radius: radius, startAngle: from + .pi / 2, endAngle: to + .pi / 2, clockwise: to < from)
         let arc = SKShapeNode(path: path)
         arc.position = weaponPivot.position
-        arc.strokeColor = kind == .caelen ? Palette.cyan : Palette.red
+        arc.strokeColor = kind.team == .hero ? Palette.cyan : Palette.red
         arc.lineWidth = 7
         arc.glowWidth = 5
         arc.lineCap = .round

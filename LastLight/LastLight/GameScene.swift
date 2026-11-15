@@ -30,7 +30,7 @@ final class GameScene: SKScene {
 
     init(demo: Bool) {
         self.demo = demo
-        world = World.feelSlice(seed: 1)
+        world = World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
         backgroundColor = Palette.sky
@@ -53,7 +53,7 @@ final class GameScene: SKScene {
         if !demo { addChild(controls) }
         buildRoom()
         layout()
-        hud.showHint(demo ? "DEMO" : "Parry: attack just as the red flash comes.  Dodge passes through.")
+        hud.showHint(demo ? "DEMO" : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         if let hero = world.controlled { cameraX = hero.pos.x }
     }
 
@@ -70,7 +70,7 @@ final class GameScene: SKScene {
     private func restart() {
         run += 1
         kills = 0
-        world = World.feelSlice(seed: UInt64(run + 1))
+        world = World.partnerSlice(seed: UInt64(run + 1))
         nodes.values.forEach { $0.removeFromParent() }
         nodes = [:]
         hud.hideMessage()
@@ -151,6 +151,7 @@ final class GameScene: SKScene {
         input.jump = reading.jump || presses.contains(.jump)
         input.attack = reading.attack || presses.contains(.attack)
         input.dodge = reading.dodge || presses.contains(.dodge)
+        input.switchHero = reading.switchHero || presses.contains(.switchHero)
 
         let step = 1 / Tuning.framesPerSecond
         var steps = 0
@@ -161,6 +162,7 @@ final class GameScene: SKScene {
             input.jump = false
             input.attack = false
             input.dodge = false
+            input.switchHero = false
             accumulator -= step
             steps += 1
         }
@@ -180,7 +182,7 @@ final class GameScene: SKScene {
                 nodes[f.id] = created
                 return created
             }()
-            node.sync(f, frame: world.frame)
+            node.sync(f, frame: world.frame, controlled: f.id == world.controlledID)
         }
         for (id, node) in nodes where !seen.contains(id) {
             node.removeFromParent()
@@ -193,7 +195,10 @@ final class GameScene: SKScene {
             let high = world.arena.upperBound - half + 60
             let target = min(max(hero.pos.x + hero.facing * 40, low), max(low, high))
             cameraX += (target - cameraX) * 0.12
-            hud.setHealth(hero.hp / hero.spec.maxHP)
+            let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id }
+            hud.setHeroes(
+                lead: (hero.kind.rawValue.uppercased(), hero.hp / hero.spec.maxHP),
+                partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
         }
         shake *= 0.86
         let jolt = shake < 0.3 ? CGPoint.zero : CGPoint(
@@ -249,6 +254,16 @@ final class GameScene: SKScene {
                 hud.announce("WAVE \(number)")
             case .waveCleared:
                 hud.announce("CLEAR")
+            case .controlChanged(let id):
+                if let f = world.fighter(id) {
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 60, color: Palette.cyan)
+                }
+                light.impactOccurred()
+            case .revived(let id):
+                if let f = world.fighter(id) {
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 80, color: Palette.white)
+                    popup("BACK UP", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.cyan, size: 14)
+                }
             case .heroDown:
                 hud.showMessage(demo ? "DOWN" : "DOWN\ntap to try again")
             case .spawned, .swing, .evaded, .jumped, .landed, .dodged:

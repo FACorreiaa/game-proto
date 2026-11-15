@@ -1,11 +1,12 @@
 import SpriteKit
 
-/// A floating stick on the left half of the screen and three buttons on the right.
+/// A floating stick on the left half of the screen and four buttons on the right.
 final class TouchControls: SKNode {
     enum Button: CaseIterable {
         case attack
         case dodge
         case jump
+        case switchHero
     }
 
     private(set) var moveX = 0.0
@@ -38,7 +39,7 @@ final class TouchControls: SKNode {
         addChild(stickBase)
         addChild(stickKnob)
 
-        for (button, radius, glyph) in [(Button.attack, 42.0, "⚔︎"), (.dodge, 32.0, "»"), (.jump, 32.0, "▲")] {
+        for (button, radius, glyph) in [(Button.attack, 42.0, "⚔︎"), (.dodge, 32.0, "»"), (.jump, 32.0, "▲"), (.switchHero, 26.0, "⇄")] {
             let node = SKShapeNode(circleOfRadius: radius)
             node.strokeColor = Palette.white.withAlphaComponent(0.3)
             node.lineWidth = 2
@@ -69,6 +70,7 @@ final class TouchControls: SKNode {
         buttonNodes[.attack]?.position = CGPoint(x: edge - 62, y: bottom + 66)
         buttonNodes[.jump]?.position = CGPoint(x: edge - 158, y: bottom + 50)
         buttonNodes[.dodge]?.position = CGPoint(x: edge - 82, y: bottom + 156)
+        buttonNodes[.switchHero]?.position = CGPoint(x: edge - 176, y: bottom + 138)
     }
 
     func takePresses() -> Set<Button> {

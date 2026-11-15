@@ -2,7 +2,7 @@ import ActionCore
 import GameController
 
 /// Keyboard and controller, polled once per rendered frame.
-/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, R restarts.
+/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, L switches hero, R restarts.
 struct HardwareInput {
     private var wasDown: Set<String> = []
 
@@ -12,6 +12,7 @@ struct HardwareInput {
         var jump = false
         var attack = false
         var dodge = false
+        var switchHero = false
         var restart = false
     }
 
@@ -26,6 +27,7 @@ struct HardwareInput {
             if held(.spacebar) || held(.keyW) || held(.upArrow) { down.insert("jump") }
             if held(.keyJ) { down.insert("attack") }
             if held(.keyK) || held(.leftShift) { down.insert("dodge") }
+            if held(.keyL) || held(.tab) { down.insert("switch") }
             if held(.keyR) { down.insert("restart") }
         }
 
@@ -37,6 +39,7 @@ struct HardwareInput {
             if pad.buttonA.isPressed { down.insert("jump") }
             if pad.buttonX.isPressed { down.insert("attack") }
             if pad.buttonB.isPressed || pad.rightShoulder.isPressed { down.insert("dodge") }
+            if pad.buttonY.isPressed { down.insert("switch") }
             if pad.buttonMenu.isPressed { down.insert("restart") }
         }
 
@@ -45,6 +48,7 @@ struct HardwareInput {
         reading.jump = down.contains("jump") && !wasDown.contains("jump")
         reading.attack = down.contains("attack") && !wasDown.contains("attack")
         reading.dodge = down.contains("dodge") && !wasDown.contains("dodge")
+        reading.switchHero = down.contains("switch") && !wasDown.contains("switch")
         reading.restart = down.contains("restart") && !wasDown.contains("restart")
         wasDown = down
         return reading
@@ -63,6 +67,7 @@ enum DemoBot {
         let dx = target.pos.x - hero.pos.x
         let dir: Double = dx >= 0 ? 1 : -1
         var inp = InputFrame()
+        inp.switchHero = world.frame % 600 == 599
 
         if target.state == .fuse, abs(dx) < 150 {
             inp.moveX = -dir

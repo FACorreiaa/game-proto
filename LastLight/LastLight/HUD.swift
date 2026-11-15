@@ -3,7 +3,10 @@ import SpriteKit
 final class HUD: SKNode {
     private let barBack = SKShapeNode(rect: CGRect(x: 0, y: 0, width: 190, height: 10), cornerRadius: 3)
     private let barFill = SKSpriteNode(color: Palette.cyan, size: CGSize(width: 186, height: 6))
-    private let heroName = SKLabelNode(text: "CAELEN")
+    private let heroName = SKLabelNode(text: "")
+    private let partnerBack = SKShapeNode(rect: CGRect(x: 0, y: 0, width: 110, height: 7), cornerRadius: 2)
+    private let partnerFill = SKSpriteNode(color: Palette.cyan, size: CGSize(width: 106, height: 3))
+    private let partnerName = SKLabelNode(text: "")
     private let status = SKLabelNode(text: "")
     private let banner = SKLabelNode(text: "")
     private let message = SKLabelNode(text: "")
@@ -21,6 +24,20 @@ final class HUD: SKNode {
         barFill.position = CGPoint(x: 2, y: 2)
         barBack.addChild(barFill)
         addChild(barBack)
+
+        partnerBack.fillColor = Palette.body.withAlphaComponent(0.8)
+        partnerBack.strokeColor = Palette.cyan.withAlphaComponent(0.3)
+        partnerBack.lineWidth = 1
+        partnerFill.anchorPoint = CGPoint(x: 0, y: 0)
+        partnerFill.position = CGPoint(x: 2, y: 2)
+        partnerBack.addChild(partnerFill)
+        addChild(partnerBack)
+        partnerName.fontName = "AvenirNext-Medium"
+        partnerName.fontSize = 10
+        partnerName.fontColor = Palette.white.withAlphaComponent(0.6)
+        partnerName.horizontalAlignmentMode = .left
+        partnerName.verticalAlignmentMode = .center
+        addChild(partnerName)
 
         for (label, size, face) in [(heroName, 12.0, "AvenirNext-DemiBold"), (status, 12.0, "AvenirNext-Medium"),
                                     (banner, 30.0, "AvenirNext-Heavy"), (message, 26.0, "AvenirNext-Heavy"),
@@ -53,6 +70,8 @@ final class HUD: SKNode {
         let top = size.height - max(insets.top, 10) - 14
         heroName.position = CGPoint(x: left, y: top - 6)
         barBack.position = CGPoint(x: left, y: top - 24)
+        partnerBack.position = CGPoint(x: left, y: top - 40)
+        partnerName.position = CGPoint(x: left + 118, y: top - 36)
         status.position = CGPoint(x: right, y: top - 6)
         banner.position = CGPoint(x: size.width / 2, y: size.height * 0.68)
         message.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
@@ -60,9 +79,19 @@ final class HUD: SKNode {
         damage.size = size
     }
 
-    func setHealth(_ fraction: Double) {
-        barFill.xScale = CGFloat(max(0, min(1, fraction)))
-        barFill.color = fraction < 0.3 ? Palette.red : Palette.cyan
+    /// The controlled hero gets the large bar; the partner, if there is one, the small one under it.
+    func setHeroes(lead: (name: String, health: Double), partner: (name: String, health: Double)?) {
+        if heroName.text != lead.name { heroName.text = lead.name }
+        barFill.xScale = CGFloat(max(0, min(1, lead.health)))
+        barFill.color = lead.health < 0.3 ? Palette.red : Palette.cyan
+
+        partnerBack.isHidden = partner == nil
+        partnerName.isHidden = partner == nil
+        guard let partner else { return }
+        let text = partner.health <= 0 ? "\(partner.name)  DOWN" : partner.name
+        if partnerName.text != text { partnerName.text = text }
+        partnerFill.xScale = CGFloat(max(0, min(1, partner.health)))
+        partnerFill.color = partner.health < 0.3 ? Palette.red : Palette.cyan
     }
 
     func setStatus(wave: Int, kills: Int) {
