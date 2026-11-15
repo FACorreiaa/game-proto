@@ -28,6 +28,7 @@ public enum GameEvent: Equatable, Sendable {
     /// A companion left behind catches up in one step.
     case regrouped(id: Int, at: Vec2)
     case bossDefeated(id: Int)
+    case slowed(id: Int)
     /// Caelen's Command put a mark on an enemy.
     case commanded(by: Int, target: Int)
     /// Orion's Adapt: the guard went up.

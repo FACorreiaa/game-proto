@@ -46,6 +46,15 @@ public struct Tuning: Sendable {
     public var droneAttackGap = 40...85
     public var soldierAttackGap = 50...90
     public var soldierTurnDelay = 28
+    public var sentryAttackGap = 90...140
+    /// The Sentry Core keeps its target between these distances.
+    public var sentryNear = 250.0
+    public var sentryFar = 400.0
+    /// Speed of a slowed fighter, as a fraction of normal.
+    public var slowFactor = 0.5
+    /// The Dogma Frame stays this close to the machine it shields.
+    public var dogmaFollowDistance = 110.0
+    public var wardHeight = 220.0
     public var protocolAttackGap = 70...110
     /// Below this fraction of health The Protocol attacks more often.
     public var protocolEnrageAt = 0.5
@@ -143,6 +152,26 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// Sentry Core: floats at chest height, keeps its distance and fires a beam along the floor line.
+    public var sentryCore: FighterSpec = {
+        var s = FighterSpec(width: 40, height: 40, maxHP: 40, runSpeed: 150)
+        var beam = AttackSpec(windup: 50, active: 6, recovery: 40, damage: 10, reach: 480, height: 22, yOffset: 0,
+                              knockback: 120, lunge: 0, hitstun: 12, hitStop: 4)
+        beam.slowFrames = 120
+        s.attacks = [beam]
+        s.hovers = true
+        s.brain = SentryBrain()
+        return s
+    }()
+
+    /// Dogma Frame: does not attack. Machines near it cannot be hurt until it is destroyed.
+    public var dogmaFrame: FighterSpec = {
+        var s = FighterSpec(width: 44, height: 110, maxHP: 55, runSpeed: 70)
+        s.wardRadius = 260
+        s.brain = DogmaBrain()
+        return s
+    }()
+
     /// The Protocol. Attack 0 is the slam (close), 1 the charge (dodge through it), 2 the floor surge (jump it).
     public var theProtocol: FighterSpec = {
         var s = FighterSpec(width: 150, height: 250, maxHP: 460, runSpeed: 55)
@@ -171,6 +200,8 @@ public struct Tuning: Sendable {
         case .dummy: dummy
         case .scrapDrone: scrapDrone
         case .forgedSoldier: forgedSoldier
+        case .sentryCore: sentryCore
+        case .dogmaFrame: dogmaFrame
         case .theProtocol: theProtocol
         }
     }
