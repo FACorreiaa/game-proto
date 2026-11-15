@@ -12,6 +12,7 @@ final class GameScene: SKScene {
     }
 
     private let demo: Bool
+    private let story: StoryPresenter
     private var mode: Mode
     private var world: World
     private var pilot = Autopilot(fights: true)
@@ -53,8 +54,9 @@ final class GameScene: SKScene {
         max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.8 : 1)
     }
 
-    init(demo: Bool, mode: Mode = .level) {
+    init(demo: Bool, mode: Mode = .level, story: StoryPresenter) {
         self.demo = demo
+        self.story = story
         self.mode = mode
         // `-level 2` starts on the third level, for checking one without playing up to it.
         let args = ProcessInfo.processInfo.arguments
@@ -64,6 +66,7 @@ final class GameScene: SKScene {
         world = mode == .level ? World(level: Level.all[levelIndex], seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
+        if mode == .level { story.forget(Level.all[levelIndex].scenes.map(\.scene)) }
         backgroundColor = Palette.sky
     }
 
@@ -90,6 +93,13 @@ final class GameScene: SKScene {
         layout()
         showHint()
         if let hero = world.controlled { cameraX = hero.pos.x }
+        // `-scene awakening.orion 2` opens that scene two lines in, for checking the dialogue panel.
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-scene"), i + 1 < args.count {
+            story.forget([args[i + 1]])
+            story.begin(args[i + 1])
+            for _ in 0..<(i + 2 < args.count ? Int(args[i + 2]) ?? 0 : 0) { story.advance() }
+        }
     }
 
     private let bossHint = "Strike only when the core opens.  Jump the surge.  Dodge the charge."
@@ -101,7 +111,7 @@ final class GameScene: SKScene {
         }
         #if os(iOS)
         hud.showHint(mode == .level
-            ? "Reach the gate.  Dodge passes through the arc.  ⇄ switches hero.  MODE changes level."
+            ? "Reach the gate.  Dodge passes through arcs.  ⇄ switches hero."
             : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         #else
         hud.showHint("A/D move   Space jump   J attack   K dodge   L switch   R restart   M mode   P debug")
@@ -134,6 +144,8 @@ final class GameScene: SKScene {
             world = World(level: level, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
                           collected: resume ? world.collected : [])
             pilot = Autopilot(fights: true)
+            // A level started over plays its scenes again; a retry from a checkpoint does not.
+            if !resume { story.forget(level.scenes.map(\.scene)) }
         }
         nodes.values.forEach { $0.removeFromParent() }
         nodes = [:]
@@ -321,6 +333,13 @@ final class GameScene: SKScene {
 
         let reading = hardware.poll()
         var presses = controls.takePresses()
+        // While someone is speaking the game holds still. Attack or jump moves the scene on.
+        if story.isActive {
+            if reading.attack || reading.jump { story.advance() }
+            accumulator = 0
+            draw()
+            return
+        }
         if reading.mode { toggleMode() }
         if reading.debug { showDebug.toggle() }
         if reading.restart {
@@ -343,7 +362,7 @@ final class GameScene: SKScene {
 
         let step = 1 / Tuning.framesPerSecond
         var steps = 0
-        while accumulator >= step, steps < 4 {
+        while accumulator >= step, steps < 4, !story.isActive {
             let frameInput = !demo ? input : (mode == .level ? pilot.input(for: world) : DemoBot.input(for: world))
             react(to: world.step(frameInput))
             // A press belongs to one simulation frame only.
@@ -593,6 +612,9 @@ final class GameScene: SKScene {
                 if id == world.controlledID { sound.play(.land) }
             case .dodged(let id):
                 sound.play(.dodge, volume: id == world.controlledID ? 1 : 0.5)
+            case .scene(let id):
+                // The demo bot does not read.
+                if !demo { story.begin(id) }
             case .spawned, .evaded:
                 break
             }

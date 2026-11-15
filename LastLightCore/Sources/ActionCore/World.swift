@@ -32,6 +32,7 @@ public struct World: Sendable {
     public private(set) var isComplete = false
     public private(set) var bossID: Int?
     var bossDownFrames = 0
+    var firedScenes: Set<String> = []
     var platformDeltas: [Vec2]
 
     var waves: [[Spawn]] = []
@@ -190,8 +191,27 @@ public struct World: Sendable {
         for id in explosions { explode(id, &events) }
         levelRules(&events)
         housekeeping(&events)
+        cueScenes(&events)
         frame += 1
         return events
+    }
+
+    /// Announces each story scene once, when what sets it off happens.
+    private mutating func cueScenes(_ events: inout [GameEvent]) {
+        guard let level, firedScenes.count < level.scenes.count else { return }
+        for trigger in level.scenes where !firedScenes.contains(trigger.scene) {
+            let due: Bool = switch trigger.cue {
+            case .start: true
+            case .reach(let x): (controlled?.pos.x ?? -.infinity) >= x
+            case .partnerJoins: events.contains { if case .joined = $0 { true } else { false } }
+            case .bossWakes: bossID.map { events.contains(.woke(id: $0)) } ?? false
+            case .complete: events.contains(.levelComplete)
+            }
+            if due {
+                firedScenes.insert(trigger.scene)
+                events.append(.scene(id: trigger.scene))
+            }
+        }
     }
 
     private func index(of id: Int) -> Int? {

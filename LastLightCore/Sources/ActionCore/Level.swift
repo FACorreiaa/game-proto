@@ -100,6 +100,8 @@ public struct Level: Sendable, Equatable {
     public var partner: Placement?
     /// A level with a boss has no exit: it ends when the boss falls.
     public var boss: Placement?
+    /// Story scenes and what sets each one off.
+    public var scenes: [SceneTrigger] = []
     /// Reaching this x on the ground finishes the level.
     public var exitX: Double
     /// Falling below this is falling out of the level.
@@ -198,6 +200,7 @@ extension Level {
         l.ground(1700, 1800, top: 90)
         l.ground(1800, 2400, top: 180)
         l.partner = Placement(.orion, x: 2080, y: 180)
+        l.scenes.append(SceneTrigger("awakening.orion", on: .partnerJoins))
         l.checkpoints.append(Vec2(1900, 180))
 
         // Down to the lower floor and the first machine.
@@ -265,6 +268,7 @@ extension Level {
     public static let theProtocol: Level = {
         var l = Level(name: "The Protocol", width: 1700, start: Vec2(140, 0), exitX: .infinity)
         l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("protocol.wake", on: .bossWakes))
         l.ground(-200, 1900)
         l.boss = Placement(.theProtocol, x: 1180)
         return l

@@ -28,4 +28,6 @@ public enum GameEvent: Equatable, Sendable {
     /// A companion left behind catches up in one step.
     case regrouped(id: Int, at: Vec2)
     case bossDefeated(id: Int)
+    /// A story scene is due. The simulation only says so; showing it is the app's work.
+    case scene(id: String)
 }

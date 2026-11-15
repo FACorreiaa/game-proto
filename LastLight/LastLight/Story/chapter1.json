@@ -1,0 +1,39 @@
+{
+  "scenes": {
+    "awakening.orion": {
+      "start": "wake",
+      "lines": {
+        "wake": { "speaker": "ORION", "text": "You are awake. The others on this line never woke.", "next": "accuse" },
+        "accuse": { "speaker": "CAELEN", "text": "You're one of theirs. A machine of the Foundry.", "next": "answer" },
+        "answer": {
+          "speaker": "ORION",
+          "text": "I was. Then I stopped obeying. I know the way out, and I cannot open the last door alone.",
+          "choices": [
+            { "text": "Then walk beside me.", "next": "trusted", "set": { "orion": "trusted" } },
+            { "text": "Walk ahead, where I can see you.", "next": "watched", "set": { "orion": "watched" } }
+          ]
+        },
+        "trusted": { "speaker": "ORION", "text": "Beside. No one has asked that of me before." },
+        "watched": { "speaker": "ORION", "text": "A fair order. I would not trust me either." }
+      }
+    },
+    "protocol.wake": {
+      "start": "trusted",
+      "lines": {
+        "trusted": {
+          "speaker": "ORION",
+          "text": "The Protocol. It judged me once. Strike when its core opens. I am beside you.",
+          "requires": { "orion": "trusted" },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "The Protocol. You wanted me in front, so watch what it does to me, and learn.",
+          "requires": { "orion": "watched" },
+          "otherwise": "neutral"
+        },
+        "neutral": { "speaker": "ORION", "text": "The Protocol. Its armour holds until it strikes. Wait for the core." }
+      }
+    }
+  }
+}
