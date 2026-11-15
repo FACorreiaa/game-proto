@@ -39,7 +39,13 @@ public struct Fighter: Sendable, Identifiable {
     public var aiCooldown = 0
     public var aiAux = 0
 
-    var coyote = 0
+    /// False for a placed enemy that has not noticed a hero yet; it patrols instead of fighting.
+    public var awake = true
+    /// Index of the platform it stands on, when it stands on one.
+    public internal(set) var groundIndex: Int?
+    public internal(set) var coyote = 0
+    var patrolFrames = 0
+    var lastSafe: Vec2?
     var attackBuffer = 0
     var jumpBuffer = 0
     var dodgeBuffer = 0

@@ -17,4 +17,10 @@ public enum GameEvent: Equatable, Sendable {
     case controlChanged(id: Int)
     case revived(id: Int)
     case heroDown
+    case fell(id: Int)
+    case respawned(id: Int)
+    case checkpoint(index: Int)
+    case collected(id: Int, secret: Bool, at: Vec2)
+    case woke(id: Int)
+    case levelComplete
 }

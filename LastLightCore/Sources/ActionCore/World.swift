@@ -22,6 +22,15 @@ public struct World: Sendable {
     public private(set) var waveNumber = 0
     public let tuning: Tuning
     public let arena: ClosedRange<Double>
+    /// Nil in the training room, which is one flat floor.
+    public let level: Level?
+    /// Where every platform is on this frame, in the same order as `platforms`.
+    public private(set) var platformBoxes: [Box]
+    public let platforms: [Platform]
+    public private(set) var checkpointIndex = -1
+    public private(set) var collected: Set<Int> = []
+    public private(set) var isComplete = false
+    var platformDeltas: [Vec2]
 
     var waves: [[Spawn]] = []
     var waveLive = false
@@ -34,6 +43,33 @@ public struct World: Sendable {
         self.tuning = tuning
         self.arena = arena
         self.rng = SeededRandom(seed: seed)
+        level = nil
+        platforms = [Platform(Box(minX: arena.lowerBound - 2000, minY: -600, maxX: arena.upperBound + 2000, maxY: 0))]
+        platformBoxes = platforms.map(\.box)
+        platformDeltas = platforms.map { _ in .zero }
+    }
+
+    /// A world built from level data. `fromCheckpoint` and `collected` carry progress across a retry.
+    public init(
+        level: Level, hero: FighterKind = .caelen, tuning: Tuning = Tuning(), seed: UInt64,
+        fromCheckpoint: Int = -1, collected: Set<Int> = []
+    ) {
+        self.tuning = tuning
+        self.level = level
+        arena = 0...level.width
+        rng = SeededRandom(seed: seed)
+        platforms = level.platforms
+        platformBoxes = platforms.map { $0.box(at: 0) }
+        platformDeltas = platforms.map { _ in .zero }
+        self.collected = collected
+        checkpointIndex = min(fromCheckpoint, level.checkpoints.count - 1)
+        let origin = checkpointIndex >= 0 ? level.checkpoints[checkpointIndex] : level.start
+        control(spawn(hero, x: origin.x, y: origin.y, facing: 1))
+        // After a retry, what was behind the checkpoint stays gone.
+        for e in level.enemies where checkpointIndex < 0 || e.pos.x > origin.x - 100 || tuning.spec(for: e.kind).immortal {
+            spawn(e.kind, x: e.pos.x, y: e.pos.y, facing: -1)
+            fighters[fighters.count - 1].awake = tuning.spec(for: e.kind).brain == nil
+        }
     }
 
     public var controlled: Fighter? { fighter(controlledID) }
@@ -45,13 +81,15 @@ public struct World: Sendable {
     // MARK: Setup
 
     @discardableResult
-    public mutating func spawn(_ kind: FighterKind, x: Double, facing: Double? = nil, spec: FighterSpec? = nil) -> Int {
+    public mutating func spawn(
+        _ kind: FighterKind, x: Double, y: Double = 0, facing: Double? = nil, spec: FighterSpec? = nil
+    ) -> Int {
         let id = nextID
         nextID += 1
         let mid = (arena.lowerBound + arena.upperBound) / 2
         fighters.append(Fighter(
             id: id, kind: kind, team: kind.team, spec: spec ?? tuning.spec(for: kind),
-            pos: Vec2(x, 0), facing: facing ?? (x <= mid ? 1 : -1)))
+            pos: Vec2(x, y), facing: facing ?? (x <= mid ? 1 : -1)))
         return id
     }
 
@@ -80,14 +118,40 @@ public struct World: Sendable {
         if input.switchHero, switchCooldown == 0, let other = otherHero() {
             passControl(to: other, &events)
         }
+        for i in platforms.indices where platforms[i].moves {
+            let next = platforms[i].box(at: frame + 1)
+            platformDeltas[i] = Vec2(next.minX - platformBoxes[i].minX, next.minY - platformBoxes[i].minY)
+            platformBoxes[i] = next
+        }
         let snapshot = fighters
         for i in fighters.indices {
             var f = fighters[i]
             var inp = InputFrame.neutral
             if f.id == controlledID {
                 inp = input
+            } else if f.isAlive, !f.awake {
+                let noticed = snapshot.contains {
+                    $0.team == .hero && $0.isAlive && abs($0.pos.x - f.pos.x) <= tuning.wakeRange
+                        && abs($0.pos.y - f.pos.y) <= tuning.wakeHeight
+                }
+                if noticed {
+                    f.awake = true
+                    f.aiAux = 0
+                    events.append(.woke(id: f.id))
+                } else if f.spec.runSpeed > 0, !f.spec.rooted {
+                    // Paces back and forth until a hero comes close.
+                    f.patrolFrames += 1
+                    if f.patrolFrames >= tuning.patrolTurnFrames {
+                        f.patrolFrames = 0
+                        f.facing = -f.facing
+                    }
+                    inp = InputFrame(moveX: f.facing * tuning.patrolSpeed)
+                }
             } else if f.isAlive, let brain = f.spec.brain {
-                let foes = snapshot.filter { $0.team != f.team && $0.isAlive && !$0.spec.immortal }
+                let sight = f.team == .enemy ? tuning.enemySightHeight : .infinity
+                let foes = snapshot.filter {
+                    $0.team != f.team && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - f.pos.y) <= sight
+                }
                 let allies = snapshot.filter { $0.team == f.team && $0.isAlive }
                 inp = brain.think(me: &f, foes: foes, allies: allies, tuning: tuning, rng: &rng)
                 latch(&f, inp)
@@ -99,6 +163,7 @@ public struct World: Sendable {
 
         resolveHits(&events)
         for id in explosions { explode(id, &events) }
+        levelRules(&events)
         housekeeping(&events)
         frame += 1
         return events
@@ -178,7 +243,18 @@ public struct World: Sendable {
 
         case .idle, .run, .air:
             if abs(inp.moveX) > 0.01 { f.facing = inp.moveX > 0 ? 1 : -1 }
-            f.vel.x = inp.moveX * f.spec.runSpeed * (f.onGround ? 1 : tuning.airControl)
+            let target = inp.moveX * f.spec.runSpeed * (f.onGround ? 1 : tuning.airControl)
+            let rate: Double
+            if abs(inp.moveX) <= 0.01 {
+                rate = f.onGround ? tuning.groundDecel : tuning.airDecel
+            } else if target * f.vel.x < 0 {
+                rate = tuning.turnAccel
+            } else {
+                rate = f.onGround ? tuning.groundAccel : tuning.airAccel
+            }
+            // Momentum is for the hand on the stick. Brains steer in small corrections and get exact speed.
+            let change = f.id == controlledID ? rate / Tuning.framesPerSecond : .infinity
+            f.vel.x += max(-change, min(change, target - f.vel.x))
             if canDodge(f) {
                 startDodge(&f, inp, &events)
             } else if f.attackBuffer > 0, !f.spec.attacks.isEmpty {
@@ -223,33 +299,90 @@ public struct World: Sendable {
 
     private func integrate(_ f: inout Fighter, _ inp: InputFrame, _ events: inout [GameEvent]) {
         let dt = 1 / Tuning.framesPerSecond
+        let half = f.spec.width / 2
+        let height = f.spec.height
+
+        // A moving platform carries whoever stands on it.
+        if f.onGround, let g = f.groundIndex {
+            f.pos.x += platformDeltas[g].x
+            f.pos.y += platformDeltas[g].y
+        }
         if f.state == .dodge {
             f.vel.y = 0
         } else if !f.onGround {
             let cut = f.vel.y > 0 && f.id == controlledID && !inp.jumpHeld
-            f.vel.y -= tuning.gravity * (cut ? tuning.jumpCutGravity : 1) * dt
+            f.vel.y = max(f.vel.y - tuning.gravity * (cut ? tuning.jumpCutGravity : 1) * dt, -tuning.maxFallSpeed)
         }
-        f.pos.x += f.vel.x * dt
-        f.pos.y += f.vel.y * dt
 
-        if f.pos.y <= 0 {
-            f.pos.y = 0
+        // Machines do not walk off an edge by themselves. A hit can still knock them off.
+        var blocked = false
+        if f.team == .enemy, f.onGround, f.vel.x != 0, f.state != .hitstun, f.state != .dead {
+            let probe = f.pos.x + (f.vel.x > 0 ? 1 : -1) * (half + 6)
+            if !hasGround(atX: probe, y: f.pos.y) {
+                f.vel.x = 0
+                blocked = true
+            }
+        }
+
+        // Sideways, stopped by walls.
+        let fromX = f.pos.x
+        f.pos.x += f.vel.x * dt
+        for (i, b) in platformBoxes.enumerated() where !platforms[i].oneWay {
+            guard f.pos.y < b.maxY - 0.5, f.pos.y + height > b.minY + 0.5,
+                  f.pos.x + half > b.minX, f.pos.x - half < b.maxX else { continue }
+            let fromLeft = fromX <= b.minX || (fromX < b.maxX && fromX < (b.minX + b.maxX) / 2)
+            f.pos.x = fromLeft ? b.minX - half : b.maxX + half
+            f.vel.x = 0
+            blocked = true
+        }
+        let clamped = min(max(f.pos.x, arena.lowerBound + half), arena.upperBound - half)
+        if clamped != f.pos.x {
+            f.pos.x = clamped
+            blocked = true
+        }
+        if blocked, !f.awake {
+            f.facing = -f.facing
+            f.patrolFrames = 0
+        }
+
+        // Up and down: land on the highest surface crossed, bump the head on solid undersides.
+        let fromY = f.pos.y
+        f.pos.y += f.vel.y * dt
+        var support: Int?
+        var supportTop = -Double.infinity
+        for (i, b) in platformBoxes.enumerated() where f.pos.x + half > b.minX + 0.5 && f.pos.x - half < b.maxX - 0.5 {
+            if f.vel.y <= 0, fromY >= b.maxY - 0.5, f.pos.y <= b.maxY + 0.01 {
+                if b.maxY > supportTop || (b.maxY == supportTop && platforms[i].moves) {
+                    support = i
+                    supportTop = b.maxY
+                }
+            } else if !platforms[i].oneWay, f.vel.y > 0, fromY + height <= b.minY + 0.5, f.pos.y + height >= b.minY {
+                f.pos.y = b.minY - height
+                f.vel.y = 0
+            }
+        }
+        if let support {
+            f.pos.y = supportTop
+            f.vel.y = 0
+            f.groundIndex = support
             if !f.onGround {
                 f.onGround = true
                 events.append(.landed(id: f.id))
             }
-            if f.vel.y < 0 { f.vel.y = 0 }
+            if f.team == .hero, f.isAlive, !platforms[support].moves { f.lastSafe = f.pos }
         } else {
             f.onGround = false
+            f.groundIndex = nil
         }
         if f.onGround {
             f.coyote = tuning.coyoteFrames
         } else if f.coyote > 0 {
             f.coyote -= 1
         }
+    }
 
-        let half = f.spec.width / 2
-        f.pos.x = min(max(f.pos.x, arena.lowerBound + half), arena.upperBound - half)
+    private func hasGround(atX x: Double, y: Double) -> Bool {
+        platformBoxes.contains { $0.minX <= x && x <= $0.maxX && $0.maxY <= y + 1 && $0.maxY >= y - 8 }
     }
 
     // MARK: Hits
@@ -363,9 +496,81 @@ public struct World: Sendable {
         }
     }
 
+    // MARK: Level rules
+
+    /// Pits, hazards, checkpoints, pickups and the exit. Does nothing in the training room.
+    private mutating func levelRules(_ events: inout [GameEvent]) {
+        guard let level else { return }
+
+        for i in fighters.indices where fighters[i].pos.y < level.killY {
+            var f = fighters[i]
+            defer { fighters[i] = f }
+            f.vel = .zero
+            f.pos.y = level.killY
+            guard f.isAlive else { continue }
+            if f.team == .enemy {
+                f.hp = 0
+                f.enter(.dead)
+                f.stateFrame = tuning.corpseFrames
+                events.append(.died(id: f.id))
+                continue
+            }
+            events.append(.fell(id: f.id))
+            f.hp -= tuning.fallDamage
+            if f.hp <= 0 {
+                f.hp = 0
+                f.enter(.dead)
+                events.append(.died(id: f.id))
+            } else {
+                f.pos = f.lastSafe ?? (checkpointIndex >= 0 ? level.checkpoints[checkpointIndex] : level.start)
+                f.onGround = false
+                f.groundIndex = nil
+                f.enter(.idle)
+                f.invulnerable = max(f.spec.hurtInvulnerable, 60)
+                events.append(.respawned(id: f.id))
+            }
+        }
+
+        for hazard in level.hazards where hazard.isOn(at: frame) {
+            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive {
+                let f = fighters[i]
+                guard f.invulnerable == 0, !f.isDodgeInvulnerable, hazard.box.intersects(f.hurtbox) else { continue }
+                let push: Double = f.pos.x >= hazard.box.center.x ? 1 : -1
+                hurt(i, damage: hazard.damage, by: -1, at: f.hurtbox.center, push: push * 260, hitstun: 16, &events)
+                hitStop = max(hitStop, tuning.heroHurtHitStop)
+            }
+        }
+
+        for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive {
+            let reach = tuning.pickupReach
+            let box = fighters[i].hurtbox
+            for p in level.pickups where !collected.contains(p.id)
+                && p.pos.x >= box.minX - reach && p.pos.x <= box.maxX + reach
+                && p.pos.y >= box.minY - reach && p.pos.y <= box.maxY + reach {
+                collected.insert(p.id)
+                events.append(.collected(id: p.id, secret: p.secret, at: p.pos))
+            }
+        }
+
+        guard let i = index(of: controlledID), fighters[i].isAlive else { return }
+        let hero = fighters[i]
+        for (n, c) in level.checkpoints.enumerated() where n > checkpointIndex
+            && abs(hero.pos.x - c.x) < 40 && abs(hero.pos.y - c.y) < 120 {
+            checkpointIndex = n
+            fighters[i].hp = min(hero.spec.maxHP, hero.hp + tuning.checkpointHeal)
+            events.append(.checkpoint(index: n))
+        }
+        if hero.onGround, hero.pos.x >= level.exitX {
+            isComplete = true
+            isOver = true
+            events.append(.levelComplete)
+        }
+    }
+
     // MARK: Waves and endings
 
     private mutating func housekeeping(_ events: inout [GameEvent]) {
+        guard !isComplete else { return }
         let corpseFrames = tuning.corpseFrames
         fighters.removeAll { $0.team == .enemy && $0.state == .dead && $0.stateFrame >= corpseFrames }
         for i in fighters.indices where fighters[i].spec.immortal && fighters[i].sinceHit > tuning.dummyRegenFrames {

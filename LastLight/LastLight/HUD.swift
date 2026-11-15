@@ -12,6 +12,14 @@ final class HUD: SKNode {
     private let message = SKLabelNode(text: "")
     private let hint = SKLabelNode(text: "")
     private let damage = SKSpriteNode(color: Palette.red, size: .zero)
+    private let debug = SKLabelNode(text: "")
+    private let modeButton = SKLabelNode(text: "MODE")
+    private let debugButton = SKLabelNode(text: "DEBUG")
+
+    enum Action {
+        case toggleMode
+        case toggleDebug
+    }
 
     override init() {
         super.init()
@@ -55,6 +63,22 @@ final class HUD: SKNode {
         message.isHidden = true
         hint.fontColor = Palette.white.withAlphaComponent(0.55)
 
+        debug.fontName = "Menlo"
+        debug.fontSize = 10
+        debug.fontColor = Palette.white.withAlphaComponent(0.8)
+        debug.numberOfLines = 0
+        debug.horizontalAlignmentMode = .right
+        debug.verticalAlignmentMode = .top
+        debug.isHidden = true
+        addChild(debug)
+        for button in [modeButton, debugButton] {
+            button.fontName = "AvenirNext-DemiBold"
+            button.fontSize = 10
+            button.fontColor = Palette.cyan.withAlphaComponent(0.7)
+            button.horizontalAlignmentMode = .right
+            addChild(button)
+        }
+
         damage.anchorPoint = .zero
         damage.alpha = 0
         damage.zPosition = -1
@@ -64,7 +88,7 @@ final class HUD: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func layout(size: CGSize, insets: UIEdgeInsets) {
+    func layout(size: CGSize, insets: Insets) {
         let left = max(insets.left, 16) + 8
         let right = size.width - max(insets.right, 16) - 8
         let top = size.height - max(insets.top, 10) - 14
@@ -77,6 +101,23 @@ final class HUD: SKNode {
         message.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
         hint.position = CGPoint(x: size.width / 2, y: top - 6)
         damage.size = size
+        debugButton.position = CGPoint(x: right, y: top - 26)
+        modeButton.position = CGPoint(x: right - 56, y: top - 26)
+        debug.position = CGPoint(x: right, y: top - 36)
+    }
+
+    /// The small text buttons under the status line.
+    func action(at point: CGPoint) -> Action? {
+        for (button, action) in [(modeButton, Action.toggleMode), (debugButton, .toggleDebug)] {
+            let centre = CGPoint(x: button.position.x - button.frame.width / 2, y: button.position.y + 4)
+            if abs(point.x - centre.x) < 28, abs(point.y - centre.y) < 18 { return action }
+        }
+        return nil
+    }
+
+    func setDebug(_ text: String?) {
+        debug.isHidden = text == nil
+        if let text, debug.text != text { debug.text = text }
     }
 
     /// The controlled hero gets the large bar; the partner, if there is one, the small one under it.
@@ -94,8 +135,7 @@ final class HUD: SKNode {
         partnerFill.color = partner.health < 0.3 ? Palette.red : Palette.cyan
     }
 
-    func setStatus(wave: Int, kills: Int) {
-        let text = wave == 0 ? "TRAINING" : "WAVE \(wave)   KILLS \(kills)"
+    func setStatus(_ text: String) {
         if status.text != text { status.text = text }
     }
 

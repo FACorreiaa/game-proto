@@ -6,6 +6,27 @@ public struct Tuning: Sendable {
     /// Extra gravity multiplier while rising with jump released, which makes a tap a short hop.
     public var jumpCutGravity = 2.4
     public var airControl = 0.9
+    /// Speed gained per second while pushing the stick, on the ground and in the air.
+    public var groundAccel = 3200.0
+    public var airAccel = 2200.0
+    /// Speed lost per second with the stick released on the ground. In the air momentum is kept longer.
+    public var groundDecel = 3800.0
+    public var airDecel = 900.0
+    /// Speed changed per second while pushing against the current direction: a quick turn.
+    public var turnAccel = 6000.0
+    public var maxFallSpeed = 1500.0
+
+    /// Health lost by falling out of the level; the hero is put back on the last safe ground.
+    public var fallDamage = 15.0
+    public var checkpointHeal = 30.0
+    public var pickupReach = 16.0
+    /// A placed enemy notices a hero inside this box around itself.
+    public var wakeRange = 520.0
+    public var wakeHeight = 220.0
+    /// Enemies ignore a hero this far above or below them.
+    public var enemySightHeight = 150.0
+    public var patrolSpeed = 0.35
+    public var patrolTurnFrames = 150
     public var coyoteFrames = 6
     public var jumpBuffer = 7
     public var attackBuffer = 10

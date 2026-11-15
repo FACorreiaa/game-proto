@@ -161,3 +161,24 @@ art is made for the rest.
    decisions, epilogues. → **Owner gate on the scripts.**
 5. **Look and release.** Art spike → **owner verdict**; art, cinematic, polish;
    TestFlight to strangers.
+
+## 9. Addendum: the owner's brief (2026-11-15)
+
+Later the same day the owner gave a fuller brief. Where it differs from the sections above, the brief wins.
+
+- **Genre emphasis.** An action-*platformer*: movement quality is the first priority (momentum, coyote
+  time, jump buffering, variable jump height, reliable platform and wall collisions), then combat.
+  Levels have platforms, moving platforms, hazards, secrets and checkpoints.
+- **Platforms.** iPhone, iPad and macOS from one codebase. The app target now builds for all three.
+- **Characters.** All eight are playable eventually, each with its own kit. The first slice is Caelen
+  only; the character system stays data-driven so the others are added without touching movement,
+  combat or level code.
+- **First slice.** Chapter 1, The Foundry, in three segments: Awakening, The Machine Hall, The Protocol.
+- **Art.** The owner will model and animate characters in Blender and render sprites from them.
+  Placeholders stay until that phase.
+- **Stages, revised.** (1) Movement yard: one test level that exercises every basic. **Owner plays it.**
+  (2) Chapter 1 segments A and B. (3) The Protocol, first phase. (4) Story architecture with one
+  small example. Art and the other characters follow.
+
+The AI partner and control switching (old stage 2) are built and stay in the training room. The brief
+does not mention them, so the Chapter 1 slice is played as Caelen alone until the owner decides.

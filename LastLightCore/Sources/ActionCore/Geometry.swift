@@ -26,6 +26,10 @@ public struct Box: Equatable, Sendable {
 
     public var center: Vec2 { Vec2((minX + maxX) / 2, (minY + maxY) / 2) }
 
+    public func offset(by d: Vec2) -> Box {
+        Box(minX: minX + d.x, minY: minY + d.y, maxX: maxX + d.x, maxY: maxY + d.y)
+    }
+
     public func intersects(_ other: Box) -> Bool {
         minX < other.maxX && other.minX < maxX && minY < other.maxY && other.minY < maxY
     }
