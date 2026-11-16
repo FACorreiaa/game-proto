@@ -85,21 +85,17 @@ platform :ios do
     )
   end
 
-  # CFBundleVersion must exceed every earlier upload of this app, so read them all from App Store
-  # Connect instead of trusting the project file.
+  # CFBundleVersion must exceed every earlier upload of this app. App Store Connect's build list misses an upload
+  # that is still processing, so two merges in quick succession used to pick the same number and the second upload
+  # was rejected. The UTC minute the build starts is always newer than the last one: the workflow runs one build at
+  # a time, and each takes minutes. The list is still read, so a number can never go backwards.
   private_lane :bump_build_number do |options|
     Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: options[:api_key])
     app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
     UI.user_error!("Create #{BUNDLE_ID} in App Store Connect first (docs/release.md)") unless app
 
-    build_numbers = app.get_builds.map { |build| Integer(build.version, exception: false) }.compact
-    # An upload still processing isn't in the build list yet. Two pushes to main in quick succession then pick
-    # the same number and the second upload is rejected as a duplicate, so count the deliveries too.
-    begin
-      build_numbers += app.get_build_deliveries.map { |d| Integer(d.cf_build_version, exception: false) }.compact
-    rescue StandardError => e
-      UI.important("Couldn't read processing uploads (#{e.message}); using finished builds only")
-    end
-    increment_build_number(build_number: (build_numbers.max || 0) + 1, xcodeproj: PROJECT)
+    uploaded = app.get_builds.map { |build| Integer(build.version, exception: false) }.compact.max || 0
+    minute = Integer(Time.now.utc.strftime("%Y%m%d%H%M"))
+    increment_build_number(build_number: [uploaded + 1, minute].max, xcodeproj: PROJECT)
   end
 end

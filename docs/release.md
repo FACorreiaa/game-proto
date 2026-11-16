@@ -29,8 +29,10 @@ cd LastLight && bundle install
 bundle exec fastlane beta
 ```
 
-The build number is read from App Store Connect and incremented; the marketing version is
-`MARKETING_VERSION` in the Xcode project.
+The build number is the UTC minute the build starts (`202611161730`), or one more than the highest number in App
+Store Connect if that is somehow higher. App Store Connect doesn't list an upload that is still processing, so
+reading it alone gave two quick merges the same number. The marketing version is `MARKETING_VERSION` in the Xcode
+project.
 
 ## Notes
 
