@@ -2,7 +2,7 @@ import ActionCore
 import GameController
 
 /// Keyboard and controller, polled once per rendered frame.
-/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, I uses the special, L switches hero, R restarts,
+/// Keyboard: A/D or arrows move, Space jumps, J attacks, K dodges, I uses the special, L switches hero, R restarts, Esc pauses,
 /// M changes between the level and the training room, P shows or hides the debug overlay.
 struct HardwareInput {
     private var wasDown: Set<String> = []
@@ -16,6 +16,7 @@ struct HardwareInput {
         var special = false
         var switchHero = false
         var restart = false
+        var pause = false
         var mode = false
         var debug = false
     }
@@ -34,6 +35,7 @@ struct HardwareInput {
             if held(.keyI) || held(.keyE) { down.insert("special") }
             if held(.keyL) || held(.tab) { down.insert("switch") }
             if held(.keyR) { down.insert("restart") }
+            if held(.escape) { down.insert("pause") }
             if held(.keyM) { down.insert("mode") }
             if held(.keyP) { down.insert("debug") }
         }
@@ -48,7 +50,7 @@ struct HardwareInput {
             if pad.buttonB.isPressed || pad.rightShoulder.isPressed { down.insert("dodge") }
             if pad.buttonY.isPressed { down.insert("switch") }
             if pad.leftShoulder.isPressed || pad.rightTrigger.isPressed { down.insert("special") }
-            if pad.buttonMenu.isPressed { down.insert("restart") }
+            if pad.buttonMenu.isPressed { down.insert("pause") }
         }
 
         reading.moveX = max(-1, min(1, reading.moveX))
@@ -59,6 +61,7 @@ struct HardwareInput {
         reading.special = down.contains("special") && !wasDown.contains("special")
         reading.switchHero = down.contains("switch") && !wasDown.contains("switch")
         reading.restart = down.contains("restart") && !wasDown.contains("restart")
+        reading.pause = down.contains("pause") && !wasDown.contains("pause")
         reading.mode = down.contains("mode") && !wasDown.contains("mode")
         reading.debug = down.contains("debug") && !wasDown.contains("debug")
         wasDown = down

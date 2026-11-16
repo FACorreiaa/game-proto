@@ -17,12 +17,10 @@ final class HUD: SKNode {
     private let bossFill = SKSpriteNode(color: Palette.red, size: CGSize(width: 316, height: 5))
     private let bossName = SKLabelNode(text: "")
     private let special = SKLabelNode(text: "")
-    private let modeButton = SKLabelNode(text: "MODE")
-    private let debugButton = SKLabelNode(text: "DEBUG")
+    private let pauseButton = SKShapeNode(rectOf: CGSize(width: 34, height: 30), cornerRadius: 6)
 
     enum Action {
-        case toggleMode
-        case toggleDebug
+        case pause
     }
 
     override init() {
@@ -96,13 +94,16 @@ final class HUD: SKNode {
         debug.verticalAlignmentMode = .top
         debug.isHidden = true
         addChild(debug)
-        for button in [modeButton, debugButton] {
-            button.fontName = "AvenirNext-DemiBold"
-            button.fontSize = 10
-            button.fontColor = Palette.cyan.withAlphaComponent(0.7)
-            button.horizontalAlignmentMode = .right
-            addChild(button)
+        pauseButton.fillColor = Palette.white.withAlphaComponent(0.06)
+        pauseButton.strokeColor = Palette.cyan.withAlphaComponent(0.5)
+        pauseButton.lineWidth = 1
+        for x in [-4.0, 4.0] {
+            let bar = SKShapeNode(rect: CGRect(x: x - 1.5, y: -7, width: 3, height: 14), cornerRadius: 1)
+            bar.fillColor = Palette.cyan.withAlphaComponent(0.85)
+            bar.strokeColor = .clear
+            pauseButton.addChild(bar)
         }
+        addChild(pauseButton)
 
         damage.anchorPoint = .zero
         damage.alpha = 0
@@ -129,18 +130,13 @@ final class HUD: SKNode {
         special.position = CGPoint(x: left, y: top - 54)
         bossBack.position = CGPoint(x: size.width / 2, y: top - 30)
         bossName.position = CGPoint(x: size.width / 2, y: top - 34)
-        debugButton.position = CGPoint(x: right, y: top - 26)
-        modeButton.position = CGPoint(x: right - 56, y: top - 26)
-        debug.position = CGPoint(x: right, y: top - 36)
+        pauseButton.position = CGPoint(x: right - 17, y: top - 30)
+        debug.position = CGPoint(x: right, y: top - 52)
     }
 
-    /// The small text buttons under the status line.
+    /// The pause button under the status line, with a generous target.
     func action(at point: CGPoint) -> Action? {
-        for (button, action) in [(modeButton, Action.toggleMode), (debugButton, .toggleDebug)] {
-            let centre = CGPoint(x: button.position.x - button.frame.width / 2, y: button.position.y + 4)
-            if abs(point.x - centre.x) < 28, abs(point.y - centre.y) < 18 { return action }
-        }
-        return nil
+        abs(point.x - pauseButton.position.x) < 30 && abs(point.y - pauseButton.position.y) < 26 ? .pause : nil
     }
 
     func setDebug(_ text: String?) {
