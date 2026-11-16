@@ -270,3 +270,19 @@ private func shipped() throws -> StoryLibrary {
         #expect(last.contains(words), "\(choice)")
     }
 }
+
+@Test func atTheGateEachLeadSpeaksThenOrionNamesTheWardensWeakness() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        for choice in ["trusted", "watched"] {
+            var state = StoryState()
+            state.flags = ["lead": lead.rawValue, "orion": choice]
+            var runner = try #require(StoryRunner(sceneID: "warden.wake", library: story, state: state))
+            var speakers: [String] = []
+            var last = ""
+            while let line = runner.line { speakers.append(line.speaker); last = line.text; runner.advance() }
+            #expect(speakers == [lead.rawValue.uppercased(), "ORION"], "\(lead) \(choice)")
+            #expect(last.contains("behind") || last.contains("round"))
+        }
+    }
+}

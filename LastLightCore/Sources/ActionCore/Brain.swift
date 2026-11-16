@@ -223,6 +223,64 @@ public struct WeaverBrain: Brain {
     }
 }
 
+/// The Line Warden. Faces the hero behind its guard and turns slowly, so getting behind it is the way in.
+/// Two cuts up close, a thrust from further off. In overdrive it turns faster and, when alone, calls a soldier.
+public struct WardenBrain: Brain {
+    public init() {}
+
+    static let cut = 0, crossCut = 1, thrust = 2, call = 3, spin = 4
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        // Anyone lingering close behind it gets the spin.
+        let spinReach = me.spec.width / 2 + me.spec.attacks[Self.spin].reach
+        let behind = foes.contains { ($0.pos.x - me.pos.x) * me.facing < 0 && abs($0.pos.x - me.pos.x) < spinReach }
+        if behind, me.aiCooldown < tuning.wardenAttackGap.lowerBound / 2 {
+            me.aiAux3 += 1
+            if me.aiAux3 >= tuning.wardenSpinAfter {
+                me.aiAux3 = 0
+                me.aiCooldown = Int.random(in: tuning.wardenAttackGap, using: &rng)
+                me.nextAttack = Self.spin
+                return InputFrame(attack: true)
+            }
+        } else if !behind {
+            me.aiAux3 = 0
+        }
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < (me.phase >= 2 ? tuning.wardenFastTurnDelay : tuning.wardenTurnDelay) { return .neutral }
+        }
+        me.aiAux = 0
+
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        let close = gap < me.spec.attacks[Self.cut].reach - 10
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: close ? dir * facingNudge : dir) }
+
+        me.aiCooldown = Int.random(in: tuning.wardenAttackGap, using: &rng)
+        let alone = !allies.contains { $0.id != me.id && $0.isAlive && $0.kind == .forgedSoldier }
+        if me.phase >= 2, alone, me.aiAux2 == 0 {
+            // Calls once per overdrive, and again only after the soldier falls and it has fought a while.
+            me.aiAux2 = 6
+            me.nextAttack = Self.call
+        } else if close {
+            if me.aiAux2 > 0, alone { me.aiAux2 -= 1 }
+            // A cut, often followed straight away by the cross-cut.
+            me.nextAttack = me.nextAttack == Self.cut && Bool.random(using: &rng) ? Self.crossCut : Self.cut
+        } else if gap < 320, Double.random(in: 0..<1, using: &rng) < tuning.wardenThrustChance {
+            me.nextAttack = Self.thrust
+        } else {
+            return InputFrame(moveX: dir)
+        }
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
 /// The Cinder King, in three phases.
 /// Offer: walks the hero down; cane up close, lanterns from further off.
 /// Debt: calls Ratborn whenever none are left, who shield him; between calls, fire from the floor and lanterns.

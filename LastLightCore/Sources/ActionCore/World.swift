@@ -874,7 +874,8 @@ public struct World: Sendable {
             if let sd = f.spec.selfDestruct, f.state != .fuse, f.hp <= f.spec.maxHP * sd.threshold {
                 f.enter(.fuse)
                 events.append(.fuseLit(id: f.id))
-            } else if f.state == .fuse || f.state == .staggered || f.spec.rooted || f.spec.armored {
+            } else if f.state == .fuse || f.state == .staggered || f.spec.rooted || f.spec.armored
+                        || f.spec.unflinching {
                 // Keeps doing what it was doing.
             } else if f.spec.poise, case .attack = f.state {
                 // Finishes its swing.

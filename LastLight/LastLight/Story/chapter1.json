@@ -276,6 +276,58 @@
           "text": "It is silent. Come. There is more of the Foundry than this room."
         }
       }
+    },
+    "warden.wake": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Something still keeps the gate. It was waiting for whoever woke.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "trusted"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "It stands like a temple guard. Nothing passes it from the front.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "trusted"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Runners went round this gate. There's no round any more.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "trusted",
+          "next": "trusted"
+        },
+        "trusted": {
+          "speaker": "ORION",
+          "text": "The Line Warden. Its guard faces forward and it turns slowly. I will hold its eye. Go round.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "The Line Warden. You wanted me in front, so I will stand where it looks. Get behind it.",
+          "requires": {
+            "orion": "watched"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Line Warden. Its guard faces forward. Get behind it, or turn its blade aside."
+        }
+      }
     }
   }
 }

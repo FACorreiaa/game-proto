@@ -269,6 +269,16 @@ extension Level {
         return l
     }()
 
+    /// Chapter 1's mid-boss: the gate between the Machine Hall and the Protocol, held by the Line Warden.
+    public static let wardensGate: Level = {
+        var l = Level(name: "The Warden's Gate", width: 1500, start: Vec2(140, 0), exitX: .infinity)
+        l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("warden.wake", on: .bossWakes))
+        l.ground(-200, 1700)
+        l.boss = Placement(.lineWarden, x: 1050)
+        return l
+    }()
+
     /// Chapter 1, segment C. One room, one machine far larger than the hero.
     public static let theProtocol: Level = {
         var l = Level(name: "The Protocol", width: 1700, start: Vec2(140, 0), exitX: .infinity)
@@ -358,12 +368,13 @@ extension Level {
     }()
 
     /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
-    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .theProtocol,
+    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .wardensGate,
+                                      .theProtocol,
                                       .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault]
 
     /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
     public static func chapter1(for lead: FighterKind) -> [Level] {
-        [Faction(lead: lead).opening, .foundryYard, .machineHall, .theProtocol]
+        [Faction(lead: lead).opening, .foundryYard, .machineHall, .wardensGate, .theProtocol]
     }
 }
 

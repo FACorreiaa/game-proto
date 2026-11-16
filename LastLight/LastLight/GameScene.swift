@@ -180,6 +180,9 @@ final class GameScene: SKScene {
         case .cinderKing:
             ("THE CINDER KING", ["THE DEBT", "THE PRICE"],
              "Step out of the fire.  While his Ratborn live, he can't be hurt.")
+        case .lineWarden:
+            ("THE LINE WARDEN", ["OVERDRIVE"],
+             "Its guard faces forward.  Get behind it, or parry to break its stance.")
         default:
             ("THE PROTOCOL", ["ASCENSION", "EXECUTION"], "Strike only when the core opens.  Jump the surge.  Dodge the charge.")
         }
@@ -614,7 +617,7 @@ final class GameScene: SKScene {
         if let boss = world.boss, boss.awake, boss.isAlive {
             let title = bossTitle(boss.kind)
             let phase = boss.phase >= 2 ? " · " + title.phases[min(boss.phase - 2, title.phases.count - 1)] : ""
-            hud.setBoss((title.name + phase, boss.hp / boss.spec.maxHP, boss.isOpen && !world.isWarded(boss.id)))
+            hud.setBoss((title.name + phase, boss.hp / boss.spec.maxHP, boss.isOpen && !boss.isGuarding && !world.isWarded(boss.id)))
         } else {
             hud.setBoss(nil)
         }

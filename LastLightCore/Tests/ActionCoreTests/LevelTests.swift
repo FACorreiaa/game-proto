@@ -385,7 +385,7 @@ private func partner(_ world: World) -> Fighter {
     let routes = Faction.allCases.map { Level.chapter1(for: $0.lead) }
     #expect(Set(routes.map { $0[0].name }).count == 3)
     for route in routes {
-        #expect(route.dropFirst().map(\.name) == ["Foundry Yard", "The Machine Hall", "The Protocol"])
+        #expect(route.dropFirst().map(\.name) == ["Foundry Yard", "The Machine Hall", "The Warden's Gate", "The Protocol"])
     }
 }
 
