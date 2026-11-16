@@ -34,7 +34,11 @@ public enum GameEvent: Equatable, Sendable {
     /// A boss came down from the air and is open.
     case bossLanded(id: Int)
     /// A column of light began to burn.
-    case struck(at: Vec2, width: Double)
+    case struck(at: Vec2, width: Double, kind: StrikeKind)
+    /// Something was thrown and will land at `at`.
+    case lobbed(id: Int, kind: StrikeKind, at: Vec2)
+    /// A summoned thing ran out of time and faded.
+    case faded(id: Int, at: Vec2)
     /// Caelen's Command put a mark on an enemy.
     case commanded(by: Int, target: Int)
     /// Orion's Adapt: the guard went up.

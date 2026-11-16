@@ -40,6 +40,8 @@ final class FighterNode: SKNode {
         rim = switch kind {
         case .seraphine: Palette.gold
         case .nimue, .decoy: Palette.violet
+        // The Lantern Cities' people are lit by their lanterns, not by machine red.
+        case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage: Palette.ember
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
         }
         if kind == .orion { baseFill = Palette.plate }
@@ -61,6 +63,11 @@ final class FighterNode: SKNode {
         case .theProtocol: buildProtocol()
         case .sentryCore: buildSentry()
         case .dogmaFrame: buildDogma()
+        case .ratborn: buildRatborn()
+        case .lanternGunner: buildGunner()
+        case .smugglerBrute: buildBrute()
+        case .nightWeaver: buildWeaver()
+        case .weaverImage: buildWeaverImage()
         }
         addGlows()
     }
@@ -609,6 +616,121 @@ final class FighterNode: SKNode {
         blade(length: 30, color: Palette.violet, at: CGPoint(x: 6, y: 48))
     }
 
+    // MARK: The Lantern Cities
+
+    /// Ember eyes under a hood or brim.
+    private func emberEyes(at point: CGPoint, gap: CGFloat = 5) {
+        let pair = SKNode()
+        for dx in [0, gap] {
+            let dot = SKShapeNode(circleOfRadius: 1.6)
+            dot.position = CGPoint(x: point.x + dx, y: point.y)
+            light(dot, color: Palette.ember, glow: 2)
+            pair.addChild(dot)
+        }
+        pair.zPosition = 2
+        figure.addChild(pair)
+    }
+
+    /// Ratborn: small and hunched, hood forward, a short knife.
+    private func buildRatborn() {
+        leg(x: -6, hipY: 20, length: 20, width: 7)
+        leg(x: 6, hipY: 20, length: 20, width: 7)
+        let body = CGMutablePath()
+        body.addLines(between: [
+            CGPoint(x: -12, y: 18), CGPoint(x: 10, y: 18), CGPoint(x: 16, y: 40), CGPoint(x: 4, y: 50),
+            CGPoint(x: -12, y: 42),
+        ])
+        body.closeSubpath()
+        _ = part(body)
+        let hood = CGMutablePath()
+        hood.addLines(between: [CGPoint(x: -2, y: 44), CGPoint(x: 22, y: 50), CGPoint(x: 12, y: 60), CGPoint(x: -4, y: 56)])
+        hood.closeSubpath()
+        _ = part(hood, z: 1)
+        emberEyes(at: CGPoint(x: 11, y: 51), gap: 4)
+        blade(length: 22, color: Palette.ember, at: CGPoint(x: 10, y: 30))
+    }
+
+    /// Lantern Gunner: a long coat, a wide brim, a lantern held ready to throw.
+    private func buildGunner() {
+        leg(x: -6, hipY: 30, length: 30, width: 8)
+        leg(x: 6, hipY: 30, length: 30, width: 8)
+        let coat = CGMutablePath()
+        coat.addLines(between: [CGPoint(x: -15, y: 14), CGPoint(x: 15, y: 14), CGPoint(x: 11, y: 62), CGPoint(x: -11, y: 62)])
+        coat.closeSubpath()
+        _ = part(coat)
+        _ = part(CGPath(ellipseIn: CGRect(x: -8, y: 60, width: 16, height: 16), transform: nil), z: 1)
+        _ = part(CGPath(rect: CGRect(x: -17, y: 72, width: 34, height: 4), transform: nil), z: 2)
+        emberEyes(at: CGPoint(x: 3, y: 67))
+        let lantern = SKShapeNode(rect: CGRect(x: -4, y: -5, width: 8, height: 10), cornerRadius: 2)
+        lantern.position = CGPoint(x: 18, y: 40)
+        light(lantern, color: Palette.ember, glow: 5)
+        figure.addChild(lantern)
+        let glow = Effects.glow(color: Palette.ember, size: 54, alpha: 0.5)
+        glow.position = lantern.position
+        glow.zPosition = 1.5
+        figure.addChild(glow)
+    }
+
+    /// Smuggler Brute: a wall of a body, a small head, a cargo hook.
+    private func buildBrute() {
+        leg(x: -14, hipY: 40, length: 40, width: 16)
+        leg(x: 14, hipY: 40, length: 40, width: 16)
+        _ = part(CGPath(roundedRect: CGRect(x: -30, y: 36, width: 60, height: 52), cornerWidth: 14, cornerHeight: 14,
+                        transform: nil))
+        _ = part(CGPath(ellipseIn: CGRect(x: -9, y: 84, width: 20, height: 20), transform: nil), z: 1)
+        emberEyes(at: CGPoint(x: 3, y: 94))
+        // A strap of lanterns across the chest.
+        for (n, x) in [-16.0, -4.0, 8.0].enumerated() {
+            let lamp = SKShapeNode(circleOfRadius: 2.5)
+            lamp.position = CGPoint(x: x, y: 70 - Double(n) * 6)
+            light(lamp, color: Palette.ember, glow: 3)
+            figure.addChild(lamp)
+        }
+        blade(length: 70, color: Palette.ember, at: CGPoint(x: 20, y: 70))
+    }
+
+    /// Night Weaver: tall and thin, a cloak that ends in threads.
+    private func buildWeaver() {
+        leg(x: -4, hipY: 26, length: 26, width: 6)
+        leg(x: 4, hipY: 26, length: 26, width: 6)
+        let cloak = CGMutablePath()
+        cloak.addLines(between: [
+            CGPoint(x: -16, y: 10), CGPoint(x: -8, y: 18), CGPoint(x: 0, y: 8), CGPoint(x: 8, y: 18), CGPoint(x: 16, y: 10),
+            CGPoint(x: 9, y: 70), CGPoint(x: -9, y: 70),
+        ])
+        cloak.closeSubpath()
+        _ = part(cloak)
+        let hood = CGMutablePath()
+        hood.addLines(between: [CGPoint(x: -9, y: 66), CGPoint(x: 9, y: 66), CGPoint(x: 6, y: 86), CGPoint(x: -2, y: 90)])
+        hood.closeSubpath()
+        _ = part(hood, z: 1)
+        let eyes = SKShapeNode(rect: CGRect(x: 0, y: 77, width: 6, height: 2))
+        light(eyes, color: Palette.violet, glow: 3)
+        figure.addChild(eyes)
+        eye = eyes
+        // Threads of light between the hands.
+        let thread = CGMutablePath()
+        thread.move(to: CGPoint(x: -12, y: 44))
+        thread.addQuadCurve(to: CGPoint(x: 14, y: 44), control: CGPoint(x: 1, y: 30))
+        let line = SKShapeNode(path: thread)
+        line.strokeColor = Palette.violet.withAlphaComponent(0.8)
+        line.lineWidth = 1
+        line.glowWidth = 2
+        line.zPosition = 3
+        figure.addChild(line)
+    }
+
+    /// A Weaver's image: the same figure, thinner, flickering.
+    private func buildWeaverImage() {
+        buildWeaver()
+        for node in bodyParts {
+            node.fillColor = Palette.violet.withAlphaComponent(0.12)
+            node.strokeColor = Palette.violet.withAlphaComponent(0.7)
+        }
+        figure.alpha = 0.7
+        figure.run(.repeatForever(.sequence([.fadeAlpha(to: 0.45, duration: 0.25), .fadeAlpha(to: 0.75, duration: 0.35)])))
+    }
+
     /// Nimue's stand-in: her outline in lantern light, see-through.
     private func buildDecoy() {
         buildNimue()
@@ -665,6 +787,8 @@ final class FighterNode: SKNode {
         case .orion: 46
         case .seraphine: 64
         case .nimue: 30
+        case .ratborn: 22
+        case .smugglerBrute: 70
         default: 76
         }
     }

@@ -1,0 +1,166 @@
+{
+  "scenes": {
+    "market.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Foundry crates, on market stalls. Someone here deals with the machines.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "caelen2"
+        },
+        "caelen2": {
+          "speaker": "ORION",
+          "text": "Then someone here knows the way in and out of the Foundry. We follow the crates."
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "My order calls the Cities godless. They look like people trying to stay lit.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "seraphine2"
+        },
+        "seraphine2": {
+          "speaker": "ORION",
+          "text": "Lanterns on every stall. Here, light is something you can buy."
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Home. Mind your pockets. Half this market is honest, and the other half is hungry.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "nimue2"
+        },
+        "nimue2": {
+          "speaker": "ORION",
+          "text": "And your runners?",
+          "next": "nimue3"
+        },
+        "nimue3": {
+          "speaker": "NIMUE",
+          "text": "Someone here sold them to the line. I mean to find out who."
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Lantern Cities. Stay close. Not everyone here wants to be found."
+        }
+      }
+    },
+    "market.ratborn": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "ORION",
+          "text": "Ratborn. They are not machines, Caelen. They are hungry.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "ORION",
+          "text": "Ratborn. They are not machines. They are hungry.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Ratborn. Drain kids, grown up hungry. They take anything that isn't held tight.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Ratborn. They are not machines. They are hungry."
+        }
+      }
+    },
+    "roofs.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "ORION",
+          "text": "Night Weavers keep these roofs. If you see two of one, one of them is not there.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "Two of the same figure, on two roofs at once.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "seraphine2"
+        },
+        "seraphine2": {
+          "speaker": "ORION",
+          "text": "A Night Weaver. One of them is not there. Strike the one that does not flicker."
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The roofs are the only road nobody charges for.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "nimue2"
+        },
+        "nimue2": {
+          "speaker": "NIMUE",
+          "text": "Watch for Weavers. If you see two of one, one of them is lying."
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Night Weavers keep these roofs. If you see two of one, one of them is not there."
+        }
+      }
+    },
+    "docks.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "More Foundry crates. Whoever trades with the machines ships from here.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "Sanctuary bread on those crates. Ours. Sold here at three times what it cost us.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The Cinder Docks. Every crate here pays the Cinder King twice. Once in coin, once in fear.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Cinder Docks. Everything that is bought in this city passes through here."
+        }
+      }
+    }
+  }
+}

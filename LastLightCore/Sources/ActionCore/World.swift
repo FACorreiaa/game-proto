@@ -105,6 +105,9 @@ public struct World: Sendable {
         fighters.append(Fighter(
             id: id, kind: kind, team: kind.team, spec: spec ?? tuning.spec(for: kind),
             pos: Vec2(x, y), facing: facing ?? (x <= mid ? 1 : -1)))
+        if fighters[fighters.count - 1].spec.lifetime > 0 {
+            fighters[fighters.count - 1].expires = fighters[fighters.count - 1].spec.lifetime
+        }
         return id
     }
 
@@ -198,6 +201,7 @@ public struct World: Sendable {
 
         resolveCommands(&events)
         resolveSpecials(&events)
+        fadeSummons(&events)
         resolveHits(&events)
         applyEffects(&events)
         updateStrikes(&events)
@@ -347,7 +351,7 @@ public struct World: Sendable {
             } else if canDodge(f) {
                 startDodge(&f, inp, &events)
             } else if f.attackBuffer > 0, !f.spec.attacks.isEmpty {
-                startAttack(&f, f.spec.boss ? min(f.nextAttack, f.spec.attacks.count - 1) : 0, inp, &events)
+                startAttack(&f, f.spec.boss || f.spec.choosesAttacks ? min(f.nextAttack, f.spec.attacks.count - 1) : 0, inp, &events)
             } else {
                 if f.jumpBuffer > 0, f.spec.jumpSpeed > 0, f.onGround || f.coyote > 0 {
                     f.jumpBuffer = 0
@@ -568,14 +572,22 @@ public struct World: Sendable {
             case .strike:
                 break
             case .summon(let kind, let count):
-                let living = fighters.filter { $0.team == me.team && $0.isAlive && !$0.spec.boss && !$0.spec.immortal }.count
-                for n in 0..<max(0, min(count, tuning.protocolMaxMinions - living)) {
+                // A boss counts everyone fighting beside it; anyone else counts only what it calls.
+                let living = me.spec.boss
+                    ? fighters.filter { $0.team == me.team && $0.isAlive && !$0.spec.boss && !$0.spec.immortal }.count
+                    : fighters.filter { $0.kind == kind && $0.isAlive && abs($0.pos.x - me.pos.x) < 800 }.count
+                let cap = me.spec.boss ? tuning.protocolMaxMinions : tuning.maxSummoned
+                for n in 0..<max(0, min(count, cap - living)) {
                     let side: Double = n % 2 == 0 ? -1 : 1
                     let x = me.pos.x + side * (me.spec.width / 2 + 60 + Double(n / 2) * 60)
-                    // Boss rooms have their floor at 0.
-                    let id = spawn(kind, x: min(max(x, arena.lowerBound + 40), arena.upperBound - 40), y: 0, facing: -side)
+                    // Boss rooms have their floor at 0; elsewhere they appear on the summoner's floor.
+                    let y = me.spec.boss ? 0 : me.pos.y
+                    let id = spawn(kind, x: min(max(x, arena.lowerBound + 40), arena.upperBound - 40), y: y, facing: -side)
+                    if let s = self.index(of: id) { fighters[s].onGround = me.onGround }
                     events.append(.spawned(id: id, kind: kind))
                 }
+            case .lob(let lob):
+                lobbed(lob, from: me, &events)
             case .rain(let columns, let width, let warning, let active, let damage):
                 var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
                 var tries = 0
@@ -593,12 +605,34 @@ public struct World: Sendable {
         }
     }
 
+    /// Lands a thrown thing under the nearest hero in range, or as far as it carries toward them, on the ground there.
+    private mutating func lobbed(_ lob: Lob, from me: Fighter, _ events: inout [GameEvent]) {
+        let heroes = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }
+        let target = heroes.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+        var x = me.pos.x + me.facing * lob.range
+        var y = me.pos.y
+        if let target, abs(target.pos.x - me.pos.x) <= lob.range {
+            x = target.pos.x
+            y = target.pos.y
+        }
+        // The highest floor at or below that point.
+        let floors = platformBoxes.filter { $0.minX <= x && x <= $0.maxX && $0.maxY <= y + 1 }
+        guard let floor = floors.max(by: { $0.maxY < $1.maxY })?.maxY else { return }
+        var strike = Strike(box: Box(minX: x - lob.width / 2, minY: floor - 4, maxX: x + lob.width / 2, maxY: floor + lob.height),
+                            warning: lob.warning, active: lob.active, damage: lob.damage)
+        strike.kind = lob.kind
+        strike.slowFrames = lob.slowFrames
+        strikes.append(strike)
+        events.append(.lobbed(id: me.id, kind: lob.kind, at: Vec2(x, floor)))
+    }
+
     private mutating func updateStrikes(_ events: inout [GameEvent]) {
         guard !strikes.isEmpty else { return }
         for s in strikes.indices {
             strikes[s].age += 1
             if strikes[s].age == strikes[s].warning {
-                events.append(.struck(at: Vec2(strikes[s].box.center.x, 0), width: strikes[s].box.width))
+                events.append(.struck(at: Vec2(strikes[s].box.center.x, strikes[s].box.minY + 4), width: strikes[s].box.width,
+                                      kind: strikes[s].kind))
             }
             guard strikes[s].isActive else { continue }
             for t in fighters.indices where fighters[t].team == .hero && fighters[t].isAlive && fighters[t].awake
@@ -615,6 +649,11 @@ public struct World: Sendable {
                     events.append(.absorbed(by: f.id, attacker: bossID ?? -1, at: f.hurtbox.center))
                     continue
                 }
+                if strikes[s].slowFrames > 0 {
+                    fighters[t].slowFrames = strikes[s].slowFrames
+                    events.append(.slowed(id: f.id))
+                }
+                guard strikes[s].damage > 0 else { continue }
                 let push: Double = f.pos.x >= strikes[s].box.center.x ? 1 : -1
                 hurt(t, damage: strikes[s].damage, by: bossID ?? -1, at: f.hurtbox.center, push: push * 220,
                      hitstun: 16, &events)
@@ -694,6 +733,15 @@ public struct World: Sendable {
             }
         }
         fighters.removeAll { $0.spec.isDecoy && ($0.expires <= 0 || !$0.isAlive) }
+    }
+
+    /// Things that last only a while, such as a Night Weaver's images, fade when their time is up.
+    private mutating func fadeSummons(_ events: inout [GameEvent]) {
+        for i in fighters.indices where fighters[i].spec.lifetime > 0 && !fighters[i].spec.isDecoy && fighters[i].isAlive {
+            fighters[i].expires -= 1
+            if fighters[i].expires <= 0 { events.append(.faded(id: fighters[i].id, at: fighters[i].hurtbox.center)) }
+        }
+        fighters.removeAll { $0.spec.lifetime > 0 && !$0.spec.isDecoy && $0.isAlive && $0.expires <= 0 }
     }
 
     // MARK: Hits

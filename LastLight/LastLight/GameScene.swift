@@ -71,11 +71,26 @@ final class GameScene: SKScene {
     private(set) var lead: FighterKind {
         didSet { UserDefaults.standard.set(lead.rawValue, forKey: "progress.lead") }
     }
-    /// Chapter 1 as the lead plays it: their opening, then the shared levels.
-    private var levels: [Level] { Level.chapter1(for: lead) }
-    /// Which level of the lead's chapter is being played. Remembered between launches.
+    /// The whole run as the lead plays it: every chapter's levels, in order.
+    private var levels: [Level] { Self.route(for: lead) }
+    /// Which level of the run is being played. Saved by the level's name, so adding a chapter never moves it.
     private var levelIndex: Int {
-        didSet { UserDefaults.standard.set(levelIndex, forKey: "progress.level") }
+        didSet { UserDefaults.standard.set(levels[levelIndex].name, forKey: "progress.levelName") }
+    }
+
+    private static func route(for lead: FighterKind) -> [Level] {
+        Chapter.all.flatMap { $0.levels(for: lead) }
+    }
+
+    /// The chapter a level of the run belongs to, and where that chapter starts in the run.
+    private func chapter(at index: Int) -> (chapter: Chapter, start: Int) {
+        var start = 0
+        for chapter in Chapter.all {
+            let count = chapter.levels(for: lead).count
+            if index < start + count { return (chapter, start) }
+            start += count
+        }
+        return (Chapter.all[Chapter.all.count - 1], start)
     }
     private var level: Level { levels[levelIndex] }
 
@@ -87,8 +102,11 @@ final class GameScene: SKScene {
 
     /// The saved place in the chapter. Builds before the openings saved `levelIndex` in the old order (Foundry Yard
     /// first, then Awakening); that is read once and moved to Caelen's route.
-    private static func savedLevel() -> Int {
+    private static func savedLevel(in route: [Level]) -> Int {
         let defaults = UserDefaults.standard
+        if let name = defaults.string(forKey: "progress.levelName") {
+            return route.firstIndex { $0.name == name } ?? 0
+        }
         if defaults.object(forKey: "progress.level") == nil, defaults.object(forKey: "levelIndex") != nil {
             let old = defaults.integer(forKey: "levelIndex")
             defaults.removeObject(forKey: "levelIndex")
@@ -111,8 +129,8 @@ final class GameScene: SKScene {
         let savedLead = UserDefaults.standard.string(forKey: "progress.lead").flatMap(FighterKind.init(rawValue:))
         let lead = askedLead ?? (demo ? .caelen : savedLead ?? .caelen)
         self.lead = lead
-        let route = Level.chapter1(for: lead)
-        let saved = asked ?? (demo ? 0 : Self.savedLevel())
+        let route = Self.route(for: lead)
+        let saved = asked ?? (demo ? 0 : Self.savedLevel(in: route))
         levelIndex = min(max(saved, 0), route.count - 1)
         world = mode == .level ? World(level: route[levelIndex], hero: lead, seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
@@ -268,6 +286,17 @@ final class GameScene: SKScene {
 
     var currentLevel: Int { levelIndex }
     var levelNames: [String] { levels.map(\.name) }
+    /// The chapter the saved place is in.
+    var currentChapter: Chapter { chapter(at: levelIndex).chapter }
+    /// Each chapter with the run index of its first level and its level names, for the chapter list.
+    var chapterList: [(chapter: Chapter, start: Int, names: [String])] {
+        var start = 0
+        return Chapter.all.map { chapter in
+            let names = chapter.levels(for: lead).map(\.name)
+            defer { start += names.count }
+            return (chapter, start, names)
+        }
+    }
 
     func apply(_ settings: Settings) {
         self.settings = settings
@@ -639,6 +668,10 @@ final class GameScene: SKScene {
             }
             let s = world.strikes[i]
             node.isHidden = false
+            if s.kind != .light {
+                drawGroundStrike(node, s)
+                continue
+            }
             node.path = CGPath(rect: CGRect(x: s.box.minX, y: -20, width: s.box.width, height: 620), transform: nil)
             if s.isActive {
                 node.fillColor = Palette.white.withAlphaComponent(0.85)
@@ -651,6 +684,52 @@ final class GameScene: SKScene {
                 node.strokeColor = Palette.red.withAlphaComponent(0.3 + 0.6 * t)
                 node.glowWidth = 0
             }
+        }
+    }
+
+    /// A burning patch or a snare on the ground: an outline while it warns, then lit while it is live.
+    private func drawGroundStrike(_ node: SKShapeNode, _ s: Strike) {
+        let color = s.kind == .fire ? Palette.ember : Palette.violet
+        let rect = CGRect(x: s.box.minX, y: s.box.minY + 4, width: s.box.width, height: s.box.maxY - s.box.minY - 4)
+        if s.kind == .fire, s.isActive {
+            // Flames: a jagged top that moves.
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            let peaks = max(3, Int(rect.width / 14))
+            for n in 0...peaks {
+                let x = rect.minX + rect.width * CGFloat(n) / CGFloat(peaks)
+                let flicker = sin(CGFloat(s.age + n * 7) * 0.5) * 0.35 + 0.65
+                path.addLine(to: CGPoint(x: x, y: rect.minY + rect.height * (n % 2 == 0 ? flicker : flicker * 0.45)))
+            }
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.closeSubpath()
+            node.path = path
+            node.fillColor = color.withAlphaComponent(0.7)
+            node.strokeColor = Palette.gold
+            node.glowWidth = 8
+        } else if s.kind == .snare, s.isActive {
+            // Threads pinned to the ground.
+            let path = CGMutablePath()
+            let strands = 4
+            for n in 0...strands {
+                let x = rect.minX + rect.width * CGFloat(n) / CGFloat(strands)
+                path.move(to: CGPoint(x: x, y: rect.minY))
+                path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+            }
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY + 2))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + 2))
+            node.path = path
+            node.fillColor = .clear
+            node.strokeColor = color.withAlphaComponent(0.85)
+            node.glowWidth = 3
+        } else {
+            let t = CGFloat(s.age) / CGFloat(max(s.warning, 1))
+            let blink = s.warning - s.age <= 14 && (s.age / 3) % 2 == 0
+            node.path = CGPath(roundedRect: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 6),
+                               cornerWidth: 3, cornerHeight: 3, transform: nil)
+            node.fillColor = color.withAlphaComponent(blink ? 0.6 : 0.1 + 0.3 * t)
+            node.strokeColor = color.withAlphaComponent(0.4 + 0.5 * t)
+            node.glowWidth = 0
         }
     }
 
@@ -808,8 +887,12 @@ final class GameScene: SKScene {
                 if (demo && !demoShowsResults) || onComplete == nil {
                     hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
                 } else {
+                    let (chapter, start) = chapter(at: levelIndex)
+                    let endsChapter = levelIndex + 1 == start + chapter.levels(for: lead).count
                     onComplete?(LevelResult(
-                        name: level.name, index: levelIndex, isLast: levelIndex + 1 == levels.count,
+                        name: level.name, index: levelIndex, chapterNumber: chapter.number, chapterTitle: chapter.title,
+                        ending: endsChapter ? chapter.ending : nil, chapterStart: start,
+                        isFinal: levelIndex + 1 == levels.count,
                         seconds: Double(levelFrames) / Tuning.framesPerSecond, defeated: kills, downs: downs,
                         found: world.collected.count, hidden: total))
                 }
@@ -891,11 +974,31 @@ final class GameScene: SKScene {
                 shake = max(shake, 14)
                 sound.play(.explosion)
                 haptics.heavy()
-            case .struck(let at, _):
-                if case .struck(_, let width) = event { Effects.column(worldNode, at: CGPoint(x: at.x, y: at.y), width: width) }
-                sparks(at: Vec2(at.x, at.y + 10), color: Palette.white, count: 10)
-                shake = max(shake, 4)
-                sound.play(.heavyHit, volume: 0.7)
+            case .struck(let at, let width, let kind):
+                switch kind {
+                case .light:
+                    Effects.column(worldNode, at: CGPoint(x: at.x, y: at.y), width: width)
+                    sparks(at: Vec2(at.x, at.y + 10), color: Palette.white, count: 10)
+                    shake = max(shake, 4)
+                    sound.play(.heavyHit, volume: 0.7)
+                case .fire:
+                    sparks(at: Vec2(at.x, at.y + 8), color: Palette.ember, count: 14)
+                    Effects.dust(worldNode, at: CGPoint(x: at.x, y: at.y), amount: 6, spread: width / 2)
+                    shake = max(shake, 2)
+                    sound.play(.explosion, volume: 0.35)
+                case .snare:
+                    sparks(at: Vec2(at.x, at.y + 4), color: Palette.violet, count: 6)
+                    sound.play(.warning, volume: 0.4)
+                }
+            case .lobbed(let id, let kind, let at):
+                if let f = world.fighter(id) {
+                    let from = CGPoint(x: f.pos.x + f.facing * 14, y: f.pos.y + f.spec.height * 0.55)
+                    Effects.lob(worldNode, from: from, to: CGPoint(x: at.x, y: at.y + 6),
+                                color: kind == .fire ? Palette.ember : Palette.violet)
+                }
+                sound.play(.dodge, volume: 0.6)
+            case .faded(_, let at):
+                Effects.motes(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.violet, count: 8)
             case .spawned(let id, _):
                 if world.bossID != nil, let f = world.fighter(id) {
                     ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 50, color: Palette.red)

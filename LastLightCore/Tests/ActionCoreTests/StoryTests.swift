@@ -25,7 +25,16 @@ private func library() throws -> StoryLibrary {
 private func shipped() throws -> StoryLibrary {
     let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent()
-    return try StoryLibrary(json: Data(contentsOf: root.appendingPathComponent("LastLight/LastLight/Story/chapter1.json")))
+    var scenes: [String: StoryScene] = [:]
+    for chapter in Chapter.all {
+        let file = root.appendingPathComponent("LastLight/LastLight/Story/\(chapter.id).json")
+        let library = try StoryLibrary(json: Data(contentsOf: file))
+        for (id, scene) in library.scenes {
+            precondition(scenes[id] == nil, "scene \(id) is in two chapter files")
+            scenes[id] = scene
+        }
+    }
+    return StoryLibrary(scenes: scenes)
 }
 
 @Test func aSceneIsReadFromDataAndPlayedLineByLine() throws {
@@ -217,4 +226,20 @@ private func shipped() throws -> StoryLibrary {
     for _ in 0..<(60 * 240) where !world.isOver { events += world.step(pilot.input(for: world)) }
     #expect(world.isComplete)
     #expect(events.contains(.scene(id: "protocol.end")))
+}
+
+@Test func everyChapterTwoSceneSpeaksToWhoeverLeads() throws {
+    let story = try shipped()
+    for id in ["market.arrive", "market.ratborn", "roofs.arrive", "docks.arrive"] {
+        for lead in [FighterKind.caelen, .seraphine, .nimue] {
+            var state = StoryState()
+            state.flags["lead"] = lead.rawValue
+            var runner = try #require(StoryRunner(sceneID: id, library: story, state: state))
+            var speakers: Set<String> = []
+            while let line = runner.line { speakers.insert(line.speaker); runner.advance() }
+            #expect(speakers.isSubset(of: [lead.rawValue.uppercased(), "ORION"]), "\(id) as \(lead)")
+        }
+        // Saves from before leads were remembered still get a line.
+        #expect(try #require(StoryRunner(sceneID: id, library: story, state: StoryState())).line != nil)
+    }
 }

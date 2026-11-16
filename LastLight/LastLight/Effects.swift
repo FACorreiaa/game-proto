@@ -180,6 +180,34 @@ enum Effects {
     }
 
     /// A soft glow sprite, for lights on fighters.
+    /// Something thrown: a lit ember arcing from the thrower to where it lands, with a short trail.
+    static func lob(_ parent: SKNode, from: CGPoint, to: CGPoint, color: SKColor, duration: TimeInterval = 0.5) {
+        let ball = SKShapeNode(circleOfRadius: 4)
+        ball.fillColor = color
+        ball.strokeColor = color
+        ball.glowWidth = 5
+        ball.zPosition = 9
+        ball.position = from
+        parent.addChild(ball)
+        let peak = max(from.y, to.y) + 70 + abs(to.x - from.x) * 0.15
+        let path = CGMutablePath()
+        path.move(to: from)
+        path.addQuadCurve(to: to, control: CGPoint(x: (from.x + to.x) / 2, y: peak))
+        let fly = SKAction.follow(path, asOffset: false, orientToPath: false, duration: duration)
+        fly.timingMode = .easeIn
+        let trail = SKAction.repeat(.sequence([.run { [weak parent, weak ball] in
+            guard let parent, let ball else { return }
+            let mote = SKShapeNode(circleOfRadius: 2)
+            mote.fillColor = color.withAlphaComponent(0.6)
+            mote.strokeColor = .clear
+            mote.position = ball.position
+            mote.zPosition = 8
+            parent.addChild(mote)
+            mote.run(.sequence([.group([.fadeOut(withDuration: 0.25), .scale(to: 0.3, duration: 0.25)]), .removeFromParent()]))
+        }, .wait(forDuration: 0.03)]), count: Int(duration / 0.03))
+        ball.run(.sequence([.group([fly, trail]), .removeFromParent()]))
+    }
+
     static func glow(color: SKColor, size: CGFloat, alpha: CGFloat) -> SKSpriteNode {
         let glow = SKSpriteNode(texture: dot, size: CGSize(width: size, height: size))
         glow.color = color

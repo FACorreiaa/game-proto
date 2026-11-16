@@ -25,6 +25,7 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
+| DRAFT-006 | 2026-11-16 | Chapter 2, The Lantern Cities: three levels, enemy behaviour, lead-aware lines and the chapter-end line. Region chosen by the creator ("Lantern Cities … but follow the lore"); every line and claim is a draft. | Games/TheLastLight2D, Bestiary/LanternCities, `chapter2.json` |
 | DRAFT-005 | 2026-11-16 | The three openings and the faction pick: Seraphine's Sun Gauges, Nimue's Undercroft, lead-aware lines in the Machine Hall, and a chapter ending per lead and per Orion choice. Direction "own motives" chosen by the creator; every line and the world claims they make are drafts. | Games/TheLastLight2D, game text (`chapter1.json`, faction cards) |
 
 ## How to amend

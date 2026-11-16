@@ -76,9 +76,11 @@ final class Game {
             case "settings": panel = .settings
             case "chapters": panel = .chapters
             case "results", "chapter":
+                let end = args[i + 1] == "chapter"
                 screen = .results(LevelResult(
-                    name: args[i + 1] == "chapter" ? "The Protocol" : "The Machine Hall", index: 2,
-                    isLast: args[i + 1] == "chapter", seconds: 263, defeated: 14, downs: 1, found: 3, hidden: 5))
+                    name: end ? "The Protocol" : "The Machine Hall", index: end ? 3 : 2, chapterNumber: 1,
+                    chapterTitle: Chapter.foundry.title, ending: end ? Chapter.foundry.ending : nil, chapterStart: 0,
+                    isFinal: false, seconds: 263, defeated: 14, downs: 1, found: 3, hidden: 5))
             default: break
             }
         }
@@ -153,19 +155,22 @@ final class Game {
 
     /// From the chapter's last results screen: back to the start of the chapter.
     func replayChapter() {
-        scene.play(levelAt: 0)
+        guard case .results(let result) = screen else { return }
+        scene.play(levelAt: result.chapterStart)
         screen = .playing
     }
 
+    /// Back to the title after a chapter. Continue then starts the next chapter, or the last one again.
     func finishChapter() {
-        scene.play(levelAt: 0)
+        guard case .results(let result) = screen else { return quitToTitle() }
+        if result.isFinal { scene.play(levelAt: result.chapterStart) }
         quitToTitle()
     }
 
     func quitToTitle() {
         panel = nil
         // Leaving a results screen still counts the level as done, so Continue goes to the next one.
-        if case .results(let result) = screen, !result.isLast { scene.play(levelAt: result.index + 1) }
+        if case .results(let result) = screen, !result.isFinal { scene.play(levelAt: result.index + 1) }
         screen = .title
     }
 }

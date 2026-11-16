@@ -113,6 +113,116 @@ public struct DogmaBrain: Brain {
     }
 }
 
+/// Ratborn: rushes in, bites, then backs off for a moment, and now and then breaks off its approach.
+public struct RatbornBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        // Backing off, after a bite or a feint.
+        if me.aiAux > 0 {
+            me.aiAux -= 1
+            return InputFrame(moveX: -dir)
+        }
+        let range = strikeDistance(me, target) + 40
+        if abs(dx) > range {
+            if Double.random(in: 0..<1, using: &rng) < tuning.ratbornFeintChance {
+                me.aiAux = 20
+                return InputFrame(moveX: -dir, jump: true)
+            }
+            return InputFrame(moveX: dir)
+        }
+        if me.aiCooldown == 0, me.isActionable {
+            me.aiCooldown = Int.random(in: tuning.ratbornAttackGap, using: &rng)
+            // Starts backing off once the bite is over.
+            me.aiAux2 = 1
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        if me.aiAux2 == 1, me.isActionable {
+            me.aiAux2 = 0
+            me.aiAux = Int.random(in: tuning.ratbornRetreat, using: &rng)
+        }
+        return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
+/// Lantern Gunner: holds a throwing distance and lobs lanterns at the hero.
+public struct GunnerBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if abs(dx) < tuning.gunnerNear { return InputFrame(moveX: -dir) }
+        if abs(dx) > tuning.gunnerFar { return InputFrame(moveX: dir) }
+        if me.aiCooldown == 0, me.isActionable {
+            me.aiCooldown = Int.random(in: tuning.gunnerAttackGap, using: &rng)
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
+/// Smuggler Brute: lumbers in, slow to turn. Up close it often slams, which reaches behind it too.
+public struct BruteBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        // Anyone behind it is close enough to slam without turning.
+        let behind = dir != me.facing && abs(dx) < me.spec.width / 2 + me.spec.attacks[1].reach
+        if dir != me.facing, me.isActionable, !behind {
+            me.aiAux += 1
+            if me.aiAux < tuning.bruteTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+        if !behind, abs(dx) > strikeDistance(me, target) { return InputFrame(moveX: dir) }
+        if me.aiCooldown == 0, me.isActionable {
+            me.aiCooldown = Int.random(in: tuning.bruteAttackGap, using: &rng)
+            me.nextAttack = behind || Double.random(in: 0..<1, using: &rng) < tuning.bruteSlamChance ? 1 : 0
+            return InputFrame(moveX: behind ? 0 : dir * facingNudge, attack: true)
+        }
+        return InputFrame(moveX: behind ? 0 : dir * facingNudge)
+    }
+}
+
+/// Night Weaver: keeps away, sends images when it has none, and otherwise lays snares in the hero's path.
+public struct WeaverBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if abs(dx) < tuning.weaverNear { return InputFrame(moveX: -dir) }
+        if abs(dx) > tuning.weaverFar { return InputFrame(moveX: dir) }
+        if me.aiCooldown == 0, me.isActionable {
+            me.aiCooldown = Int.random(in: tuning.weaverAttackGap, using: &rng)
+            let images = allies.filter { $0.kind == .weaverImage && $0.isAlive }.count
+            me.nextAttack = images == 0 ? 0 : 1
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
 /// The Protocol, in three phases.
 /// Judgement: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
 /// Ascension: takes to the air, summons drones and calls down light, then crashes down open; and again.
