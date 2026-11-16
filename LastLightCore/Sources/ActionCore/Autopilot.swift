@@ -16,12 +16,24 @@ public struct Autopilot: Sendable {
         if jumpHeld > 0 { jumpHeld -= 1 }
 
         if let boss = world.boss {
-            return boss.isAlive ? bossInput(me, boss, frame: world.frame) : .neutral
+            return boss.isAlive ? bossInput(me, boss, world: world) : .neutral
         }
 
+        // A long attack about to land from further away, such as a Sentry Core's beam: dodge it.
+        let beam = world.fighters.contains { foe in
+            guard foe.team == .enemy, foe.isAlive, foe.awake, let attack = foe.currentAttack, attack.reach > 150,
+                  foe.attackPhase == .windup, attack.windup - foe.stateFrame <= 4 else { return false }
+            let ahead = (me.pos.x - foe.pos.x) * foe.facing
+            return ahead >= 0 && ahead <= foe.spec.width / 2 + attack.reach + half
+                && me.pos.y < foe.pos.y + attack.yOffset + attack.height && me.pos.y + me.spec.height > foe.pos.y + attack.yOffset
+        }
+        if beam, me.onGround { return InputFrame(moveX: 1, dodge: true) }
+
         if fights {
-            let foe = world.fighters
+            let nearby = world.fighters
                 .filter { $0.team == .enemy && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - me.pos.y) < 70 }
+            // A shielded machine cannot be hurt: go for the Dogma Frame that shields it.
+            let foe = nearby.filter { !world.isWarded($0.id) }
                 .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
             if let foe, abs(foe.pos.x - me.pos.x) < 96 {
                 let dir: Double = foe.pos.x >= me.pos.x ? 1 : -1
@@ -84,22 +96,50 @@ public struct Autopilot: Sendable {
         return inp
     }
 
-    /// Against a boss: stay close, dodge each attack just before it lands, and strike only while it is open.
-    private func bossInput(_ me: Fighter, _ boss: Fighter, frame: Int) -> InputFrame {
+    /// Against a boss: keep out of falling light, dodge each attack just before it lands, deal with what it
+    /// summons, and strike only while it is open.
+    private func bossInput(_ me: Fighter, _ boss: Fighter, world: World) -> InputFrame {
+        let half = me.spec.width / 2
         let dx = boss.pos.x - me.pos.x
         let dir: Double = dx >= 0 ? 1 : -1
         let gap = abs(dx) - boss.spec.width / 2 - me.spec.width / 2
         guard boss.awake else { return InputFrame(moveX: dir) }
 
-        if let attack = boss.currentAttack, boss.attackPhase == .windup {
-            let inFront = (me.pos.x - boss.pos.x) * boss.facing >= 0
-            if inFront, attack.windup - boss.stateFrame <= 4 { return InputFrame(moveX: dir, dodge: true) }
+        if let strike = world.strikes.first(where: { $0.box.minX - 30 < me.pos.x + half && me.pos.x - half < $0.box.maxX + 30 }) {
+            var away: Double = me.pos.x >= strike.box.center.x ? 1 : -1
+            let room = away > 0 ? world.arena.upperBound - me.pos.x : me.pos.x - world.arena.lowerBound
+            if room < strike.box.width + 60 { away = -away }
+            return InputFrame(moveX: away)
+        }
+
+        if let attack = boss.currentAttack, boss.attackPhase == .windup, attack.effect == .strike {
+            let inFront = attack.bothSides || (me.pos.x - boss.pos.x) * boss.facing >= 0
+            let travel = attack.holdsStill ? attack.lunge * Double(attack.active) / 60 : 0
+            let reach = boss.spec.width / 2 + attack.reach + travel + half
+            if inFront, abs(dx) <= reach, attack.windup - boss.stateFrame <= 4 { return InputFrame(moveX: dir, dodge: true) }
             return InputFrame(moveX: gap > 30 ? dir : dir * 0.02)
+        }
+
+        let minion = world.fighters
+            .filter { $0.team == .enemy && $0.isAlive && !$0.spec.boss && abs($0.pos.y - me.pos.y) < 70 }
+            .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+        if let minion, abs(minion.pos.x - me.pos.x) < 110 {
+            let toward: Double = minion.pos.x >= me.pos.x ? 1 : -1
+            if minion.state == .fuse { return InputFrame(moveX: -toward) }
+            let biteComing = minion.attackPhase == .windup
+                && (minion.currentAttack.map { $0.windup - minion.stateFrame <= 5 } ?? false)
+            if biteComing { return InputFrame(moveX: toward, dodge: true) }
+            return InputFrame(moveX: toward * 0.02, attack: world.frame % 8 == 0)
+        }
+
+        // Up in the air it cannot be reached: wait near it, out of its way.
+        if boss.flying || boss.descending {
+            return InputFrame(moveX: abs(dx) > 170 ? dir : (abs(dx) < 110 ? -dir : 0))
         }
         if boss.isOpen {
             let reach = me.spec.attacks.first?.reach ?? 0
             if gap > reach - 12 { return InputFrame(moveX: dir) }
-            return InputFrame(moveX: dir * 0.02, attack: frame % 8 == 0)
+            return InputFrame(moveX: dir * 0.02, attack: world.frame % 8 == 0)
         }
         // Between attacks: mark it when Command is ready.
         if case .command(let range, _, _, _)? = me.spec.special, me.specialCooldown == 0, boss.markedFrames == 0,

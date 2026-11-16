@@ -46,10 +46,30 @@ public struct Tuning: Sendable {
     public var droneAttackGap = 40...85
     public var soldierAttackGap = 50...90
     public var soldierTurnDelay = 28
+    public var sentryAttackGap = 90...140
+    /// The Sentry Core keeps its target between these distances.
+    public var sentryNear = 250.0
+    public var sentryFar = 400.0
+    /// Speed of a slowed fighter, as a fraction of normal.
+    public var slowFactor = 0.5
+    /// The Dogma Frame stays this close to the machine it shields.
+    public var dogmaFollowDistance = 110.0
+    public var wardHeight = 220.0
     public var protocolAttackGap = 70...110
-    /// Below this fraction of health The Protocol attacks more often.
-    public var protocolEnrageAt = 0.5
-    public var protocolEnrageGapScale = 0.65
+    /// In its last phase The Protocol waits this fraction of the usual time between attacks.
+    public var protocolExecutionGapScale = 0.6
+    /// Frames a phase change lasts. It cannot be hurt meanwhile.
+    public var bossPhaseShiftFrames = 100
+    /// Ascension: how high it flies, how many attacks it makes up there and on the ground before switching.
+    public var protocolFlightHeight = 170.0
+    public var protocolAirActions = 3
+    public var protocolGroundActions = 2
+    public var protocolAirGap = 60...90
+    public var protocolTakeoffPause = 80
+    /// Frames it stays open after crashing back down.
+    public var protocolLandOpen = 150
+    /// Machines it summons are capped at this many alive at once.
+    public var protocolMaxMinions = 2
     /// Frames it needs to turn around, which is the time a hero behind it has.
     public var protocolTurnDelay = 26
     /// How often it slams a hero standing close, rather than charging or sending a surge.
@@ -143,9 +163,30 @@ public struct Tuning: Sendable {
         return s
     }()
 
-    /// The Protocol. Attack 0 is the slam (close), 1 the charge (dodge through it), 2 the floor surge (jump it).
+    /// Sentry Core: floats at chest height, keeps its distance and fires a beam along the floor line.
+    public var sentryCore: FighterSpec = {
+        var s = FighterSpec(width: 40, height: 40, maxHP: 40, runSpeed: 150)
+        var beam = AttackSpec(windup: 50, active: 6, recovery: 40, damage: 10, reach: 480, height: 22, yOffset: 0,
+                              knockback: 120, lunge: 0, hitstun: 12, hitStop: 4)
+        beam.slowFrames = 120
+        s.attacks = [beam]
+        s.hovers = true
+        s.brain = SentryBrain()
+        return s
+    }()
+
+    /// Dogma Frame: does not attack. Machines near it cannot be hurt until it is destroyed.
+    public var dogmaFrame: FighterSpec = {
+        var s = FighterSpec(width: 44, height: 110, maxHP: 55, runSpeed: 70)
+        s.wardRadius = 260
+        s.brain = DogmaBrain()
+        return s
+    }()
+
+    /// The Protocol. Judgement: 0 slam (close), 1 charge (dodge through it), 2 floor surge (jump it).
+    /// Ascension adds 3 summon and 4 laser rain from the air. Execution adds 5 pulse (both sides) and 6 beam.
     public var theProtocol: FighterSpec = {
-        var s = FighterSpec(width: 150, height: 250, maxHP: 460, runSpeed: 55)
+        var s = FighterSpec(width: 150, height: 250, maxHP: 520, runSpeed: 55)
         var slam = AttackSpec(windup: 48, active: 6, recovery: 72, damage: 22, reach: 115, height: 130,
                               knockback: 420, lunge: 0, hitstun: 22, hitStop: 7)
         var charge = AttackSpec(windup: 56, active: 24, recovery: 84, damage: 20, reach: 40, height: 150,
@@ -153,7 +194,21 @@ public struct Tuning: Sendable {
         charge.holdsStill = true
         var surge = AttackSpec(windup: 62, active: 8, recovery: 76, damage: 16, reach: 640, height: 34,
                                knockback: 240, lunge: 0, hitstun: 18, hitStop: 5)
-        s.attacks = [slam, charge, surge]
+        // Ascension: called from the air.
+        var summon = AttackSpec(windup: 50, active: 1, recovery: 70, damage: 0, reach: 0, height: 0,
+                                knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+        summon.effect = .summon(.scrapDrone, count: 2)
+        var rain = AttackSpec(windup: 45, active: 1, recovery: 60, damage: 0, reach: 0, height: 0,
+                              knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+        rain.effect = .rain(columns: 4, width: 80, warning: 55, active: 14, damage: 14)
+        // Execution: a pulse along the floor on both sides, and a beam across the room at chest height.
+        var pulse = AttackSpec(windup: 54, active: 8, recovery: 70, damage: 16, reach: 520, height: 30,
+                               knockback: 260, lunge: 0, hitstun: 18, hitStop: 5)
+        pulse.bothSides = true
+        let beam = AttackSpec(windup: 64, active: 8, recovery: 80, damage: 22, reach: 900, height: 36, yOffset: 44,
+                              knockback: 300, lunge: 0, hitstun: 20, hitStop: 6)
+        s.attacks = [slam, charge, surge, summon, rain, pulse, beam]
+        s.phaseThresholds = [0.6, 0.3]
         s.armored = true
         s.boss = true
         s.poise = true
@@ -171,6 +226,8 @@ public struct Tuning: Sendable {
         case .dummy: dummy
         case .scrapDrone: scrapDrone
         case .forgedSoldier: forgedSoldier
+        case .sentryCore: sentryCore
+        case .dogmaFrame: dogmaFrame
         case .theProtocol: theProtocol
         }
     }

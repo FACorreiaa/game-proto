@@ -225,6 +225,8 @@ extension Level {
         l.ground(1200, 2600)
         l.checkpoints.append(Vec2(1270, 0))
         l.enemies.append(Placement(.forgedSoldier, x: 1600))
+        // The first Sentry Core, floating behind the soldier.
+        l.enemies.append(Placement(.sentryCore, x: 1780, y: 40))
 
         // Two arcs that take turns.
         l.hazards.append(Hazard(Box(minX: 1830, minY: 0, maxX: 1862, maxY: 150), damage: 12, period: 160, onFrames: 80))
@@ -258,6 +260,8 @@ extension Level {
         l.checkpoints.append(Vec2(4300, 150))
         l.hazards.append(Hazard(Box(minX: 4640, minY: 0, maxX: 4672, maxY: 150), damage: 12, period: 150, onFrames: 80))
         l.enemies.append(Placement(.forgedSoldier, x: 4950))
+        // A Dogma Frame shields the guard: it has to go first.
+        l.enemies.append(Placement(.dogmaFrame, x: 5040))
         l.enemies.append(Placement(.scrapDrone, x: 5120))
         l.enemies.append(Placement(.scrapDrone, x: 5260))
         l.pickups.append(Pickup(id: 5, at: Vec2(5500, 40)))

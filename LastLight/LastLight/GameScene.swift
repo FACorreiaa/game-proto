@@ -34,6 +34,8 @@ final class GameScene: SKScene {
     private var hazardNodes: [SKShapeNode] = []
     private var checkpointNodes: [SKShapeNode] = []
     private var pickupNodes: [Int: SKNode] = [:]
+    /// Columns of light, reused frame to frame.
+    private var strikeNodes: [SKShapeNode] = []
     private var shake: CGFloat = 0
     private var run = 0
     private var kills = 0
@@ -51,7 +53,7 @@ final class GameScene: SKScene {
     /// World units are scaled so about the same slice of the level shows on a phone, a tablet and a Mac window.
     /// A boss room is seen from further back, so the boss fits under the bars at the top.
     private var zoom: CGFloat {
-        max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.8 : 1)
+        max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.7 : 1)
     }
 
     init(demo: Bool, mode: Mode = .level, story: StoryPresenter) {
@@ -183,6 +185,7 @@ final class GameScene: SKScene {
         hazardNodes = []
         checkpointNodes = []
         pickupNodes = [:]
+        strikeNodes = []
         buildBackdrop()
         if let level = world.level { build(level) } else { buildRoomFloor() }
     }
@@ -392,7 +395,8 @@ final class GameScene: SKScene {
                 nodes[f.id] = created
                 return created
             }()
-            node.sync(f, frame: world.frame, controlled: f.id == world.controlledID)
+            node.sync(f, frame: world.frame, controlled: f.id == world.controlledID,
+                      warded: f.team == .enemy && world.isWarded(f.id))
             // A companion that has not joined yet stands dark.
             if f.team == .hero, !f.awake { node.alpha = 0.4 }
         }
@@ -409,7 +413,9 @@ final class GameScene: SKScene {
             let target = min(max(hero.pos.x + hero.facing * 40, low), max(low, high))
             cameraX += (target - cameraX) * 0.12
             // The camera only climbs once the hero is well off the floor, and never chases a fall into a pit.
-            let lift = max(-40, hero.pos.y - 70)
+            var lift = max(-40, hero.pos.y - 70)
+            // Rise with a boss that takes to the air, so it stays in view.
+            if let boss = world.boss, boss.isAlive, !boss.onGround { lift = max(lift, 60) }
             cameraY += (lift - cameraY) * 0.08
             let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id && $0.awake }
             hud.setSpecial(hero.spec.special.map { ($0.name, hero.specialCooldown) })
@@ -420,7 +426,8 @@ final class GameScene: SKScene {
         }
         drawLevel()
         if let boss = world.boss, boss.awake, boss.isAlive {
-            hud.setBoss((boss.kind == .theProtocol ? "THE PROTOCOL" : boss.kind.rawValue.uppercased(),
+            let phase = boss.phase == 2 ? " · ASCENSION" : (boss.phase >= 3 ? " · EXECUTION" : "")
+            hud.setBoss(((boss.kind == .theProtocol ? "THE PROTOCOL" : boss.kind.rawValue.uppercased()) + phase,
                          boss.hp / boss.spec.maxHP, boss.isOpen))
         } else {
             hud.setBoss(nil)
@@ -446,6 +453,7 @@ final class GameScene: SKScene {
 
     private func drawLevel() {
         guard let level = world.level else { return }
+        drawStrikes()
         for (i, node) in platformNodes where world.platforms[i].moves {
             let box = world.platformBoxes[i]
             node.position = CGPoint(x: box.minX, y: box.minY)
@@ -467,6 +475,37 @@ final class GameScene: SKScene {
         }
     }
 
+    /// Faint and widening while a column warns, white-hot while it burns.
+    private func drawStrikes() {
+        while strikeNodes.count < world.strikes.count {
+            let node = SKShapeNode()
+            node.zPosition = 8
+            node.lineWidth = 2
+            worldNode.addChild(node)
+            strikeNodes.append(node)
+        }
+        for (i, node) in strikeNodes.enumerated() {
+            guard i < world.strikes.count else {
+                node.isHidden = true
+                continue
+            }
+            let s = world.strikes[i]
+            node.isHidden = false
+            node.path = CGPath(rect: CGRect(x: s.box.minX, y: -20, width: s.box.width, height: 620), transform: nil)
+            if s.isActive {
+                node.fillColor = Palette.white.withAlphaComponent(0.85)
+                node.strokeColor = Palette.red
+                node.glowWidth = 12
+            } else {
+                let t = CGFloat(s.age) / CGFloat(max(s.warning, 1))
+                let blink = s.warning - s.age <= 14 && (s.age / 3) % 2 == 0
+                node.fillColor = Palette.red.withAlphaComponent(blink ? 0.4 : 0.06 + 0.2 * t)
+                node.strokeColor = Palette.red.withAlphaComponent(0.3 + 0.6 * t)
+                node.glowWidth = 0
+            }
+        }
+    }
+
     private func debugText() -> String {
         guard let f = world.controlled else { return "" }
         let ground = f.onGround ? "ground" + (f.groundIndex.map { " #\($0)" } ?? "") : "air"
@@ -475,7 +514,7 @@ final class GameScene: SKScene {
             f.pos.x, f.pos.y, f.vel.x, f.vel.y, ground, f.coyote, String(describing: f.state), f.stateFrame,
             world.hitStop, world.frame)
         if let boss = world.boss {
-            text += String(format: "\nboss %.0f  %@ f%d  %@", boss.hp, String(describing: boss.state), boss.stateFrame,
+            text += String(format: "\nboss %.0f p%d  %@ f%d  %@", boss.hp, boss.phase, String(describing: boss.state), boss.stateFrame,
                            boss.isOpen ? "open" : "armoured")
         }
         return text
@@ -637,10 +676,37 @@ final class GameScene: SKScene {
                 shake = max(shake, 5)
                 sound.play(.parry)
                 haptics.rigid()
+            case .slowed(let id):
+                if let f = world.fighter(id) {
+                    popup("SLOWED", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.ember, size: 14)
+                }
             case .scene(let id):
                 // The demo bot does not read.
                 if !demo { story.begin(id) }
-            case .spawned, .evaded:
+            case .bossPhase(_, let phase):
+                hud.announce(phase == 2 ? "ASCENSION" : "EXECUTION")
+                shake = max(shake, 12)
+                sound.play(.bossWake)
+                haptics.heavy()
+            case .bossLanded(let id):
+                if let f = world.fighter(id) {
+                    let feet = Vec2(f.pos.x, f.pos.y + 10)
+                    ring(at: feet, radius: 170, color: Palette.red)
+                    sparks(at: feet, color: Palette.ember, count: 22)
+                    popup("OPEN", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.gold, size: 20)
+                }
+                shake = max(shake, 14)
+                sound.play(.explosion)
+                haptics.heavy()
+            case .struck(let at, _):
+                sparks(at: Vec2(at.x, at.y + 10), color: Palette.white, count: 10)
+                shake = max(shake, 4)
+                sound.play(.heavyHit, volume: 0.7)
+            case .spawned(let id, _):
+                if world.bossID != nil, let f = world.fighter(id) {
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 50, color: Palette.red)
+                }
+            case .evaded:
                 break
             }
         }

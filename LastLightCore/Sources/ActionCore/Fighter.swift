@@ -9,6 +9,8 @@ public enum FighterState: Equatable, Sendable {
     case fuse
     /// Orion's Adapt: braced for a hit.
     case guardStance
+    /// A boss changing phase: it cannot be hurt until this ends.
+    case phaseShift
     case dead
 }
 
@@ -46,6 +48,18 @@ public struct Fighter: Sendable, Identifiable {
     public internal(set) var specialCooldown = 0
     /// Frames left on Caelen's mark. While it lasts, hits on this fighter do more.
     public internal(set) var markedFrames = 0
+    /// Frames left of moving slowly, after a Sentry Core's beam.
+    public internal(set) var slowFrames = 0
+    /// A boss's phase, from 1.
+    public internal(set) var phase = 1
+    /// Holds itself in the air at the tuning's flight height instead of falling.
+    public internal(set) var flying = false
+    /// Dropping back to the floor; it lands open to attack.
+    public internal(set) var descending = false
+    /// Second scratch counter for brains.
+    var aiAux2 = 0
+    /// An attack whose effect the world applies after this frame.
+    var pendingEffect: Int?
     var markScale = 1.0
     /// Damage multiplier of the swing in progress; above 1 for the counter after an absorbed hit.
     var swingScale = 1.0
@@ -95,7 +109,11 @@ public struct Fighter: Sendable, Identifiable {
 
     /// The area a swing hits, while it is in its active frames.
     public var hitbox: Box? {
-        guard let a = currentAttack, attackPhase == .active else { return nil }
+        guard let a = currentAttack, attackPhase == .active, a.effect == .strike else { return nil }
+        if a.bothSides {
+            return Box(minX: pos.x - spec.width / 2 - a.reach, minY: pos.y + a.yOffset,
+                       maxX: pos.x + spec.width / 2 + a.reach, maxY: pos.y + a.yOffset + a.height)
+        }
         let front = pos.x + facing * (spec.width / 2 + a.reach)
         return Box(minX: min(pos.x, front), minY: pos.y + a.yOffset,
                    maxX: max(pos.x, front), maxY: pos.y + a.yOffset + a.height)

@@ -18,6 +18,12 @@ final class FighterNode: SKNode {
     private var zoneAttack = -1
     /// Shown over an enemy carrying Caelen's mark.
     private let mark = SKShapeNode()
+    /// Shown around a machine a Dogma Frame is shielding.
+    private let ward = SKShapeNode()
+    private var aura: SKShapeNode?
+    private var thrusters: [SKShapeNode] = []
+    /// The look of The Protocol's last phase has been applied.
+    private var executionLook = false
     private var flashFrames = 0
     /// One arc per swing, even while hit-stop holds the same frame on screen.
     private var arcDrawn = false
@@ -34,6 +40,7 @@ final class FighterNode: SKNode {
         addChild(figure)
         buildMarker()
         buildMark()
+        buildWard()
         switch kind {
         case .caelen: buildCaelen()
         case .orion: buildOrion()
@@ -41,6 +48,8 @@ final class FighterNode: SKNode {
         case .scrapDrone: buildDrone()
         case .forgedSoldier: buildSoldier()
         case .theProtocol: buildProtocol()
+        case .sentryCore: buildSentry()
+        case .dogmaFrame: buildDogma()
         }
     }
 
@@ -201,6 +210,58 @@ final class FighterNode: SKNode {
         shield = plate
     }
 
+    /// Sentry Core: a floating shell around one red lens.
+    private func buildSentry() {
+        _ = part(CGPath(ellipseIn: CGRect(x: -20, y: 0, width: 40, height: 40), transform: nil))
+        let fin = CGMutablePath()
+        fin.addLines(between: [CGPoint(x: -18, y: 30), CGPoint(x: -34, y: 46), CGPoint(x: -14, y: 38)])
+        fin.closeSubpath()
+        _ = part(fin, z: -1)
+        let lens = SKShapeNode(circleOfRadius: 7)
+        lens.position = CGPoint(x: 9, y: 20)
+        light(lens, color: Palette.red, glow: 5)
+        figure.addChild(lens)
+        eye = lens
+        zone.lineWidth = 1
+        zone.zPosition = -3
+        zone.isHidden = true
+        addChild(zone)
+    }
+
+    /// Dogma Frame: a thin standing frame with a halo, and a faint circle showing how far its shield reaches.
+    private func buildDogma() {
+        leg(x: -7, hipY: 44, length: 44, width: 7)
+        leg(x: 7, hipY: 44, length: 44, width: 7)
+        _ = part(CGPath(roundedRect: CGRect(x: -11, y: 42, width: 22, height: 52), cornerWidth: 4, cornerHeight: 4, transform: nil))
+        let halo = SKShapeNode(circleOfRadius: 17)
+        halo.position = CGPoint(x: 0, y: 100)
+        halo.fillColor = .clear
+        halo.strokeColor = Palette.ember
+        halo.lineWidth = 3
+        halo.glowWidth = 4
+        halo.zPosition = 2
+        figure.addChild(halo)
+        eye = halo
+        let reach = SKShapeNode(circleOfRadius: CGFloat(Tuning().dogmaFrame.wardRadius))
+        reach.position = CGPoint(x: 0, y: 55)
+        reach.fillColor = Palette.ember.withAlphaComponent(0.04)
+        reach.strokeColor = Palette.ember.withAlphaComponent(0.3)
+        reach.lineWidth = 1
+        reach.zPosition = -4
+        addChild(reach)
+        aura = reach
+    }
+
+    private func buildWard() {
+        ward.fillColor = Palette.ember.withAlphaComponent(0.08)
+        ward.strokeColor = Palette.ember
+        ward.lineWidth = 2
+        ward.glowWidth = 3
+        ward.zPosition = 6
+        ward.isHidden = true
+        addChild(ward)
+    }
+
     /// The Protocol: a tower of plate on two pillars, a red visor, and a core in its chest that opens.
     private func buildProtocol() {
         leg(x: -40, hipY: 96, length: 96, width: 34)
@@ -231,12 +292,29 @@ final class FighterNode: SKNode {
         zone.zPosition = -3
         zone.isHidden = true
         addChild(zone)
+
+        // Flames under the feet, lit while it flies.
+        for x in [-40.0, 40.0] {
+            let path = CGMutablePath()
+            path.addLines(between: [CGPoint(x: -14, y: 0), CGPoint(x: 14, y: 0), CGPoint(x: 0, y: -46)])
+            path.closeSubpath()
+            let flame = SKShapeNode(path: path)
+            flame.position = CGPoint(x: x, y: 2)
+            flame.fillColor = Palette.ember
+            flame.strokeColor = Palette.gold
+            flame.glowWidth = 8
+            flame.zPosition = -2
+            flame.isHidden = true
+            figure.addChild(flame)
+            thrusters.append(flame)
+        }
     }
 
     /// Where the attack will land, drawn faint through the warning and bright on the strike.
     private func animateZone(_ f: Fighter) {
-        guard kind == .theProtocol else { return }
-        guard case .attack(let index) = f.state, let a = f.currentAttack, f.attackPhase != .recovery else {
+        guard kind == .theProtocol || kind == .sentryCore else { return }
+        guard case .attack(let index) = f.state, let a = f.currentAttack, f.attackPhase != .recovery,
+              a.effect == .strike else {
             zone.isHidden = true
             zoneAttack = -1
             return
@@ -245,7 +323,8 @@ final class FighterNode: SKNode {
             zoneAttack = index
             let travel = a.holdsStill ? a.lunge * Double(a.active) / Tuning.framesPerSecond : 0
             let far = f.spec.width / 2 + a.reach + travel
-            zone.path = CGPath(rect: CGRect(x: 0, y: a.yOffset, width: far, height: a.height), transform: nil)
+            let from = a.bothSides ? -far : 0
+            zone.path = CGPath(rect: CGRect(x: from, y: a.yOffset, width: far - from, height: a.height), transform: nil)
         }
         zone.isHidden = false
         let striking = f.attackPhase == .active
@@ -277,8 +356,15 @@ final class FighterNode: SKNode {
         removeFromParent()
     }
 
-    func sync(_ f: Fighter, frame: Int, controlled: Bool = false) {
+    func sync(_ f: Fighter, frame: Int, controlled: Bool = false, warded: Bool = false) {
         guard !gone else { return }
+        ward.isHidden = !warded
+        if warded, ward.path == nil {
+            let w = CGFloat(f.spec.width) + 22, h = CGFloat(f.spec.height) + 18
+            ward.path = CGPath(roundedRect: CGRect(x: -w / 2, y: -6, width: w, height: h), cornerWidth: 12, cornerHeight: 12, transform: nil)
+        }
+        ward.alpha = 0.6 + 0.3 * sin(CGFloat(frame) * 0.15)
+        aura?.isHidden = !f.isAlive || !f.awake
         marker.isHidden = !controlled || !f.isAlive
         marker.position = CGPoint(x: 0, y: f.spec.height + 12 + 2 * sin(CGFloat(frame) * 0.12))
         position = CGPoint(x: f.pos.x, y: f.pos.y)
@@ -310,6 +396,10 @@ final class FighterNode: SKNode {
             opacity = 0.55
         case .hitstun:
             tilt = 0.3
+        case .phaseShift:
+            // Changing form: it shudders and flashes gold.
+            stretch = CGSize(width: 1 + 0.03 * sin(CGFloat(frame) * 0.9), height: 1.02)
+            if (frame / 4) % 2 == 0 { tint = Palette.gold }
         case .guardStance:
             // Braced: low, wide, lit.
             stretch = CGSize(width: 1.12, height: 0.92)
@@ -354,6 +444,26 @@ final class FighterNode: SKNode {
         animateTelegraph(f)
         animateZone(f)
         animateCore(f, frame: frame)
+        if kind == .theProtocol {
+            let lit = f.isAlive && (f.flying || (!f.onGround && f.phase == 2))
+            for (n, flame) in thrusters.enumerated() {
+                flame.isHidden = !lit
+                flame.yScale = 0.8 + 0.3 * abs(sin(CGFloat(frame + n * 7) * 0.5))
+            }
+            if f.phase >= 3, !executionLook {
+                executionLook = true
+                for p in bodyParts { p.strokeColor = Palette.gold.withAlphaComponent(0.85) }
+                rim = Palette.gold
+            }
+        }
+        if kind == .sentryCore, f.isAlive {
+            figure.position.y += 4 * sin(CGFloat(frame) * 0.1)
+        }
+        if f.slowFrames > 0, f.isAlive, (frame / 4) % 2 == 0 {
+            for p in bodyParts { p.strokeColor = Palette.ember }
+        } else if f.team == .hero {
+            for p in bodyParts where p.strokeColor != rim.withAlphaComponent(0.45) { p.strokeColor = rim.withAlphaComponent(0.45) }
+        }
         if kind == .theProtocol, !f.awake {
             // Dormant: slumped and dark until a hero comes near.
             figure.yScale = 0.88

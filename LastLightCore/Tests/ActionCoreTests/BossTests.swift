@@ -137,7 +137,7 @@ private let slam = 0, charge = 1, surge = 2
     #expect(hits(on: grounded.controlledID, in: run(&grounded, frames: 90)) == 1)
 }
 
-@Test func standingBehindItIsSafeFromEveryAttack() {
+@Test func standingBehindItIsSafeFromEveryAttackOfTheFirstPhase() {
     for attack in [slam, charge, surge] {
         var (world, boss) = arena(heroX: 760)
         startAttack(&world, boss, attack)
@@ -172,7 +172,7 @@ private let slam = 0, charge = 1, surge = 2
             }
         }
     }
-    #expect(seen == [slam, charge, surge])
+    #expect(seen.isSuperset(of: [slam, charge, surge]))
 }
 
 @Test func theLevelEndsWhenTheProtocolFalls() {

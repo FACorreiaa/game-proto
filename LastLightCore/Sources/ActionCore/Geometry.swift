@@ -24,6 +24,8 @@ public struct Box: Equatable, Sendable {
         self.maxY = maxY
     }
 
+    public var width: Double { maxX - minX }
+
     public var center: Vec2 { Vec2((minX + maxX) / 2, (minY + maxY) / 2) }
 
     public func offset(by d: Vec2) -> Box {
