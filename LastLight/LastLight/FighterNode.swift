@@ -45,11 +45,11 @@ final class FighterNode: SKNode {
         // The Lantern Cities' people are lit by their lanterns, not by machine red.
         case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: Palette.ember
         // The Dawnfaith's believers carry their own light: gold, not machine red.
-        case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple: Palette.gold
+        case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle: Palette.gold
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
         }
         if kind == .orion { baseFill = Palette.plate }
-        if kind == .seraphine { baseFill = Palette.ivory }
+        if kind == .seraphine || kind == .lastOracle { baseFill = Palette.ivory }
         super.init()
         addChild(figure)
         buildMarker()
@@ -78,6 +78,7 @@ final class FighterNode: SKNode {
         case .radiantAcolyte: buildAcolyte()
         case .solarGuard: buildSolarGuard()
         case .haloDisciple: buildDisciple()
+        case .lastOracle: buildOracle()
         }
         addGlows()
     }
@@ -376,6 +377,47 @@ final class FighterNode: SKNode {
         blade(length: 40, color: Palette.gold, at: CGPoint(x: 6, y: 40))
     }
 
+    /// The Last Oracle: tall, in a long ivory robe with a gold hem, veiled, under a great halo of rays; a tall staff
+    /// crowned with a sun. Her halo gathers gold before a flare and turns dark before an eclipse.
+    private func buildOracle() {
+        let robe = CGMutablePath()
+        robe.addLines(between: [CGPoint(x: -12, y: 108), CGPoint(x: 13, y: 108), CGPoint(x: 26, y: 0), CGPoint(x: -26, y: 0)])
+        robe.closeSubpath()
+        _ = part(robe)
+        let hem = SKShapeNode(rect: CGRect(x: -26, y: 0, width: 52, height: 4))
+        light(hem, color: Palette.gold, glow: 3)
+        figure.addChild(hem)
+        _ = part(CGPath(ellipseIn: CGRect(x: -11, y: 104, width: 23, height: 24), transform: nil), z: 1)
+        // A veil over the face: no eyes, one thin line of light.
+        let veil = SKShapeNode(rect: CGRect(x: -2, y: 114, width: 13, height: 2))
+        light(veil, color: Palette.gold, glow: 3)
+        figure.addChild(veil)
+        eye = veil
+        let ring = SKShapeNode(circleOfRadius: 30)
+        ring.position = CGPoint(x: 0, y: 118)
+        ring.fillColor = .clear
+        ring.strokeColor = Palette.gold
+        ring.lineWidth = 3
+        ring.glowWidth = 4
+        ring.zPosition = -1
+        for i in 0..<12 {
+            let angle = CGFloat(i) * .pi / 6
+            let ray = SKShapeNode(rect: CGRect(x: -1, y: 0, width: 2, height: 10))
+            ray.position = CGPoint(x: cos(angle) * 32, y: sin(angle) * 32)
+            ray.zRotation = angle - .pi / 2
+            ray.fillColor = Palette.gold
+            ray.strokeColor = .clear
+            ring.addChild(ray)
+        }
+        figure.addChild(ring)
+        halo = ring
+        blade(length: 104, color: Palette.ivory, at: CGPoint(x: 10, y: 70))
+        let sun = SKShapeNode(circleOfRadius: 8)
+        sun.position = CGPoint(x: 0, y: 104)
+        light(sun, color: Palette.gold, glow: 8)
+        weapon?.addChild(sun)
+    }
+
     /// Sentry Core: a floating shell around one red lens.
     private func buildSentry() {
         _ = part(CGPath(ellipseIn: CGRect(x: -20, y: 0, width: 40, height: 40), transform: nil))
@@ -578,13 +620,21 @@ final class FighterNode: SKNode {
         position = CGPoint(x: f.pos.x, y: f.pos.y)
         if let halo {
             // The flare gathers on the halo through its windup, the cue to look away.
+            // Gold for a flare (look away), violet for an eclipse (look at it).
             var gather: CGFloat = 0
-            if case .attack(0) = f.state, let a = f.currentAttack, f.attackPhase == .windup {
-                gather = CGFloat(f.stateFrame) / CGFloat(max(a.windup, 1))
+            var dark = false
+            if let a = f.currentAttack, f.attackPhase == .windup {
+                switch a.effect {
+                case .flare: gather = CGFloat(f.stateFrame) / CGFloat(max(a.windup, 1))
+                case .eclipse: gather = CGFloat(f.stateFrame) / CGFloat(max(a.windup, 1)); dark = true
+                default: break
+                }
             }
             halo.setScale(1 + gather * 0.9)
             halo.glowWidth = 3 + gather * 14
             halo.lineWidth = 3 + gather * 3
+            halo.strokeColor = dark ? Palette.violet : Palette.gold
+            halo.fillColor = dark ? Palette.body.withAlphaComponent(0.85 * gather) : .clear
         }
         mark.isHidden = f.markedFrames == 0 || !f.isAlive
         mark.position = CGPoint(x: 0, y: f.spec.height + 22)
@@ -992,6 +1042,7 @@ final class FighterNode: SKNode {
         case .radiantAcolyte: 54
         case .solarGuard: 58
         case .haloDisciple: 40
+        case .lastOracle: 104
         default: 76
         }
     }

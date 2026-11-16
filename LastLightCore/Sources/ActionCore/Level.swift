@@ -371,7 +371,18 @@ extension Level {
     public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .wardensGate,
                                       .theProtocol,
                                       .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault,
-                                      .pilgrimRoad, .sunCloister, .choirStair]
+                                      .pilgrimRoad, .sunCloister, .choirStair, .oracleTerrace]
+
+    /// The Dawnfaith's boss room: the terrace at the top of the Choir Stair, where the Last Oracle waits.
+    public static let oracleTerrace: Level = {
+        var l = Level(name: "The Oracle's Terrace", width: 1700, start: Vec2(140, 0), exitX: .infinity)
+        l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("oracle.wake", on: .bossWakes))
+        l.scenes.append(SceneTrigger("oracle.end", on: .complete))
+        l.ground(-200, 1900)
+        l.boss = Placement(.lastOracle, x: 1200)
+        return l
+    }()
 
     // MARK: Chapter 3, The Dawnfaith
 

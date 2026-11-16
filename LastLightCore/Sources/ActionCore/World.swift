@@ -591,7 +591,7 @@ public struct World: Sendable {
                 }
             case .lob(let lob):
                 lobbed(lob, from: me, &events)
-            case .eruption(let columns, let width, let height, let warning, let active, let damage):
+            case .eruption(let columns, let width, let height, let warning, let active, let damage, let kind):
                 var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
                 var tries = 0
                 while xs.count < columns, tries < 40 {
@@ -602,7 +602,7 @@ public struct World: Sendable {
                 for x in xs.prefix(columns) {
                     var strike = Strike(box: Box(minX: x - width / 2, minY: -4, maxX: x + width / 2, maxY: height),
                                         warning: warning, active: active, damage: damage)
-                    strike.kind = .fire
+                    strike.kind = kind
                     strikes.append(strike)
                 }
             case .mend(let amount, let range):
@@ -615,18 +615,18 @@ public struct World: Sendable {
                     events.append(.healed(id: fighters[t].id, amount: gained))
                 }
             case .flare(let radius, let daze):
-                let centre = Vec2(me.pos.x, me.pos.y + me.spec.height / 2)
-                events.append(.flared(id: me.id, at: centre, radius: radius))
-                for t in fighters.indices where fighters[t].team != me.team && fighters[t].isAlive
-                    && !fighters[t].spec.isDecoy && !fighters[t].isDodgeInvulnerable {
-                    let h = fighters[t]
-                    let dx = me.pos.x - h.pos.x
-                    let dy = centre.y - (h.pos.y + h.spec.height / 2)
-                    // Looking at it: facing toward it, or standing right on it.
-                    guard dx * dx + dy * dy <= radius * radius, dx * h.facing > 0 || abs(dx) < 8 else { continue }
-                    fighters[t].vel.x = 0
-                    fighters[t].enter(.hitstun, duration: daze)
-                    events.append(.dazed(id: h.id))
+                dazzle(from: me, radius: radius, frames: daze, lookingAt: true, &events)
+            case .eclipse(let radius, let daze):
+                dazzle(from: me, radius: radius, frames: daze, lookingAt: false, &events)
+            case .prophecy(let width, let height, let warning, let active, let damage):
+                for h in fighters where h.team != me.team && h.isAlive && h.awake && !h.spec.isDecoy {
+                    // Where they will be when it lands, if they keep going.
+                    let ahead = h.pos.x + h.vel.x * Double(warning) / Tuning.framesPerSecond
+                    let x = min(max(ahead, arena.lowerBound + width / 2), arena.upperBound - width / 2)
+                    var strike = Strike(box: Box(minX: x - width / 2, minY: -4, maxX: x + width / 2, maxY: height),
+                                        warning: warning, active: active, damage: damage)
+                    strike.kind = .light
+                    strikes.append(strike)
                 }
             case .rain(let columns, let width, let warning, let active, let damage):
                 var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
@@ -642,6 +642,25 @@ public struct World: Sendable {
                         warning: warning, active: active, damage: damage))
                 }
             }
+        }
+    }
+
+    /// A flare (dazes those looking at it) or an eclipse (dazes those looking away), from the attacker's centre.
+    private mutating func dazzle(from me: Fighter, radius: Double, frames: Int, lookingAt: Bool, _ events: inout [GameEvent]) {
+        let centre = Vec2(me.pos.x, me.pos.y + me.spec.height / 2)
+        events.append(lookingAt ? .flared(id: me.id, at: centre, radius: radius) : .eclipsed(id: me.id, at: centre, radius: radius))
+        for t in fighters.indices where fighters[t].team != me.team && fighters[t].isAlive
+            && !fighters[t].spec.isDecoy && !fighters[t].isDodgeInvulnerable {
+            let h = fighters[t]
+            let dx = me.pos.x - h.pos.x
+            let dy = centre.y - (h.pos.y + h.spec.height / 2)
+            guard dx * dx + dy * dy <= radius * radius else { continue }
+            // Standing right on it counts as looking at it.
+            let facing = dx * h.facing > 0 || abs(dx) < 8
+            guard facing == lookingAt else { continue }
+            fighters[t].vel.x = 0
+            fighters[t].enter(.hitstun, duration: frames)
+            events.append(.dazed(id: h.id))
         }
     }
 

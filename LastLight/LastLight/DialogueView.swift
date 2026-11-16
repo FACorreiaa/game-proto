@@ -27,6 +27,7 @@ struct DialogueView: View {
         case "CAELEN": Color.white.opacity(0.85)
         case "SERAPHINE": Color(red: 1.0, green: 0.82, blue: 0.4)
         case "NIMUE": Color(red: 0.78, green: 0.58, blue: 1.0)
+        case "LAST ORACLE": Color(red: 0.93, green: 0.89, blue: 0.8)
         default: cyan
         }
     }

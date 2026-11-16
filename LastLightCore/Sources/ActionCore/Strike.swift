@@ -6,6 +6,8 @@ public enum StrikeKind: String, Sendable, Equatable {
     case fire
     /// A Night Weaver's snare: it catches and slows.
     case snare
+    /// The Last Oracle's dark: it bursts up from the floor.
+    case dark
 }
 
 /// Something that warns, then is live for a few frames, then is gone: a column of light, a burning patch, a snare.

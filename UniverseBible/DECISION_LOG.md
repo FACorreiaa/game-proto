@@ -28,7 +28,7 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
-| DRAFT-008 | 2026-11-16 | Chapter 3, The Dawnfaith: three levels, enemy behaviour, lead-aware lines and a placeholder chapter-end line until the Last Oracle's fight. Every line and claim is a draft. | Games/TheLastLight2D, Bestiary/Dawnfaith, Locations |
+| DRAFT-008 | 2026-11-16 | Chapter 3, The Dawnfaith: three levels, enemy and boss behaviour, lead-aware lines and the chapter-end line. The Last Oracle's fight on the Oracle's Terrace closes it. Every line and claim is a draft. | Games/TheLastLight2D, Bestiary/Dawnfaith, Locations |
 
 ## How to amend
 

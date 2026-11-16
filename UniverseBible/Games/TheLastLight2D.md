@@ -84,8 +84,8 @@ wakes, then Orion names it and says how to beat it, in words that follow the cho
 
 ## Draft: Chapter 3, The Dawnfaith (DRAFT-008, PROPOSED)
 
-Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**. The
-Last Oracle's fight comes next and will replace the placeholder chapter-end line.
+Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**, and the
+boss room, **The Oracle's Terrace**, where the Last Oracle is fought.
 
 Guards kept: the Last Oracle and Seraphine stay separate, with nothing hinting at a link (open question 9); nothing
 says how the Dawnfaith is organised (open question 6); its people are believers, not monsters.
@@ -102,7 +102,14 @@ says how the Dawnfaith is organised (open question 6); its people are believers,
 8. Runners used to sleep in the cloister when the roads were bad; "the doors were open then".
 9. The Choir Stair is where the hours were once sung; no one sings now.
 10. Someone at the top has been listening as they climb (Orion).
-11. Placeholder chapter-end line: "The Choir Stair is climbed. The Last Oracle waits at the top."
+11. Chapter-end line: "The Last Oracle is beaten. She still believes the ending is coming."
+12. The Last Oracle believes she has seen how it ends: "The light goes out, and everyone is finally still." She
+    names no cause (LC-002 holds), and whether she truly sees the future is UNKNOWN.
+13. She wants that ending and will not stop it, only "make it gentle".
+14. Seraphine asks her what was bought with the Dawnfaith's seal; she doesn't answer. Nothing in the scene says who
+    she is to Seraphine (open question 9 stays open).
+15. Orion, after the fight: "Being sure is not the same as being right" (trusted) or "Watch the certain ones too"
+    (watched). Consistent with WC-007: certainty proves nothing.
 
 ## Chapter 2, The Lantern Cities (DEC-013, WORKING)
 

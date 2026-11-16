@@ -33,8 +33,8 @@ public struct Chapter: Sendable, Identifiable {
 
     public static let dawnfaith = Chapter(
         id: "chapter3", number: 3, title: "The Dawnfaith",
-        ending: "The Choir Stair is climbed. The Last Oracle waits at the top.",
-        route: { _ in [.pilgrimRoad, .sunCloister, .choirStair] })
+        ending: "The Last Oracle is beaten. She still believes the ending is coming.",
+        route: { _ in [.pilgrimRoad, .sunCloister, .choirStair, .oracleTerrace] })
 
     /// Every chapter, in play order.
     public static let all: [Chapter] = [.foundry, .lanternCities, .dawnfaith]

@@ -9,7 +9,7 @@ extension FighterKind {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol, .lineWarden,
              .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing,
-             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple: .enemy
+             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle: .enemy
         }
     }
 }
@@ -43,6 +43,8 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case radiantAcolyte
     case solarGuard
     case haloDisciple
+    /// The Dawnfaith's boss.
+    case lastOracle
 }
 
 /// What an attack does when its active frames begin.
@@ -56,11 +58,16 @@ public enum AttackEffect: Sendable, Equatable {
     /// Throws something that lands under the target: a burning patch or a snare.
     case lob(Lob)
     /// Fire bursts up from the floor: one column under each hero, the rest spread over the room.
-    case eruption(columns: Int, width: Double, height: Double, warning: Int, active: Int, damage: Double)
+    case eruption(columns: Int, width: Double, height: Double, warning: Int, active: Int, damage: Double,
+                  kind: StrikeKind = .fire)
     /// Restores health to its own side within range, the attacker excepted.
     case mend(amount: Double, range: Double)
     /// A burst of light. Anyone within the radius who is facing it, and not dodging, is dazed for a while.
     case flare(radius: Double, daze: Int)
+    /// The flare turned inside out: anyone within the radius who is NOT facing it is dazed.
+    case eclipse(radius: Double, daze: Int)
+    /// A strike laid where each hero will be when it lands, judged from how they are moving now.
+    case prophecy(width: Double, height: Double, warning: Int, active: Int, damage: Double)
 }
 
 /// What a thrown thing leaves on the ground where it lands. It warns, then stays live for `active` frames and

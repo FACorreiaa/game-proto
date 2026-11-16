@@ -311,3 +311,29 @@ private func shipped() throws -> StoryLibrary {
     let disciple = try #require(Level.sunCloister.enemies.first { $0.kind == .haloDisciple })
     if case .reach(let x) = cue.cue { #expect(x < disciple.pos.x - 300) } else { Issue.record("not a reach cue") }
 }
+
+@Test func theLastOracleHearsEachLeadThenNamesHerEnding() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        var state = StoryState()
+        state.flags["lead"] = lead.rawValue
+        var runner = try #require(StoryRunner(sceneID: "oracle.wake", library: story, state: state))
+        var speakers: [String] = []
+        var last = ""
+        while let line = runner.line { speakers.append(line.speaker); last = line.text; runner.advance() }
+        #expect(speakers == [lead.rawValue.uppercased(), "LAST ORACLE", "LAST ORACLE"], "\(lead)")
+        #expect(last.contains("gentle"))
+    }
+}
+
+@Test func afterTheTerraceOrionAnswersTheChoiceMadeWhenTheyMet() throws {
+    let story = try shipped()
+    for (choice, words) in [("trusted", "not the same as being right"), ("watched", "Watch the certain ones")] {
+        var state = StoryState()
+        state.flags = ["lead": "seraphine", "orion": choice]
+        var runner = try #require(StoryRunner(sceneID: "oracle.end", library: story, state: state))
+        var last = ""
+        while let line = runner.line { last = line.text; runner.advance() }
+        #expect(last.contains(words), "\(choice)")
+    }
+}
