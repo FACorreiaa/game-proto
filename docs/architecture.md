@@ -94,7 +94,7 @@ complete). Story state is saved apart from the game (`story.json`). The world bi
 |---|---|
 | Story strings moved into string catalogs | The first non-English language |
 | A codex or lore screen and its data file | The owner approves a lore feature for a release |
-| Story files that list their own cues instead of `Level` holding them | Stage 4, with three openings that share levels but not scenes |
+| Story files that list their own cues instead of `Level` holding them | Two leads need different scenes on the same level and a flag can't do it. Stage 4 didn't fire it: each opening is its own level, and the one shared scene that differs by lead (`hall.enter`) branches on the `lead` flag |
 
 ## Pillar 3: reusable asset pipelines
 
@@ -127,7 +127,8 @@ keeps verdicts on all art. The planned sources are Blender and, with approval, H
 
 ## Pillar 4: DLC-ready content manifests
 
-**Now.** Content is compiled in. `Level.all` is a Swift array of four levels; Chapter 1 is "everything".
+**Now.** Content is compiled in. `Level.all` lists every level once; `Level.chapter1(for:)` is one lead's route (her
+opening from `Faction`, then the shared levels).
 
 **Follow:**
 
@@ -136,7 +137,7 @@ keeps verdicts on all art. The planned sources are Blender and, with approval, H
 - **Put new content in places a pack could own.** Use one file per level group and one story file per chapter,
   and don't let one chapter's code reach into another's.
 - **Save data names content by ID, not by array position.** Today the current level is saved as an index
-  (`levelIndex`); that's fine for one chapter. Switch it to a level ID when the second chapter or pack arrives,
+  (`progress.level`, a position in the lead's route, with `progress.lead`); that's fine for one chapter. Switch it to a level ID when the second chapter or pack arrives,
   before it ships, so old saves migrate once.
 - **Owned content is decided by the app**, never by data inside a pack. When paid content exists, StoreKit
   entitlements decide what loads.

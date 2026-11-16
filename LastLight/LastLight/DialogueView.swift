@@ -21,12 +21,22 @@ struct DialogueView: View {
         }
     }
 
+    /// Each speaker in their faction's light.
+    static func colour(for speaker: String) -> Color {
+        switch speaker {
+        case "CAELEN": Color.white.opacity(0.85)
+        case "SERAPHINE": Color(red: 1.0, green: 0.82, blue: 0.4)
+        case "NIMUE": Color(red: 0.78, green: 0.58, blue: 1.0)
+        default: cyan
+        }
+    }
+
     private func panel(_ line: StoryLine, choices: [StoryChoice]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(line.speaker)
                 .font(.system(size: 12, weight: .heavy))
                 .tracking(2)
-                .foregroundStyle(line.speaker == "CAELEN" ? Color.white.opacity(0.8) : Self.cyan)
+                .foregroundStyle(Self.colour(for: line.speaker))
             Text(line.text)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(.white)

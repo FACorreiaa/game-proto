@@ -215,6 +215,7 @@ extension Level {
     public static let machineHall: Level = {
         var l = Level(name: "The Machine Hall", width: 5900, start: Vec2(120, 0), exitX: 5780)
         l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("hall.enter", on: .start))
 
         l.ground(-200, 800)
         l.enemies.append(Placement(.scrapDrone, x: 520))
@@ -278,6 +279,88 @@ extension Level {
         return l
     }()
 
-    /// Every level, in play order. The yard is the movement test; the rest is Chapter 1.
-    public static let all: [Level] = [.foundryYard, .awakening, .machineHall, .theProtocol]
+    /// Seraphine's opening. She comes into the Foundry from outside, up its outer works to the gauges where it
+    /// measures the light. A Sentry Core watches the climb; Orion is found holding the gauge floor.
+    public static let sunGauges: Level = {
+        var l = Level(name: "The Sun Gauges", width: 3900, start: Vec2(120, 0), exitX: 3700)
+        l.scenes.append(SceneTrigger("gauges.arrive", on: .start))
+
+        // Up the outer wall in two steps.
+        l.ground(-200, 900)
+        l.ground(560, 700, top: 60)
+        l.ground(700, 900, top: 120)
+        l.pickups.append(Pickup(id: 1, at: Vec2(630, 105)))
+
+        // Across to the gauge walk, watched from above.
+        l.ground(1030, 1700, top: 120)
+        l.pickups.append(Pickup(id: 2, at: Vec2(965, 200)))
+        l.enemies.append(Placement(.sentryCore, x: 1560, y: 160))
+        // The secret sits on the gauges themselves.
+        l.ledge(1150, 1270, top: 205)
+        l.ledge(1320, 1440, top: 290)
+        l.pickups.append(Pickup(id: 3, at: Vec2(1380, 335), secret: true))
+
+        // Down to the gauge floor, where Orion is.
+        l.ground(1700, 4100)
+        l.checkpoints.append(Vec2(1790, 0))
+        l.partner = Placement(.orion, x: 2150)
+        l.scenes.append(SceneTrigger("gauges.orion", on: .partnerJoins))
+        l.enemies.append(Placement(.scrapDrone, x: 2500))
+        l.enemies.append(Placement(.scrapDrone, x: 2600))
+
+        // The gauge keeper, then the lift to the inner gate.
+        l.checkpoints.append(Vec2(2760, 0))
+        l.enemies.append(Placement(.forgedSoldier, x: 3000))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3250, 40)))
+        l.ledge(3390, 3490, top: 0, travel: Vec2(0, 170), period: 240)
+        l.ground(3500, 4100, top: 150)
+        return l
+    }()
+
+    /// Nimue's opening. Her smuggling route runs under the Foundry: drains with arcs that take turns, a pit,
+    /// and drones in numbers. Orion is found down there, the way out of the line.
+    public static let undercroft: Level = {
+        var l = Level(name: "The Undercroft", width: 4000, start: Vec2(120, 0), exitX: 3800)
+        l.scenes.append(SceneTrigger("undercroft.arrive", on: .start))
+
+        l.ground(-200, 1500)
+        l.pickups.append(Pickup(id: 1, at: Vec2(420, 40)))
+        // Two arcs that take turns.
+        l.hazards.append(Hazard(Box(minX: 900, minY: 0, maxX: 932, maxY: 150), damage: 12, period: 140, onFrames: 70))
+        l.hazards.append(Hazard(Box(minX: 1060, minY: 0, maxX: 1092, maxY: 150), damage: 12, period: 140, onFrames: 70,
+                                phase: 70))
+        l.pickups.append(Pickup(id: 2, at: Vec2(996, 40)))
+        // A pair of drones: the place for a decoy.
+        l.enemies.append(Placement(.scrapDrone, x: 1300))
+        l.enemies.append(Placement(.scrapDrone, x: 1390))
+
+        // A pit crossed on a moving platform.
+        l.ledge(1520, 1640, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(1900, 4200)
+        l.checkpoints.append(Vec2(1970, 0))
+        // A climb off the route to a secret.
+        l.ledge(2050, 2170, top: 90)
+        l.ledge(2220, 2340, top: 175)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2280, 220), secret: true))
+        l.partner = Placement(.orion, x: 2450)
+        l.scenes.append(SceneTrigger("undercroft.orion", on: .partnerJoins))
+
+        // The way up to the line.
+        l.checkpoints.append(Vec2(2700, 0))
+        l.enemies.append(Placement(.scrapDrone, x: 2950))
+        l.enemies.append(Placement(.scrapDrone, x: 3050))
+        l.enemies.append(Placement(.scrapDrone, x: 3150))
+        l.enemies.append(Placement(.forgedSoldier, x: 3400))
+        l.hazards.append(Hazard(Box(minX: 3550, minY: 0, maxX: 3582, maxY: 150), damage: 12, period: 150, onFrames: 80))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3680, 40)))
+        return l
+    }()
+
+    /// Every level once: the three openings, then the levels all three share.
+    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .theProtocol]
+
+    /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
+    public static func chapter1(for lead: FighterKind) -> [Level] {
+        [Faction(lead: lead).opening, .foundryYard, .machineHall, .theProtocol]
+    }
 }

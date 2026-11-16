@@ -67,10 +67,15 @@ final class GameScene: SKScene {
     private let groundY: CGFloat = 104
     private let haptics = Haptics()
     private let sound = Sound()
-    private let levels = Level.all
-    /// Which level is being played. Remembered between launches.
+    /// The hero leading this run, chosen by faction. Remembered between launches.
+    private(set) var lead: FighterKind {
+        didSet { UserDefaults.standard.set(lead.rawValue, forKey: "progress.lead") }
+    }
+    /// Chapter 1 as the lead plays it: their opening, then the shared levels.
+    private var levels: [Level] { Level.chapter1(for: lead) }
+    /// Which level of the lead's chapter is being played. Remembered between launches.
     private var levelIndex: Int {
-        didSet { UserDefaults.standard.set(levelIndex, forKey: "levelIndex") }
+        didSet { UserDefaults.standard.set(levelIndex, forKey: "progress.level") }
     }
     private var level: Level { levels[levelIndex] }
 
@@ -80,6 +85,20 @@ final class GameScene: SKScene {
         max(0.5, min(size.height / 402, size.width / 700)) * (mode == .level && level.boss != nil ? 0.7 : 1)
     }
 
+    /// The saved place in the chapter. Builds before the openings saved `levelIndex` in the old order (Foundry Yard
+    /// first, then Awakening); that is read once and moved to Caelen's route.
+    private static func savedLevel() -> Int {
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "progress.level") == nil, defaults.object(forKey: "levelIndex") != nil {
+            let old = defaults.integer(forKey: "levelIndex")
+            defaults.removeObject(forKey: "levelIndex")
+            let moved = [1, 0, 2, 3][min(max(old, 0), 3)]
+            defaults.set(moved, forKey: "progress.level")
+            return moved
+        }
+        return defaults.integer(forKey: "progress.level")
+    }
+
     init(demo: Bool, mode: Mode = .level, story: StoryPresenter) {
         self.demo = demo
         self.story = story
@@ -87,13 +106,18 @@ final class GameScene: SKScene {
         // `-level 2` starts on the third level, for checking one without playing up to it.
         let args = ProcessInfo.processInfo.arguments
         let asked = args.firstIndex(of: "-level").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil }
-        let saved = asked ?? (demo ? 0 : UserDefaults.standard.integer(forKey: "levelIndex"))
-        levelIndex = min(max(saved, 0), Level.all.count - 1)
-        let lead = args.firstIndex(of: "-lead").flatMap { $0 + 1 < args.count ? FighterKind(rawValue: args[$0 + 1]) : nil }
-        world = mode == .level ? World(level: Level.all[levelIndex], hero: lead ?? .caelen, seed: 1) : World.partnerSlice(seed: 1)
+        // `-lead seraphine` or `-lead nimue` plays that faction's route, for checks.
+        let askedLead = args.firstIndex(of: "-lead").flatMap { $0 + 1 < args.count ? FighterKind(rawValue: args[$0 + 1]) : nil }
+        let savedLead = UserDefaults.standard.string(forKey: "progress.lead").flatMap(FighterKind.init(rawValue:))
+        let lead = askedLead ?? (demo ? .caelen : savedLead ?? .caelen)
+        self.lead = lead
+        let route = Level.chapter1(for: lead)
+        let saved = asked ?? (demo ? 0 : Self.savedLevel())
+        levelIndex = min(max(saved, 0), route.count - 1)
+        world = mode == .level ? World(level: route[levelIndex], hero: lead, seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
-        if mode == .level { story.forget(Level.all[levelIndex].scenes.map(\.scene)) }
+        if mode == .level { story.forget(route[levelIndex].scenes.map(\.scene)) }
         backgroundColor = Palette.sky
     }
 
@@ -178,7 +202,7 @@ final class GameScene: SKScene {
             }
             var tuning = Tuning()
             tuning.heroDamageScale = settings.difficulty.damageTaken
-            world = World(level: level, hero: leadKind, tuning: tuning, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
+            world = World(level: level, hero: lead, tuning: tuning, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
                           collected: resume ? world.collected : [])
             pilot = Autopilot(fights: true)
             // A level started over plays its scenes again; a retry from a checkpoint does not.
@@ -208,15 +232,6 @@ final class GameScene: SKScene {
         restart(fresh: true)
         showHint()
         if mode == .room { hud.announce("TRAINING ROOM") }
-    }
-
-    /// The hero who leads the levels. `-lead seraphine` or `-lead nimue` overrides the setting, for checks.
-    private var leadKind: FighterKind {
-        let args = ProcessInfo.processInfo.arguments
-        if let i = args.firstIndex(of: "-lead"), i + 1 < args.count, let kind = FighterKind(rawValue: args[i + 1]) {
-            return kind
-        }
-        return FighterKind(rawValue: settings.lead.rawValue) ?? .caelen
     }
 
     #if DEBUG
@@ -259,6 +274,12 @@ final class GameScene: SKScene {
         sound.volume = Float(settings.volume)
         haptics.enabled = settings.haptics
         showDebug = settings.debugOverlay
+    }
+
+    /// A new run as this faction's lead, from their opening.
+    func begin(as lead: FighterKind) {
+        self.lead = lead
+        play(levelAt: 0)
     }
 
     func play(levelAt index: Int) {
@@ -835,11 +856,8 @@ final class GameScene: SKScene {
                     popup("SLOWED", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.ember, size: 14)
                 }
             case .scene(let id):
-                // The demo bot does not read. Chapter 1's lines are written to Caelen; the other leads play
-                // it without dialogue until their own openings exist.
-                if !demo, leadKind == .caelen {
-                    story.begin(id)
-                }
+                // The demo bot does not read.
+                if !demo { story.begin(id) }
             case .healed(let id, let amount):
                 if let f = world.fighter(id) {
                     let at = CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2)

@@ -1,3 +1,5 @@
+import ImageIO
+import ActionCore
 import Observation
 import SpriteKit
 import SwiftUI
@@ -20,6 +22,8 @@ final class Game {
         case title
         case playing
         case paused
+        /// New Game: choose a faction, which chooses the lead and their opening.
+        case factionPick
         case results(LevelResult)
     }
 
@@ -68,6 +72,7 @@ final class Game {
         if let i = args.firstIndex(of: "-menu"), i + 1 < args.count {
             switch args[i + 1] {
             case "paused": screen = .paused
+            case "factions": screen = .factionPick
             case "settings": panel = .settings
             case "chapters": panel = .chapters
             case "results", "chapter":
@@ -91,9 +96,21 @@ final class Game {
 
     func newGame() {
         panel = nil
-        story.resetAll()
-        scene.play(levelAt: 0)
+        screen = .factionPick
+    }
+
+    /// Starts a new run as this faction: every story choice is forgotten.
+    func begin(_ faction: Faction) {
+        panel = nil
+        story.resetAll(lead: faction.lead)
+        scene.begin(as: faction.lead)
         screen = .playing
+    }
+
+    /// Who is leading and where, for the Continue button.
+    var continueDetail: String {
+        let name = scene.lead.rawValue.capitalized
+        return scene.levelNames.indices.contains(scene.currentLevel) ? "\(name) · \(scene.levelNames[scene.currentLevel])" : name
     }
 
     func play(chapter index: Int) {
@@ -166,6 +183,9 @@ struct GameView: View {
             .animation(.easeOut(duration: 0.15), value: game.story.isActive)
             .animation(.easeOut(duration: 0.2), value: game.screen)
             .animation(.easeOut(duration: 0.15), value: game.panel)
+            #if DEBUG
+            .task { await renderMenuIfAsked() }
+            #endif
             #if os(iOS)
             .statusBarHidden()
             .persistentSystemOverlays(.hidden)
@@ -173,6 +193,31 @@ struct GameView: View {
             .frame(minWidth: 800, minHeight: 450)
             #endif
     }
+
+    #if DEBUG
+    /// `-render` saves the menu layer as an image to the app's temporary folder, so menus can be checked without
+    /// a screen capture. The live hero figures inside cards don't render this way. Debug builds only.
+    @MainActor
+    private func renderMenuIfAsked() async {
+        guard ProcessInfo.processInfo.arguments.contains("-render") else { return }
+        try? await Task.sleep(for: .seconds(1.5))
+        let view = ZStack {
+            Color(red: 0.03, green: 0.06, blue: 0.11)
+            MenuOverlay(game: game)
+        }
+        .frame(width: 874, height: ProcessInfo.processInfo.arguments.contains("-short") ? 360 : 402)
+        .environment(\.colorScheme, .dark)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        guard let image = renderer.cgImage else { return }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("snapshots")
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appendingPathComponent("menu.png")
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { return }
+        CGImageDestinationAddImage(destination, image, nil)
+        CGImageDestinationFinalize(destination)
+    }
+    #endif
 
     private var debugOptions: SpriteView.DebugOptions {
         #if DEBUG

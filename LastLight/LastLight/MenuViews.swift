@@ -13,6 +13,9 @@ struct MenuOverlay: View {
             case .paused:
                 backdrop(0.6)
                 PauseMenu(game: game)
+            case .factionPick:
+                backdrop(0.82)
+                FactionPick(game: game)
             case .results(let result):
                 backdrop(0.65)
                 ResultsScreen(game: game, result: result)
@@ -128,6 +131,10 @@ private struct TitleMenu: View {
             VStack(spacing: 10) {
                 if game.hasProgress {
                     MenuButton(title: "CONTINUE", primary: true, shortcut: .return) { game.continueGame() }
+                    Text(game.continueDetail)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .frame(maxWidth: .infinity, alignment: .center)
                     MenuButton(title: "NEW GAME") { game.newGame() }
                 } else {
                     MenuButton(title: "BEGIN", primary: true, shortcut: .return) { game.newGame() }
@@ -210,24 +217,14 @@ private struct SettingsPanel: View {
 }
 
 private struct ChapterPanel: View {
-    @Bindable var game: Game
+    let game: Game
 
     var body: some View {
         PanelFrame(title: "CHAPTERS", close: { game.panel = nil }) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Lead (test)")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.8))
-                Picker("Lead", selection: $game.settings.lead) {
-                    ForEach(Settings.Lead.allCases, id: \.self) { Text($0.name).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(Array(game.levelNames.enumerated()), id: \.offset) { index, name in
-                        row(number: "\(index + 1)", name: name, note: index == 0 ? "movement" : nil) {
+                        row(number: "\(index + 1)", name: name, note: index == 0 ? "opening" : nil) {
                             game.play(chapter: index)
                         }
                     }
