@@ -328,6 +328,71 @@
           "text": "The Line Warden. Its guard faces forward. Get behind it, or turn its blade aside."
         }
       }
+    },
+    "locks.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Locks and levers. My hands know these before I do.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "Every door here wants a hand on a lever. The Foundry trusts nothing that walks.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The Lock Works. Runners went under this place, never through it. Now I see why.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Lock Works. Every door here is a lock."
+        }
+      }
+    },
+    "locks.lever": {
+      "start": "line",
+      "lines": {
+        "line": {
+          "speaker": "ORION",
+          "text": "The Foundry still answers its own handles. Strike the lever, and the gate will rise."
+        }
+      }
+    },
+    "locks.plate": {
+      "start": "line",
+      "lines": {
+        "line": {
+          "speaker": "ORION",
+          "text": "This one wants weight on the plate. Switch to me, walk me onto it, and switch back. I will hold it.",
+          "next": "line2"
+        },
+        "line2": {
+          "speaker": "ORION",
+          "text": "When you have gone far enough, I will find you."
+        }
+      }
+    },
+    "locks.race": {
+      "start": "line",
+      "lines": {
+        "line": {
+          "speaker": "ORION",
+          "text": "That lever springs back, and its gate is far. Throw it and run."
+        }
+      }
     }
   }
 }

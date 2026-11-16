@@ -55,6 +55,14 @@ public enum GameEvent: Equatable, Sendable {
     case eclipsed(id: Int, at: Vec2, radius: Double)
     /// Caught looking into a flare.
     case dazed(id: Int)
+    /// A lever was thrown, or sprang back.
+    case lever(id: Int, on: Bool)
+    /// A plate went down or came up.
+    case plate(id: Int, down: Bool)
+    /// A gate started to open or to close.
+    case gate(id: Int, opening: Bool)
+    /// A partner stays on a plate to hold it down.
+    case holding(id: Int)
     case decoyPlaced(id: Int, at: Vec2)
     /// A decoy broke or ran out.
     case decoyGone(id: Int, at: Vec2)

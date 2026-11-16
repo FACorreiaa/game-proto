@@ -48,6 +48,15 @@ These lines hold for every change:
 4. **Each piece of content is checked by a test.** Every level must be finishable by the autopilot, every
    enemy shows its signature behaviour, every story scene must resolve.
 
+**Puzzles** are level data, like hazards: `Lever`, `Plate` and `Gate` in `Level`, solved by `World.puzzleRules`.
+A gate is a solid block appended to the level's platforms, so collision needs nothing new; it slides up as it
+opens and won't shut on anyone standing in it. Levers and plates write ids into `World.signals`; a gate opens when
+all its inputs are on (or, inverted, when any is off). Heroes throw levers with a swing and press plates by
+standing on them (a decoy counts; enemies never do). A partner left on a plate when control passes away gets
+`Fighter.holding` and stays put until the lead goes far on. The autopilot solves gates too (throw the lever, put
+Orion on the plate, hand back, wait for the gate), so "every level is finishable by the autopilot" still holds
+for puzzle levels.
+
 ## Pillar 1: modular character definitions
 
 **Now.** A fighter is a `FighterKind` plus a `FighterSpec`, all data: size, HP, attacks, special, flags such as

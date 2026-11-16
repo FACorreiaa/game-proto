@@ -50,6 +50,10 @@ final class GameScene: SKScene {
     private var cameraX: CGFloat = 0
     private var cameraY: CGFloat = 0
     private var platformNodes: [Int: SKNode] = [:]
+    /// Each gate's lamps, one per lever or plate it needs, by gate id.
+    private var gateLamps: [Int: [(input: Int, node: SKShapeNode)]] = [:]
+    private var leverNodes: [Int: (handle: SKNode, ring: SKShapeNode)] = [:]
+    private var plateNodes: [Int: SKShapeNode] = [:]
     private var hazardNodes: [SKShapeNode] = []
     private var checkpointNodes: [SKShapeNode] = []
     private var pickupNodes: [Int: SKNode] = [:]
@@ -368,6 +372,9 @@ final class GameScene: SKScene {
         midLayer.removeAllChildren()
         worldNode.removeAllChildren()
         platformNodes = [:]
+        gateLamps = [:]
+        leverNodes = [:]
+        plateNodes = [:]
         hazardNodes = []
         checkpointNodes = []
         pickupNodes = [:]
@@ -375,6 +382,121 @@ final class GameScene: SKScene {
         buildBackdrop()
         Effects.ambient(mid: midLayer, far: farLayer, width: CGFloat(world.arena.upperBound - world.arena.lowerBound))
         if let level = world.level { build(level) } else { buildRoomFloor() }
+    }
+
+    /// A gate and the levers and plates that open it share a colour, so the link reads at a glance.
+    private func puzzleColour(_ input: Int, in level: Level) -> SKColor {
+        let colours = [Palette.cyan, Palette.gold, Palette.violet, Palette.ember]
+        let n = level.gates.firstIndex { $0.id == input || $0.opensWith.contains(input) } ?? 0
+        return colours[n % colours.count]
+    }
+
+    private func buildPuzzles(_ level: Level) {
+        for gate in level.gates {
+            guard let i = world.gatePlatform[gate.id], let node = platformNodes[i] else { continue }
+            node.removeAllChildren()
+            let colour = puzzleColour(gate.id, in: level)
+            let w = gate.box.maxX - gate.box.minX, h = gate.box.maxY - gate.box.minY
+            let door = SKShapeNode(rect: CGRect(x: 0, y: 0, width: w, height: h), cornerRadius: 3)
+            door.fillColor = Palette.body
+            door.strokeColor = colour.withAlphaComponent(0.8)
+            door.lineWidth = 2
+            node.addChild(door)
+            for y in stride(from: 24.0, to: h - 10, by: 28) {
+                let bar = SKShapeNode(rect: CGRect(x: 4, y: y, width: w - 8, height: 2))
+                bar.fillColor = colour.withAlphaComponent(0.35)
+                bar.strokeColor = .clear
+                node.addChild(bar)
+            }
+            var lamps: [(Int, SKShapeNode)] = []
+            for (n, input) in gate.opensWith.enumerated() {
+                let lamp = SKShapeNode(circleOfRadius: 4)
+                lamp.position = CGPoint(x: w / 2, y: h - 14 - Double(n) * 13)
+                lamp.lineWidth = 1.5
+                node.addChild(lamp)
+                lamps.append((input, lamp))
+            }
+            gateLamps[gate.id] = lamps
+            node.zPosition = -1
+        }
+        for lever in level.levers {
+            let colour = puzzleColour(lever.id, in: level)
+            let base = SKShapeNode(rect: CGRect(x: -12, y: 0, width: 24, height: 10), cornerRadius: 2)
+            base.position = CGPoint(x: lever.pos.x, y: lever.pos.y)
+            base.fillColor = Palette.body
+            base.strokeColor = colour.withAlphaComponent(0.8)
+            base.zPosition = -1
+            worldNode.addChild(base)
+            let handle = SKNode()
+            handle.position = CGPoint(x: 0, y: 8)
+            let arm = SKShapeNode(rect: CGRect(x: -2, y: 0, width: 4, height: 40), cornerRadius: 2)
+            arm.fillColor = Palette.steel
+            arm.strokeColor = .clear
+            handle.addChild(arm)
+            let knob = SKShapeNode(circleOfRadius: 6)
+            knob.position = CGPoint(x: 0, y: 42)
+            knob.fillColor = colour
+            knob.strokeColor = .clear
+            knob.glowWidth = 4
+            handle.addChild(knob)
+            base.addChild(handle)
+            // A timed lever shows its clock running down as a ring round the base.
+            let ring = SKShapeNode()
+            ring.position = CGPoint(x: 0, y: 5)
+            ring.strokeColor = colour
+            ring.lineWidth = 3
+            ring.glowWidth = 3
+            ring.fillColor = .clear
+            base.addChild(ring)
+            leverNodes[lever.id] = (handle, ring)
+        }
+        for plate in level.plates {
+            let node = SKShapeNode(rect: CGRect(x: plate.x0, y: plate.top - 2, width: plate.x1 - plate.x0, height: 6), cornerRadius: 2)
+            node.strokeColor = puzzleColour(plate.id, in: level)
+            node.lineWidth = 2
+            node.zPosition = 2
+            worldNode.addChild(node)
+            plateNodes[plate.id] = node
+        }
+    }
+
+    private func drawPuzzles(_ level: Level) {
+        for gate in level.gates {
+            if let i = world.gatePlatform[gate.id], let node = platformNodes[i] {
+                let box = world.platformBoxes[i]
+                node.position = CGPoint(x: box.minX, y: box.minY)
+            }
+            for (input, lamp) in gateLamps[gate.id] ?? [] {
+                let on = world.signals.contains(input)
+                let colour = puzzleColour(gate.id, in: level)
+                lamp.fillColor = on ? colour : Palette.body
+                lamp.strokeColor = colour.withAlphaComponent(on ? 1 : 0.5)
+                lamp.glowWidth = on ? 4 : 0
+            }
+        }
+        for lever in level.levers {
+            guard let (handle, ring) = leverNodes[lever.id] else { continue }
+            let on = world.signals.contains(lever.id)
+            let target: CGFloat = on ? -0.6 : 0.6
+            handle.zRotation += (target - handle.zRotation) * 0.3
+            if let left = world.leverTimers[lever.id], lever.holdFrames > 0 {
+                let t = CGFloat(left) / CGFloat(lever.holdFrames)
+                ring.path = CGPath(ellipseIn: CGRect(x: -18, y: -18, width: 36, height: 36), transform: nil)
+                    .copy(dashingWithPhase: 0, lengths: [113 * t, 200])
+                ring.isHidden = false
+                // The last second flickers.
+                ring.alpha = left < 60 && (left / 5) % 2 == 0 ? 0.3 : 1
+            } else {
+                ring.isHidden = true
+            }
+        }
+        for plate in level.plates {
+            guard let node = plateNodes[plate.id] else { continue }
+            let down = world.signals.contains(plate.id)
+            let colour = puzzleColour(plate.id, in: level)
+            node.fillColor = down ? colour : colour.withAlphaComponent(0.15)
+            node.glowWidth = down ? 5 : 0
+        }
     }
 
     private func build(_ level: Level) {
@@ -397,6 +519,7 @@ final class GameScene: SKScene {
             worldNode.addChild(node)
             platformNodes[i] = node
         }
+        buildPuzzles(level)
 
         for hazard in level.hazards {
             let b = hazard.box
@@ -659,6 +782,7 @@ final class GameScene: SKScene {
     private func drawLevel() {
         guard let level = world.level else { return }
         drawStrikes()
+        drawPuzzles(level)
         for (i, node) in platformNodes where world.platforms[i].moves {
             let box = world.platformBoxes[i]
             node.position = CGPoint(x: box.minX, y: box.minY)
@@ -979,6 +1103,25 @@ final class GameScene: SKScene {
                 ring(at: at, radius: radius, color: Palette.violet)
                 Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.violet, count: 26, speed: 260, life: 0.35, size: 10)
                 sound.play(.bossWake, volume: 0.35)
+            case .lever(let id, let on):
+                if let lever = world.level?.levers.first(where: { $0.id == id }) {
+                    sparks(at: Vec2(lever.pos.x, lever.pos.y + 44), color: on ? Palette.gold : Palette.steel, count: on ? 10 : 4)
+                }
+                sound.play(on ? .checkpoint : .blocked, volume: on ? 0.6 : 0.4)
+                if on { haptics.rigid(0.6) }
+            case .plate(_, let down):
+                sound.play(.blocked, volume: down ? 0.5 : 0.3)
+            case .gate(let id, let opening):
+                if let i = world.gatePlatform[id] {
+                    let box = world.platformBoxes[i]
+                    Effects.dust(worldNode, at: CGPoint(x: box.center.x, y: box.minY), amount: 5, spread: 20)
+                }
+                shake = max(shake, opening ? 3 : 2)
+                sound.play(.heavyHit, volume: 0.35)
+            case .holding(let id):
+                if let f = world.fighter(id) {
+                    popup("HOLDING", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 14), color: Palette.cyan, size: 13)
+                }
             case .dazed(let id):
                 if let f = world.fighter(id) {
                     popup("DAZED", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 14), color: Palette.gold, size: 14)

@@ -27,6 +27,55 @@ public struct Platform: Sendable, Equatable {
 }
 
 /// Something that hurts heroes who touch it. A timed hazard switches on and off.
+/// A lever standing on a floor. A hero's swing throws it. With `holdFrames` above zero it springs back after that
+/// long, and a gate it opens closes again: the time to get through.
+public struct Lever: Sendable, Equatable {
+    public var id: Int
+    /// The foot of the lever, on the floor.
+    public var pos: Vec2
+    public var holdFrames: Int
+
+    public init(id: Int, at pos: Vec2, holdFrames: Int = 0) {
+        self.id = id
+        self.pos = pos
+        self.holdFrames = holdFrames
+    }
+
+    public var box: Box { Box(minX: pos.x - 14, minY: pos.y, maxX: pos.x + 14, maxY: pos.y + 56) }
+}
+
+/// A plate set into a floor. It is down while someone on the heroes' side stands on it (a decoy counts).
+public struct Plate: Sendable, Equatable {
+    public var id: Int
+    public var x0: Double
+    public var x1: Double
+    /// The floor it is set into.
+    public var top: Double
+
+    public init(id: Int, x0: Double, x1: Double, top: Double = 0) {
+        self.id = id
+        self.x0 = x0
+        self.x1 = x1
+        self.top = top
+    }
+}
+
+/// A gate: solid while shut. It opens while every lever and plate in `opensWith` is on, or, if `inverted`, while
+/// any of them is off. It slides up into the wall above as it opens.
+public struct Gate: Sendable, Equatable {
+    public var id: Int
+    public var box: Box
+    public var opensWith: [Int]
+    public var inverted: Bool
+
+    public init(id: Int, box: Box, opensWith: [Int], inverted: Bool = false) {
+        self.id = id
+        self.box = box
+        self.opensWith = opensWith
+        self.inverted = inverted
+    }
+}
+
 public struct Hazard: Sendable, Equatable {
     public var box: Box
     public var damage: Double
@@ -91,6 +140,9 @@ public struct Level: Sendable, Equatable {
     public var start: Vec2
     public var platforms: [Platform] = []
     public var hazards: [Hazard] = []
+    public var levers: [Lever] = []
+    public var plates: [Plate] = []
+    public var gates: [Gate] = []
     /// Where the hero comes back after falling or after a retry, in the order they are reached.
     public var checkpoints: [Vec2] = []
     public var pickups: [Pickup] = []
@@ -117,6 +169,13 @@ public struct Level: Sendable, Equatable {
     /// A block of ground from `x0` to `x1` whose top is at `top`.
     public mutating func ground(_ x0: Double, _ x1: Double, top: Double = 0) {
         platforms.append(Platform(Box(minX: x0, minY: killY - 200, maxX: x1, maxY: top)))
+    }
+
+    /// A gate standing on a floor at `top`, `height` tall and 24 wide, centred on `x`.
+    public mutating func gate(_ id: Int, x: Double, top: Double = 0, height: Double = 170, opensWith: [Int],
+                              inverted: Bool = false) {
+        gates.append(Gate(id: id, box: Box(minX: x - 12, minY: top, maxX: x + 12, maxY: top + height),
+                          opensWith: opensWith, inverted: inverted))
     }
 
     public mutating func ledge(_ x0: Double, _ x1: Double, top: Double, travel: Vec2 = .zero, period: Int = 0) {
@@ -269,6 +328,62 @@ extension Level {
         return l
     }()
 
+    /// Chapter 1's puzzle level: the Foundry's locks. A lever and its gate; a plate Orion has to hold while the
+    /// lead goes on; a timed lever and a race; a fight; then a gate that needs both a plate and a timed lever,
+    /// with a Soldier between them while Orion is busy holding.
+    public static let lockWorks: Level = {
+        var l = Level(name: "The Lock Works", width: 5300, start: Vec2(120, 0), exitX: 5150)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("locks.arrive", on: .start))
+
+        // 1. A lever and its gate.
+        l.ground(-200, 2700)
+        l.pickups.append(Pickup(id: 1, at: Vec2(500, 40)))
+        l.enemies.append(Placement(.scrapDrone, x: 650))
+        l.scenes.append(SceneTrigger("locks.lever", on: .reach(780)))
+        l.levers.append(Lever(id: 1, at: Vec2(900, 0)))
+        l.gate(10, x: 1050, opensWith: [1])
+
+        // 2. A plate: Orion holds it while the lead goes through.
+        l.checkpoints.append(Vec2(1150, 0))
+        l.enemies.append(Placement(.forgedSoldier, x: 1400))
+        l.pickups.append(Pickup(id: 2, at: Vec2(1550, 40)))
+        l.scenes.append(SceneTrigger("locks.plate", on: .reach(1600)))
+        l.plates.append(Plate(id: 2, x0: 1700, x1: 1770))
+        l.gate(11, x: 2000, opensWith: [2])
+
+        // 3. A lever that springs back, and a race over a gap and a step to its gate.
+        l.checkpoints.append(Vec2(2300, 0))
+        l.scenes.append(SceneTrigger("locks.race", on: .reach(2350)))
+        l.levers.append(Lever(id: 3, at: Vec2(2420, 0), holdFrames: 330))
+        l.ground(2800, 2950)
+        l.ground(2950, 3100, top: 70)
+        l.ground(3100, 4300)
+        l.gate(12, x: 3400, opensWith: [3])
+
+        // A fight in the cooling hall, and the secret up the pipes.
+        l.checkpoints.append(Vec2(3550, 0))
+        // Far enough past the race gate that nothing wakes while the lead is still racing for it.
+        l.enemies.append(Placement(.sentryCore, x: 4180, y: 150))
+        l.enemies.append(Placement(.scrapDrone, x: 4060))
+        l.enemies.append(Placement(.scrapDrone, x: 4130))
+        l.ledge(3650, 3770, top: 95)
+        l.ledge(3800, 3920, top: 180)
+        l.ledge(3950, 4070, top: 265)
+        l.pickups.append(Pickup(id: 3, at: Vec2(4010, 310), secret: true))
+        l.pickups.append(Pickup(id: 4, at: Vec2(4200, 40)))
+
+        // 4. Both at once: Orion on the plate, the lead to the timed lever past a Soldier, then the gate.
+        l.ground(4300, 5500)
+        l.checkpoints.append(Vec2(4330, 0))
+        l.plates.append(Plate(id: 4, x0: 4400, x1: 4470))
+        l.enemies.append(Placement(.forgedSoldier, x: 4620))
+        l.levers.append(Lever(id: 5, at: Vec2(4720, 0), holdFrames: 240))
+        l.gate(13, x: 4850, opensWith: [4, 5])
+        l.pickups.append(Pickup(id: 5, at: Vec2(5000, 40)))
+        return l
+    }()
+
     /// Chapter 1's mid-boss: the gate between the Machine Hall and the Protocol, held by the Line Warden.
     public static let wardensGate: Level = {
         var l = Level(name: "The Warden's Gate", width: 1500, start: Vec2(140, 0), exitX: .infinity)
@@ -368,7 +483,7 @@ extension Level {
     }()
 
     /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
-    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .wardensGate,
+    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .lockWorks, .wardensGate,
                                       .theProtocol,
                                       .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault,
                                       .pilgrimRoad, .sunCloister, .choirStair, .oracleTerrace]
@@ -517,7 +632,7 @@ extension Level {
 
     /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
     public static func chapter1(for lead: FighterKind) -> [Level] {
-        [Faction(lead: lead).opening, .foundryYard, .machineHall, .wardensGate, .theProtocol]
+        [Faction(lead: lead).opening, .foundryYard, .machineHall, .lockWorks, .wardensGate, .theProtocol]
     }
 }
 

@@ -337,3 +337,19 @@ private func shipped() throws -> StoryLibrary {
         #expect(last.contains(words), "\(choice)")
     }
 }
+
+@Test func theLockWorksGreetsWhoeverLeadsAndOrionExplainsEachLock() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        var state = StoryState()
+        state.flags = ["lead": lead.rawValue]
+        var runner = try #require(StoryRunner(sceneID: "locks.arrive", library: story, state: state))
+        #expect(runner.line?.speaker == lead.rawValue.uppercased())
+        runner.advance()
+        #expect(runner.isFinished)
+    }
+    for id in ["locks.lever", "locks.plate", "locks.race"] {
+        let runner = try #require(StoryRunner(sceneID: id, library: story, state: StoryState()))
+        #expect(runner.line?.speaker == "ORION", "\(id)")
+    }
+}
