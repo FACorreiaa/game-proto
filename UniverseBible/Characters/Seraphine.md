@@ -11,6 +11,13 @@
 
 Planned lead for the Dawnfaith opening (plan, stage 4). **LOCKED:** keeps her name (DEC-004).
 
+## Decided (WORKING)
+
+- She comes into the Foundry by its outer works to see the Sun Gauges, where it measures the light's loss; its numbers
+  match her buried records (WC-012, DEC-012).
+- Her order calls the Lantern Cities godless; on the docks she finds sanctuary bread resold at three times its cost,
+  and the Cinder King's ledgers carry the Dawnfaith's seal (WC-016, WC-018, DEC-013).
+
 ## Personality (PROPOSED)
 
 Serene, warm, wry. Short sentences that land. *(cast sheet)*

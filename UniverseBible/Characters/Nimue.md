@@ -11,6 +11,13 @@
 
 Planned lead for the Lantern Cities opening (plan, stage 4).
 
+## Decided (WORKING)
+
+- Her people are called **runners**. Three went onto the Foundry's line; someone in the Cities sold them, and the
+  Cinder King says they went "where every debt goes. Paid." Their fate is UNKNOWN (WC-016, WC-018, DEC-012, DEC-013).
+- She comes into the Foundry by the Undercroft, her route under it (DEC-012).
+- The Cinder King calls her routes his roads and says she never pays the toll (WC-017, DEC-013).
+
 ## Personality (PROPOSED)
 
 Teasing and quick, protective of her own people to a fault. *(cast sheet)*

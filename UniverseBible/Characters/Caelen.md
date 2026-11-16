@@ -11,6 +11,12 @@
 
 **SHIPPED:** the lead of the 2D game's Chapter 1. Wakes on a line where the others never woke; Orion offers him the way out (SH-002). His special is **Command**: he marks an enemy and his partner focuses it (SH-005).
 
+## Decided (WORKING)
+
+- He knows the Machine Hall floor "and doesn't know why"; his faction card reads "Find out what you built" (WC-015,
+  DEC-012). Why stays UNKNOWN, and his backstory stays PROPOSED below.
+- In the Cinder King's ledgers he finds Foundry seals beside everyone else's (WC-018, DEC-013).
+
 ## Personality (PROPOSED)
 
 Controlled and exact in public; dry jokes when the guilt gets close. Better with machines than people, and he knows it. *(cast sheet)*

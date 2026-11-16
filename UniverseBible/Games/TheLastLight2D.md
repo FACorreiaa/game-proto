@@ -10,7 +10,7 @@ The first game. Stage-based 2D action-platformer for iPhone, iPad and Mac. The c
 |---|---|---|
 | The Foundry, its colours, its enemies, The Protocol | WORKING (ART) | Chapter 1 region and boss |
 | Caelen, Orion | WORKING (ART); backstory PROPOSED | Lead and companion |
-| Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Chosen at New Game by faction. Each has her own opening (DRAFT-005). Kits are gameplay, not canon: Seraphine's **Light Listens** heals, Nimue's **Lantern Trick** leaves a decoy |
+| Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Chosen at New Game by faction. Each has her own opening (DEC-012). Kits are gameplay, not canon: Seraphine's **Light Listens** heals, Nimue's **Lantern Trick** leaves a decoy |
 | The AI's goal | WORKING (WC-010) | Implied: a line where the others never woke |
 | The Eclipse Engine | WORKING (ART); details UNKNOWN | Hook at the end of Chapter 1 (DEC-011) |
 | The Lantern Cities, their enemies, The Cinder King | WORKING (ART) | Chapter 2 region; the Cinder King's fight is next |
@@ -27,10 +27,10 @@ before it ships.
 - Who the Last Oracle is.
 - Which of its endings is history.
 
-## Draft: the three openings (DRAFT-005, PROPOSED)
+## The three openings (DEC-012, WORKING)
 
 Direction chosen by the creator on 2026-11-16: each lead comes into the Foundry for her own reason and meets Orion
-in her own way. The lines below are drafts for the creator's verdict. Nothing here is canon.
+in her own way. The creator approved the lines and their claims on 2026-11-16 ("LGTM!"); they are WORKING canon (WC-012 to WC-015, WC-019).
 
 **Route (next build).** New Game asks for a faction. Each lead plays her opening, then the shared levels:
 Foundry Yard, The Machine Hall, The Protocol. This changes the shipped order in SH-001 (Foundry Yard used to come
@@ -45,7 +45,7 @@ before Awakening, which put Orion beside Caelen before they had met). SH-001 sho
 All three end on the same choice as Caelen's (`orion: trusted` or `watched`), so The Protocol's lines work for every
 lead. The Machine Hall opens with one line per lead, read from a `lead` story flag.
 
-**New world claims in these drafts, each needing a verdict:**
+**World claims, approved (DEC-012):**
 
 1. The Foundry measures the light's loss ("every hour, every degree") at the Sun Gauges.
 2. The Foundry's numbers match Seraphine's buried records, and "someone has known for a long time" (fits WC-011:
@@ -61,15 +61,15 @@ lead. The Machine Hall opens with one line per lead, read from a `lead` story fl
 9. Ending (scene `protocol.end`), Caelen: the Protocol was "the voice of this place. Not the hand that built it".
    This fits SH-006 ("It was only a voice") and adds that something built the Foundry's voice.
 
-**Chapter ending (draft).** When The Protocol falls, the lead speaks one line, then Orion answers the choice made
+**Chapter ending.** When The Protocol falls, the lead speaks one line, then Orion answers the choice made
 when they met: beside (`trusted`), ahead (`watched`), or a plain line for saves from before the choice. The results
 screen and its chapter-end text (SH-006) follow.
 
-Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards are drafts.
+Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards were approved with DEC-012.
 
-## Draft: Chapter 2, The Lantern Cities (DRAFT-006, PROPOSED)
+## Chapter 2, The Lantern Cities (DEC-013, WORKING)
 
-Chosen by the creator on 2026-11-16: "Lantern Cities … but follow the lore". Every lead follows the trade out of the
+Chosen by the creator on 2026-11-16: "Lantern Cities … but follow the lore". Lines and claims approved the same day ("LGTM!"). Every lead follows the trade out of the
 Foundry into the Cities. Levels: **The Ember Market**, **The Lantern Roofs**, **The Cinder Docks**, and the boss room,
 **The Cinder Vault**, where the Cinder King is fought.
 
@@ -83,7 +83,7 @@ How the drafts follow the bible:
 - The Night Weaver's images are shown, never explained (magic or trickery stays open).
 - The Cinder King is only mentioned, as someone people fear and pay. His limits stay UNKNOWN.
 
-**New world claims in these drafts, each needing a verdict:**
+**World claims, approved (DEC-013; WC-016 to WC-019):**
 
 1. Foundry crates are sold on market stalls in the Cities.
 2. In the Cities, light is something you buy (Orion to Seraphine).

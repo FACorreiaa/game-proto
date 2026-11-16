@@ -18,6 +18,8 @@ decision are listed separately.
 | DEC-009 | 2026-11-16 | CF-004: keep both names. The Dimming is the decline as lived; the Dimmed are the places where it has finished. Creator: "both". | LOCKED | CANON, WORLD_OVERVIEW, Locations |
 | DEC-010 | 2026-11-16 | CF-005, option A: cast-sheet backstories stay PROPOSED and are decided one character at a time. Creator: "ok". | LOCKED (process) | CANON, Characters/* |
 | DEC-011 | 2026-11-16 | CF-006, option B, chosen by Claude on the creator's delegation ("you decide"): the chapter-end line no longer says the Eclipse Engine is "still turning". New line: "The Protocol is silent. It was only a voice. The Eclipse Engine has not stopped." The Engine's physical form stays UNKNOWN. | WORKING (wording is the creator's verdict) | CANON, Bestiary/EclipseEngine, Games/TheLastLight2D, game text |
+| DEC-012 | 2026-11-16 | DRAFT-005 approved: the three openings, the faction pick and their nine world claims (Sun Gauges, behind the Protocol, Orion cannot lie, Caelen's familiarity, runners, the Chapter 1 ending line). Creator: "LGTM!" | WORKING | CANON (WC-012 to WC-015, WC-019), Games/TheLastLight2D, Characters/Orion, Caelen, Nimue, Locations |
+| DEC-013 | 2026-11-16 | DRAFT-006 approved: Chapter 2, the Lantern Cities and the Cinder King, and their sixteen world claims. Creator: "LGTM!" | WORKING | CANON (WC-016 to WC-019), Games/TheLastLight2D, Bestiary/LanternCities, Locations |
 
 ## Drafts awaiting a decision
 
@@ -25,8 +27,6 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
-| DRAFT-006 | 2026-11-16 | Chapter 2, The Lantern Cities: three levels and the Cinder King's vault, enemy and boss behaviour, lead-aware lines and the chapter-end line. Region chosen by the creator ("Lantern Cities … but follow the lore"); every line and claim is a draft. | Games/TheLastLight2D, Bestiary/LanternCities, `chapter2.json` |
-| DRAFT-005 | 2026-11-16 | The three openings and the faction pick: Seraphine's Sun Gauges, Nimue's Undercroft, lead-aware lines in the Machine Hall, and a chapter ending per lead and per Orion choice. Direction "own motives" chosen by the creator; every line and the world claims they make are drafts. | Games/TheLastLight2D, game text (`chapter1.json`, faction cards) |
 
 ## How to amend
 

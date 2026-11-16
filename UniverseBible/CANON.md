@@ -29,6 +29,14 @@ register, the register wins until the conflict is resolved.
 | WC-010 | The AI's motive | The AI believes organic life burns too much of the remaining light, so it is replacing living things with machines that need none. **This is its belief, not the truth** (WC-007). | Specs, DEC-007 |
 | WC-011 | Seraphine's secret | Records buried by the old oracles show the light failing **earlier than official history admits**. That is evidence about *when*, not *why*. | DEC-008 |
 | WC-009 | The Protocol's line | "Efficiency. Without exception." | ART |
+| WC-012 | The Sun Gauges | The Foundry measures the light's loss "every hour, every degree" at the Sun Gauges. Its numbers match Seraphine's buried records: someone has known for a long time (WC-011: *when*, not *why*). | DEC-012 |
+| WC-013 | Behind the Protocol | What the Foundry knows about the light is kept behind the Protocol, and the line Nimue's runners were taken to runs past it. | DEC-012 |
+| WC-014 | Orion cannot lie | Orion "cannot lie, not even to be kind". Every Orion line must respect it: he may stay silent or be wrong, never lie. | DEC-012 |
+| WC-015 | Caelen's familiarity | Caelen knows the Machine Hall floor "and doesn't know why"; his faction card says "Find out what you built". Why stays UNKNOWN; his backstory stays PROPOSED (P-007). | DEC-012 |
+| WC-016 | Life in the Lantern Cities | Nimue's people are called runners. Foundry crates sell on market stalls; light is something you buy; the Dawnfaith calls the Cities godless; Ratborn are drain kids grown up hungry; Night Weavers keep the roofs, the only road no one charges for; sanctuary bread is resold on the docks at three times its cost. | DEC-013 |
+| WC-017 | The Cinder King | Keeps a vault of ledgers behind the docks. Crates on the docks pay him "once in coin, once in fear"; he calls the smuggling routes his roads. Reach, not rule: who governs stays UNKNOWN (open question 7). His line: "Everything has a price. Even light. Especially light." | DEC-013 |
+| WC-018 | The ledgers | Someone in the Cities sold Nimue's runners to the line; they went "where every debt goes. Paid." (fate UNKNOWN). The ledgers carry Foundry, Dawnfaith and city seals: all three sold to him. Someone was always buying from the other side; who is UNKNOWN. | DEC-013 |
+| WC-019 | Chapter endings | Chapter 1: the Protocol was "the voice of this place. Not the hand that built it." Chapter 2: "The Cinder King is beaten. His ledgers are not finished." | DEC-012, DEC-013 |
 
 ## SHIPPED: in a build players have played
 
