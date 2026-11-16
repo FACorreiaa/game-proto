@@ -107,17 +107,23 @@ public struct DogmaBrain: Brain {
     }
 }
 
-/// The Protocol: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
-/// It slams what stands close; from further away it charges or sends a surge along the floor.
+/// The Protocol, in three phases.
+/// Judgement: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
+/// Ascension: takes to the air, summons drones and calls down light, then crashes down open; and again.
+/// Execution: back on the ground for good, faster, with a pulse on both sides and a beam across the room.
 public struct ProtocolBrain: Brain {
     public init() {}
+
+    static let slam = 0, charge = 1, surge = 2, summon = 3, rain = 4, pulse = 5, beam = 6
 
     public func think(
         me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
     ) -> InputFrame {
         guard let target = nearest(foes, to: me) else { return .neutral }
         if me.aiCooldown > 0 { me.aiCooldown -= 1 }
-        guard me.isActionable else { return .neutral }
+        guard me.isActionable, !me.descending else { return .neutral }
+        if me.flying { return fly(&me, target: target, allies: allies, tuning: tuning, rng: &rng) }
+
         let dx = target.pos.x - me.pos.x
         let dir: Double = dx >= 0 ? 1 : -1
         if dir != me.facing {
@@ -127,20 +133,47 @@ public struct ProtocolBrain: Brain {
         me.aiAux = 0
 
         let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
-        if me.aiCooldown == 0 {
-            let enraged = me.hp <= me.spec.maxHP * tuning.protocolEnrageAt
-            let wait = Double(Int.random(in: tuning.protocolAttackGap, using: &rng))
-            me.aiCooldown = Int(wait * (enraged ? tuning.protocolEnrageGapScale : 1))
-            // Up close it mostly slams, but not always, so standing at its feet is never one pattern.
-            let close = gap < me.spec.attacks[0].reach - 15
-            if close, Double.random(in: 0..<1, using: &rng) < tuning.protocolSlamChance {
-                me.nextAttack = 0
-            } else {
-                me.nextAttack = Bool.random(using: &rng) ? 1 : 2
-            }
-            return InputFrame(moveX: dir * facingNudge, attack: true)
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: gap > 50 ? dir : dir * facingNudge) }
+
+        if me.phase == 2, me.aiAux2 >= tuning.protocolGroundActions {
+            me.aiAux2 = 0
+            me.flying = true
+            me.aiCooldown = tuning.protocolTakeoffPause
+            return .neutral
         }
-        return InputFrame(moveX: gap > 50 ? dir : dir * facingNudge)
+        let wait = Double(Int.random(in: tuning.protocolAttackGap, using: &rng))
+        me.aiCooldown = Int(wait * (me.phase >= 3 ? tuning.protocolExecutionGapScale : 1))
+        me.aiAux2 += 1
+        let close = gap < me.spec.attacks[Self.slam].reach - 15
+        if me.phase >= 3 {
+            let choices = close ? [Self.slam, Self.slam, Self.pulse] : [Self.charge, Self.surge, Self.pulse, Self.beam]
+            me.nextAttack = choices[Int.random(in: 0..<choices.count, using: &rng)]
+        } else if close, Double.random(in: 0..<1, using: &rng) < tuning.protocolSlamChance {
+            // Up close it mostly slams, but not always, so standing at its feet is never one pattern.
+            me.nextAttack = Self.slam
+        } else {
+            me.nextAttack = Bool.random(using: &rng) ? Self.charge : Self.surge
+        }
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+
+    /// In the air it drifts over the hero, and after a few attacks drops back down.
+    private func fly(
+        _ me: inout Fighter, target: Fighter, allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        let move = max(-1, min(1, (target.pos.x - me.pos.x) / 120))
+        guard me.aiCooldown == 0, abs(me.pos.y - tuning.protocolFlightHeight) < 20 else { return InputFrame(moveX: move) }
+        if me.aiAux2 >= tuning.protocolAirActions {
+            me.aiAux2 = 0
+            me.flying = false
+            me.descending = true
+            return .neutral
+        }
+        me.aiAux2 += 1
+        me.aiCooldown = Int.random(in: tuning.protocolAirGap, using: &rng)
+        let minions = allies.filter { $0.id != me.id && !$0.spec.immortal }.count
+        me.nextAttack = minions < tuning.protocolMaxMinions && Bool.random(using: &rng) ? Self.summon : Self.rain
+        return InputFrame(moveX: move * facingNudge, attack: true)
     }
 }
 
@@ -161,7 +194,7 @@ public struct PartnerBrain: Brain {
             let dx = foe.pos.x - me.pos.x
             let away: Double = dx >= 0 ? -1 : 1
             if foe.state == .fuse, abs(dx) < 170 { return InputFrame(moveX: away) }
-            guard let attack = foe.currentAttack, foe.attackPhase == .windup,
+            guard let attack = foe.currentAttack, foe.attackPhase == .windup, attack.effect == .strike,
                   attack.windup - foe.stateFrame <= 6,
                   abs(dx) < me.spec.width / 2 + foe.spec.width / 2 + attack.reach + 50
                       + (attack.holdsStill ? attack.lunge * Double(attack.active) / 60 : 0) else { continue }
@@ -187,7 +220,11 @@ public struct PartnerBrain: Brain {
         // The leader's mark comes before whatever happens to be nearest.
         let target = inReach.first { $0.markedFrames > 0 }
             ?? inReach.first { $0.spec.wardRadius > 0 }
-            ?? inReach.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+            ?? { () -> Fighter? in
+                // Something it can reach before something flying overhead.
+                let grounded = inReach.filter { !$0.flying }
+                return (grounded.isEmpty ? inReach : grounded).min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+            }()
         if let target {
             // Under AI, Caelen marks a tough enemy when nothing is marked yet.
             if case .command(let range, _, _, _)? = me.spec.special, me.specialCooldown == 0, me.isActionable,

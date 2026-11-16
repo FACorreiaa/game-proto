@@ -23,6 +23,16 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case theProtocol
 }
 
+/// What an attack does when its active frames begin.
+public enum AttackEffect: Sendable, Equatable {
+    /// An ordinary hitbox in front of the attacker.
+    case strike
+    /// Calls fighters in beside the attacker. It never calls more than the tuning allows alive at once.
+    case summon(FighterKind, count: Int)
+    /// Calls down columns of light: one over each hero, the rest spread over the room.
+    case rain(columns: Int, width: Double, warning: Int, active: Int, damage: Double)
+}
+
 /// One swing. All durations are in frames at 60 per second.
 public struct AttackSpec: Sendable, Equatable {
     public var windup: Int
@@ -42,6 +52,9 @@ public struct AttackSpec: Sendable, Equatable {
     public var holdsStill = false
     /// Frames the target moves at reduced speed after being hit.
     public var slowFrames = 0
+    /// The hitbox reaches out on both sides, not only in front.
+    public var bothSides = false
+    public var effect = AttackEffect.strike
 
     public var total: Int { windup + active + recovery }
     /// First frame on which a buffered attack press chains into the next swing.
@@ -143,6 +156,8 @@ public struct FighterSpec: Sendable {
     public var hovers = false
     /// Machines this close to it cannot be hurt while it lives. Zero means it shields nobody.
     public var wardRadius = 0.0
+    /// Fractions of health at which a boss moves to its next phase. It cannot be hurt past one in a single hit.
+    public var phaseThresholds: [Double] = []
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.

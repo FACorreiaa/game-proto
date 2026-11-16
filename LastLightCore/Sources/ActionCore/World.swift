@@ -33,6 +33,8 @@ public struct World: Sendable {
     public private(set) var bossID: Int?
     var bossDownFrames = 0
     var firedScenes: Set<String> = []
+    /// Columns of light a boss has called down.
+    public private(set) var strikes: [Strike] = []
     var platformDeltas: [Vec2]
 
     var waves: [[Spawn]] = []
@@ -170,7 +172,8 @@ public struct World: Sendable {
                     inp = InputFrame(moveX: f.facing * tuning.patrolSpeed)
                 }
             } else if f.isAlive, let brain = f.spec.brain {
-                let sight = f.team == .enemy ? tuning.enemySightHeight : .infinity
+                // A boss sees the whole room, even from the air.
+                let sight = f.team == .enemy && !f.spec.boss ? tuning.enemySightHeight : .infinity
                 let foes = snapshot.filter {
                     $0.team != f.team && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - f.pos.y) <= sight
                         && ($0.team == .enemy || $0.awake)
@@ -184,11 +187,18 @@ public struct World: Sendable {
             }
             if update(&f, inp, &events) { explosions.append(f.id) }
             integrate(&f, inp, &events)
+            if f.descending, f.onGround {
+                f.descending = false
+                f.enter(.staggered, duration: tuning.protocolLandOpen)
+                events.append(.bossLanded(id: f.id))
+            }
             fighters[i] = f
         }
 
         resolveCommands(&events)
         resolveHits(&events)
+        applyEffects(&events)
+        updateStrikes(&events)
         for id in explosions { explode(id, &events) }
         levelRules(&events)
         housekeeping(&events)
@@ -263,6 +273,10 @@ public struct World: Sendable {
             if f.onGround { f.vel.x *= tuning.hitstunFriction }
             if f.stateFrame >= f.stateDuration { f.enter(.idle) }
 
+        case .phaseShift:
+            f.vel.x = 0
+            if f.stateFrame >= f.stateDuration { f.enter(f.onGround ? .idle : .air) }
+
         case .guardStance:
             if f.onGround { f.vel.x = 0 }
             if f.stateFrame >= f.stateDuration { f.enter(f.onGround ? .idle : .air) }
@@ -287,7 +301,10 @@ public struct World: Sendable {
             if f.onGround {
                 let moving = f.stateFrame < a.windup + a.active && !(a.holdsStill && f.stateFrame < a.windup)
                 f.vel.x = moving ? f.facing * a.lunge : 0
+            } else if f.flying {
+                f.vel.x = 0
             }
+            if f.stateFrame == a.windup, a.effect != .strike { f.pendingEffect = i }
             if !f.spec.boss, f.stateFrame >= a.chainFrom, f.attackBuffer > 0, i + 1 < f.spec.attacks.count, f.onGround {
                 startAttack(&f, i + 1, inp, &events)
             } else if f.stateFrame >= a.windup + a.active, canDodge(f) {
@@ -298,7 +315,7 @@ public struct World: Sendable {
 
         case .idle, .run, .air:
             if abs(inp.moveX) > 0.01 { f.facing = inp.moveX > 0 ? 1 : -1 }
-            let target = inp.moveX * f.spec.runSpeed * (f.onGround || f.spec.hovers ? 1 : tuning.airControl)
+            let target = inp.moveX * f.spec.runSpeed * (f.onGround || f.spec.hovers || f.flying ? 1 : tuning.airControl)
                 * (f.slowFrames > 0 ? tuning.slowFactor : 1)
             let rate: Double
             if abs(inp.moveX) <= 0.01 {
@@ -377,7 +394,9 @@ public struct World: Sendable {
             f.pos.x += platformDeltas[g].x
             f.pos.y += platformDeltas[g].y
         }
-        if f.state == .dodge || (f.spec.hovers && f.isAlive) {
+        if f.flying, f.isAlive {
+            f.vel.y = max(-320, min(320, (tuning.protocolFlightHeight - f.pos.y) * 4))
+        } else if f.state == .dodge || (f.spec.hovers && f.isAlive) {
             f.vel.y = 0
         } else if !f.onGround {
             let cut = f.vel.y > 0 && f.id == controlledID && !inp.jumpHeld
@@ -533,6 +552,74 @@ public struct World: Sendable {
         }
     }
 
+    // MARK: Boss effects
+
+    /// Summons and light called down by attacks whose active frames began this frame.
+    private mutating func applyEffects(_ events: inout [GameEvent]) {
+        for i in fighters.indices {
+            guard let index = fighters[i].pendingEffect else { continue }
+            fighters[i].pendingEffect = nil
+            let me = fighters[i]
+            switch me.spec.attacks[index].effect {
+            case .strike:
+                break
+            case .summon(let kind, let count):
+                let living = fighters.filter { $0.team == me.team && $0.isAlive && !$0.spec.boss && !$0.spec.immortal }.count
+                for n in 0..<max(0, min(count, tuning.protocolMaxMinions - living)) {
+                    let side: Double = n % 2 == 0 ? -1 : 1
+                    let x = me.pos.x + side * (me.spec.width / 2 + 60 + Double(n / 2) * 60)
+                    // Boss rooms have their floor at 0.
+                    let id = spawn(kind, x: min(max(x, arena.lowerBound + 40), arena.upperBound - 40), y: 0, facing: -side)
+                    events.append(.spawned(id: id, kind: kind))
+                }
+            case .rain(let columns, let width, let warning, let active, let damage):
+                var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
+                var tries = 0
+                while xs.count < columns, tries < 40 {
+                    tries += 1
+                    let x = Double.random(in: (arena.lowerBound + width)...(arena.upperBound - width), using: &rng)
+                    if xs.allSatisfy({ abs($0 - x) > width * 1.5 }) { xs.append(x) }
+                }
+                for x in xs.prefix(columns) {
+                    strikes.append(Strike(
+                        box: Box(minX: x - width / 2, minY: -50, maxX: x + width / 2, maxY: 600),
+                        warning: warning, active: active, damage: damage))
+                }
+            }
+        }
+    }
+
+    private mutating func updateStrikes(_ events: inout [GameEvent]) {
+        guard !strikes.isEmpty else { return }
+        for s in strikes.indices {
+            strikes[s].age += 1
+            if strikes[s].age == strikes[s].warning {
+                events.append(.struck(at: Vec2(strikes[s].box.center.x, 0), width: strikes[s].box.width))
+            }
+            guard strikes[s].isActive else { continue }
+            for t in fighters.indices where fighters[t].team == .hero && fighters[t].isAlive && fighters[t].awake
+                && !strikes[s].hit.contains(fighters[t].id) {
+                let f = fighters[t]
+                guard strikes[s].box.intersects(f.hurtbox) else { continue }
+                strikes[s].hit.insert(f.id)
+                if f.isDodgeInvulnerable {
+                    events.append(.evaded(id: f.id))
+                    continue
+                }
+                if f.invulnerable > 0 { continue }
+                if f.state == .guardStance {
+                    events.append(.absorbed(by: f.id, attacker: bossID ?? -1, at: f.hurtbox.center))
+                    continue
+                }
+                let push: Double = f.pos.x >= strikes[s].box.center.x ? 1 : -1
+                hurt(t, damage: strikes[s].damage, by: bossID ?? -1, at: f.hurtbox.center, push: push * 220,
+                     hitstun: 16, &events)
+                hitStop = max(hitStop, tuning.heroHurtHitStop)
+            }
+        }
+        strikes.removeAll(where: \.isDone)
+    }
+
     // MARK: Specials
 
     /// Caelen's Command: marks the nearest enemy in front, or the nearest at all when none is in front.
@@ -642,6 +729,25 @@ public struct World: Sendable {
         f.hp = f.spec.immortal ? max(1, f.hp - damage) : f.hp - damage
         f.sinceHit = 0
         events.append(.hit(attacker: attackerID, target: f.id, damage: damage, at: contact))
+
+        // A boss cannot be hurt past a phase threshold: it stops there and changes phase.
+        if f.spec.boss, f.phase <= f.spec.phaseThresholds.count {
+            let floor = f.spec.maxHP * f.spec.phaseThresholds[f.phase - 1]
+            if f.hp <= floor {
+                f.hp = floor
+                f.phase += 1
+                f.flying = f.phase == 2
+                f.descending = false
+                f.aiAux2 = 0
+                f.aiCooldown = 0
+                f.vel.x = 0
+                f.enter(.phaseShift, duration: tuning.bossPhaseShiftFrames)
+                f.invulnerable = tuning.bossPhaseShiftFrames
+                events.append(.bossPhase(id: f.id, phase: f.phase))
+                fighters[t] = f
+                return
+            }
+        }
 
         if f.hp <= 0 {
             f.hp = 0

@@ -29,6 +29,12 @@ public enum GameEvent: Equatable, Sendable {
     case regrouped(id: Int, at: Vec2)
     case bossDefeated(id: Int)
     case slowed(id: Int)
+    /// A boss crossed a health threshold and starts its next phase.
+    case bossPhase(id: Int, phase: Int)
+    /// A boss came down from the air and is open.
+    case bossLanded(id: Int)
+    /// A column of light began to burn.
+    case struck(at: Vec2, width: Double)
     /// Caelen's Command put a mark on an enemy.
     case commanded(by: Int, target: Int)
     /// Orion's Adapt: the guard went up.
