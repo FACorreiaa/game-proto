@@ -15,7 +15,7 @@ Its stories are about miracles, religious authority, doubt, devotion, and the li
 ## Explanation of the decline (PROPOSED)
 
 The Severance: humanity's choices broke a sacred relationship with the world. See `../COLLAPSE_MYSTERY.md`.
-The 2026-10-22 spec has them believe **the dying sun is a judgement and blame the Foundry's hubris** (see CF-001).
+The 2026-10-22 spec has them believe **the dying sun is a judgement and blame the Foundry's hubris** (the weakening sun itself is LOCKED, LC-005; their reading of it is PROPOSED).
 
 ## Inside the Dawnfaith (PROPOSED)
 

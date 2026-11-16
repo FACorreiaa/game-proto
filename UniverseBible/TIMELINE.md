@@ -14,7 +14,7 @@ apart.
 | **V. The Dying World** | The present emergency and the setting of the first game. The Foundry's AI pursues its salvation; the Dawnfaith wrestles with prophecy and zealotry; the Lantern Cities survive by trade and compromise. | The Foundry levels, the regional bosses, ordinary people under pressure |
 | **VI. The Unwritten Future** | Not one fixed line. Character endings are ALTERNATE unless the creator promotes one. | Sequels, alternative outcomes |
 
-**Open:** when the AI was built relative to the first failures (see CF-003), and how fast the decline is
+**Open:** when the AI was built relative to the first failures (Seraphine's records put the first failures earlier than official history does, WC-011), and how fast the decline is
 moving (Open Question 2).
 
 ## Sources inside the world

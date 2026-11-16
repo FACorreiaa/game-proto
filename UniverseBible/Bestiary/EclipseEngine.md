@@ -6,6 +6,6 @@ reality shifts and a catastrophic finale.
 - **Rule:** its plan is an antagonist's choice, not a cosmic necessity.
 - **Gameplay vs lore:** an attack called "Reality Pulse" doesn't prove the AI has mastered reality. Write the
   in-world explanation separately if it matters.
-- **IN CONFLICT (CF-006):** the 2D game's chapter-end text (not yet shipped) says it "is still turning", which
-  makes it an existing machine.
+- **Decided (DEC-011):** game text names it without saying it is a running machine. The 2D game's chapter end:
+  "The Protocol is silent. It was only a voice. The Eclipse Engine has not stopped."
 - **UNKNOWN:** what it is physically, where it is, and how far along it is.

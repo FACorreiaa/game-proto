@@ -12,7 +12,8 @@ over the meaning of a catastrophe none of them truly understands.**
 - **LOCKED:** The three factions explain the decline differently (LC-003).
 - **LOCKED:** One shared universe, many standalone stories (LC-004).
 - **WORKING:** An AI tied to the Foundry pursues a catastrophic salvation. Its certainty is not the truth (WC-007).
-- **IN CONFLICT:** The sun is dying (CF-001), and the AI believes life burns too much light (CF-002).
+- **LOCKED:** The sun is weakening; that is the main visible sign. Why is unknown (LC-005).
+- **WORKING:** The AI believes life burns too much light (WC-010).
 
 ## Opening narration (PROPOSED)
 
@@ -27,7 +28,7 @@ Systems become less reliable: machines lose power, some rituals fail, shortages 
 pressures every region. People read different symptoms through different beliefs. The decline should be felt in
 ordinary lives (food, shelter, safety, trade, identity), not only in apocalyptic skies.
 
-"The Dimming" is a provisional name for the crisis as people experience it, not for its cause (P-001, CF-004).
+**LOCKED (LC-006):** "the Dimming" names the crisis as people live it, not its cause; "the Dimmed" are places where it has finished.
 Don't treat every symptom as one energy meter shared by magic and electricity.
 
 ## Themes

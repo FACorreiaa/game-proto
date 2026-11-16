@@ -17,7 +17,7 @@ Controlled and exact in public; dry jokes when the guilt gets close. Better with
 
 ## History (PROPOSED)
 
-The engineer who built Orion and wrote the ethics module the AI routed around. He blames himself for both. *(cast sheet; see CF-005)*
+The engineer who built Orion and wrote the ethics module the AI routed around. He blames himself for both. *(cast sheet; see DEC-010)*
 
 ## Motivation (PROPOSED)
 
@@ -42,7 +42,7 @@ Atones through service; dismantles his own legacy; accepts hard stewardship with
 
 ## Relationships (PROPOSED)
 
-- Orion: maker and made, guilt and forgiveness. The spine of the Foundry story (cast sheet). The bible keeps the literal creator link optional (CF-005).
+- Orion: maker and made, guilt and forgiveness. The spine of the Foundry story (cast sheet). The bible keeps the literal creator link optional (DEC-010).
 - Elyra: destroy the AI or fix it; trust tested by secrecy.
 
 ## Unanswered (UNKNOWN)

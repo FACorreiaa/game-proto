@@ -2,7 +2,7 @@
 
 | Pair | What it is | Source |
 |---|---|---|
-| Caelen ↔ Orion | Maker and made: guilt and forgiveness. The literal creator link is optional (CF-005) | Cast sheet, bible |
+| Caelen ↔ Orion | Maker and made: guilt and forgiveness. The literal creator link is optional (DEC-010) | Cast sheet, bible |
 | Caelen ↔ Elyra | Destroy the AI or fix it; trust tested by secrecy | Cast sheet, bible |
 | Seraphine ↔ Lira | Faith from experience against scholarship that demands evidence | Bible |
 | Seraphine ↔ Valen | The vulnerable first against obedience to a martial order | Bible |

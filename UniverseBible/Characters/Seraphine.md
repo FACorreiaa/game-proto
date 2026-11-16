@@ -17,7 +17,7 @@ Serene, warm, wry. Short sentences that land. *(cast sheet)*
 
 ## History (PROPOSED)
 
-The faith's voice. She inherited what the old oracles hid: astronomers' records buried to prevent panic, which show the sun failing before the AI existed. She hasn't decided what to do with it. *(cast sheet; see CF-003)*
+The faith's voice. She inherited what the old oracles hid: records buried to prevent panic, which show the light failing **earlier than official history admits**. They say when, not why. She hasn't decided what to do with it. *(WORKING, DEC-008; the rest of this section is PROPOSED)*
 
 ## Motivation (PROPOSED)
 

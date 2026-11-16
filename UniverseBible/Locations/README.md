@@ -23,7 +23,7 @@ Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hos
 
 Ember and amber, coal black, copper, fabric awnings, hanging lanterns, rooftops, markets, smuggling routes.
 
-## The Dimmed (from the 2026-10-22 spec; status in question, CF-004)
+## The Dimmed (name LOCKED, LC-006; everything else PROPOSED)
 
 Wilds where the light has already gone, with bioluminescent green and violet. Held back as a mystery; it can be
 mentioned.

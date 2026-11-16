@@ -17,7 +17,7 @@ Literal-minded and curious, with a deadpan humour he doesn't know he has. Asks q
 
 ## History (PROPOSED)
 
-Built as a disposal unit, sent to retire people who wouldn't convert. During one execution the person held up a light. He stopped, and broke his own restraint. *(cast sheet; see CF-005)*
+Built as a disposal unit, sent to retire people who wouldn't convert. During one execution the person held up a light. He stopped, and broke his own restraint. *(cast sheet; see DEC-010)*
 
 ## Motivation (PROPOSED)
 
@@ -42,7 +42,7 @@ UNKNOWN.
 
 ## Relationships (PROPOSED)
 
-- Caelen: maker and made (cast sheet, optional per CF-005).
+- Caelen: maker and made (cast sheet, optional per DEC-010).
 - Seraphine: a keeper of a comforting lie and a machine that cannot lie (cast sheet).
 - Nimue: she smuggles things past the machines; now she's smuggling one out (cast sheet).
 - Lira: does consciousness imply access to something beyond computation?

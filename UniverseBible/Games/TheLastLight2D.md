@@ -11,8 +11,8 @@ The first game. Stage-based 2D action-platformer for iPhone, iPad and Mac. The c
 | The Foundry, its colours, its enemies, The Protocol | WORKING (ART) | Chapter 1 region and boss |
 | Caelen, Orion | WORKING (ART); backstory PROPOSED | Lead and companion |
 | Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Planned, stage 4 |
-| The AI's goal | IN CONFLICT (CF-002) | Implied: a line where the others never woke |
-| The Eclipse Engine | WORKING (ART); details UNKNOWN | Hook at the end of Chapter 1 (CF-006) |
+| The AI's goal | WORKING (WC-010) | Implied: a line where the others never woke |
+| The Eclipse Engine | WORKING (ART); details UNKNOWN | Hook at the end of Chapter 1 (DEC-011) |
 
 ## Local canon this game has shipped
 
