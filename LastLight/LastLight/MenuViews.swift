@@ -13,6 +13,9 @@ struct MenuOverlay: View {
             case .paused:
                 backdrop(0.6)
                 PauseMenu(game: game)
+            case .results(let result):
+                backdrop(0.65)
+                ResultsScreen(game: game, result: result)
             case .playing:
                 EmptyView()
             }
@@ -177,6 +180,19 @@ private struct SettingsPanel: View {
             #if os(iOS)
             toggle("Vibration", $game.settings.haptics)
             #endif
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Difficulty")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                Picker("Difficulty", selection: $game.settings.difficulty) {
+                    ForEach(Settings.Difficulty.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                Text("Changes how hard enemies hit. Takes effect when a level starts.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
             toggle("Screen shake", $game.settings.screenShake)
             toggle("Debug overlay", $game.settings.debugOverlay)
         }
@@ -235,5 +251,67 @@ private struct ChapterPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct ResultsScreen: View {
+    let game: Game
+    let result: LevelResult
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 40) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(result.isLast ? "CHAPTER 1 COMPLETE" : "LEVEL CLEAR")
+                    .font(.system(size: 13, weight: .heavy))
+                    .tracking(3)
+                    .foregroundStyle(result.isLast ? gold : cyan)
+                Text(result.isLast ? "The Foundry" : result.name)
+                    .font(.system(size: 34, weight: .black))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                if result.isLast {
+                    Text("The Protocol is silent. Somewhere past the Foundry, the Eclipse Engine is still turning.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+                HStack(spacing: 22) {
+                    stat("TIME", result.time)
+                    stat("DEFEATED", "\(result.defeated)")
+                    if result.hidden > 0 { stat("FOUND", "\(result.found)/\(result.hidden)") }
+                    stat("DOWNED", "\(result.downs)")
+                }
+                .padding(.top, 10)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 10) {
+                if result.isLast {
+                    MenuButton(title: "BACK TO TITLE", primary: true, shortcut: .return) { game.finishChapter() }
+                    MenuButton(title: "PLAY AGAIN") { game.replayChapter() }
+                } else {
+                    MenuButton(title: "CONTINUE", primary: true, shortcut: .return) { game.nextLevel() }
+                    MenuButton(title: "REPLAY LEVEL") { game.restartLevel() }
+                    MenuButton(title: "QUIT TO TITLE") { game.quitToTitle() }
+                }
+            }
+            .frame(width: 240)
+        }
+        .padding(.horizontal, 48)
+        .frame(maxWidth: 900)
+    }
+
+    private func stat(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(value)
+                .font(.system(size: 22, weight: .bold).monospacedDigit())
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 11, weight: .heavy))
+                .tracking(1.5)
+                .foregroundStyle(.white.opacity(0.5))
+        }
     }
 }

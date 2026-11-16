@@ -55,6 +55,13 @@ final class GameScene: SKScene {
     private var shake: CGFloat = 0
     private var run = 0
     private var kills = 0
+    /// Frames played and times the heroes went down in this level, kept across checkpoint retries.
+    private var levelFrames = 0
+    private var downs = 0
+    /// Called when a level is cleared, with what the results screen shows.
+    var onComplete: ((LevelResult) -> Void)?
+    /// The bot normally loops levels; with this it stops on the results screen like a player would.
+    var demoShowsResults = false
 
     private let groundY: CGFloat = 104
     private let haptics = Haptics()
@@ -162,8 +169,14 @@ final class GameScene: SKScene {
             // Clearing a level moves on to the next one; the last one loops back to the first.
             if !fresh, world.isComplete { levelIndex = (levelIndex + 1) % levels.count }
             let resume = !fresh && world.level != nil && !world.isComplete
-            if !resume { kills = 0 }
-            world = World(level: level, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
+            if !resume {
+                kills = 0
+                levelFrames = 0
+                downs = 0
+            }
+            var tuning = Tuning()
+            tuning.heroDamageScale = settings.difficulty.damageTaken
+            world = World(level: level, tuning: tuning, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
                           collected: resume ? world.collected : [])
             pilot = Autopilot(fights: true)
             // A level started over plays its scenes again; a retry from a checkpoint does not.
@@ -224,6 +237,11 @@ final class GameScene: SKScene {
     /// Back to the last checkpoint, as after a fall in battle.
     func retry() {
         if world.isComplete { restart(fresh: true) } else { restart() }
+    }
+
+    /// From the results screen: the next level.
+    func advance() {
+        restart()
     }
 
     func restartLevel() {
@@ -432,6 +450,7 @@ final class GameScene: SKScene {
         var steps = 0
         while accumulator >= step, steps < 4, !story.isActive {
             let frameInput = !demo ? input : (mode == .level ? pilot.input(for: world) : DemoBot.input(for: world))
+            if mode == .level, !world.isOver { levelFrames += 1 }
             react(to: world.step(frameInput))
             // A press belongs to one simulation frame only.
             input.jump = false
@@ -653,6 +672,7 @@ final class GameScene: SKScene {
                 }
             case .heroDown:
                 sound.play(.down)
+                downs += 1
                 hud.showMessage(demo ? "DOWN" : "DOWN\ntap to try again")
             case .fell:
                 sound.play(.fall)
@@ -719,8 +739,15 @@ final class GameScene: SKScene {
                 sound.play(.clear)
                 let total = world.level?.pickups.count ?? 0
                 let next = levelIndex + 1 < levels.count ? "tap to continue" : "tap to start over"
-                hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
                 haptics.rigid()
+                if (demo && !demoShowsResults) || onComplete == nil {
+                    hud.showMessage(demo ? "CLEAR" : "CLEAR   ◆ \(world.collected.count)/\(total)\n\(next)")
+                } else {
+                    onComplete?(LevelResult(
+                        name: level.name, index: levelIndex, isLast: levelIndex + 1 == levels.count,
+                        seconds: Double(levelFrames) / Tuning.framesPerSecond, defeated: kills, downs: downs,
+                        found: world.collected.count, hidden: total))
+                }
             case .swing(let id, let index):
                 if id == world.bossID {
                     sound.play(.warning)

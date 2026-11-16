@@ -726,6 +726,7 @@ public struct World: Sendable {
     ) {
         var f = fighters[t]
         let damage = base * (f.state == .staggered ? tuning.staggerDamageBonus : 1) * (f.markedFrames > 0 ? f.markScale : 1)
+            * (f.team == .hero ? tuning.heroDamageScale : 1)
         f.hp = f.spec.immortal ? max(1, f.hp - damage) : f.hp - damage
         f.sinceHit = 0
         events.append(.hit(attacker: attackerID, target: f.id, damage: damage, at: contact))
