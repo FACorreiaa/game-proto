@@ -70,8 +70,8 @@ Card names, titles, themes and quotes come from the concept art. The one-line mo
 ## Draft: Chapter 2, The Lantern Cities (DRAFT-006, PROPOSED)
 
 Chosen by the creator on 2026-11-16: "Lantern Cities … but follow the lore". Every lead follows the trade out of the
-Foundry into the Cities. Levels: **The Ember Market**, **The Lantern Roofs**, **The Cinder Docks**. The Cinder King's
-fight is the next piece of work.
+Foundry into the Cities. Levels: **The Ember Market**, **The Lantern Roofs**, **The Cinder Docks**, and the boss room,
+**The Cinder Vault**, where the Cinder King is fought.
 
 How the drafts follow the bible:
 
@@ -94,4 +94,12 @@ How the drafts follow the bible:
 7. Dawnfaith sanctuary bread is resold on the docks at three times its cost.
 8. Every crate on the Cinder Docks pays the Cinder King "once in coin, once in fear" (Nimue's view).
 9. Someone in the Cities sold Nimue's runners to the line (Nimue's belief).
-10. Chapter-end line: "The docks are quiet. Every road out of here still runs through the Cinder King."
+10. Chapter-end line: "The Cinder King is beaten. His ledgers are not finished."
+11. The Cinder King keeps a vault behind the docks, with ledgers of his trades.
+12. He says the Dawnfaith's sanctuaries sell him their bread (to Seraphine), and that Nimue runs "my roads" without
+    paying the toll. This claims his reach over the routes, not that he governs (open question 7 stays open).
+13. Asked about her runners, he says they went "where every debt goes. Paid." Their fate stays deliberately unclear.
+14. His ledgers carry Foundry, Dawnfaith and city seals: all three sold to him (Caelen). Nimue finds her runners'
+    names and where he sent them.
+15. Orion: "someone was always buying from the other side". It doesn't say who.
+16. His line "Everything has a price. Even light. Especially light." (not from the concept art).

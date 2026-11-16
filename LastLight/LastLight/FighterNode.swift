@@ -41,7 +41,7 @@ final class FighterNode: SKNode {
         case .seraphine: Palette.gold
         case .nimue, .decoy: Palette.violet
         // The Lantern Cities' people are lit by their lanterns, not by machine red.
-        case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage: Palette.ember
+        case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: Palette.ember
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
         }
         if kind == .orion { baseFill = Palette.plate }
@@ -68,6 +68,7 @@ final class FighterNode: SKNode {
         case .smugglerBrute: buildBrute()
         case .nightWeaver: buildWeaver()
         case .weaverImage: buildWeaverImage()
+        case .cinderKing: buildCinderKing()
         }
         addGlows()
     }
@@ -720,6 +721,46 @@ final class FighterNode: SKNode {
         figure.addChild(line)
     }
 
+    /// The Cinder King: a long coat over a broad frame, a crown of embers, lanterns on chains, a long cane.
+    private func buildCinderKing() {
+        leg(x: -16, hipY: 50, length: 50, width: 16)
+        leg(x: 16, hipY: 50, length: 50, width: 16)
+        let coat = CGMutablePath()
+        coat.addLines(between: [
+            CGPoint(x: -40, y: 6), CGPoint(x: 40, y: 6), CGPoint(x: 34, y: 112), CGPoint(x: 46, y: 124),
+            CGPoint(x: -46, y: 124), CGPoint(x: -34, y: 112),
+        ])
+        coat.closeSubpath()
+        _ = part(coat)
+        _ = part(CGPath(ellipseIn: CGRect(x: -13, y: 120, width: 26, height: 26), transform: nil), z: 1)
+        emberEyes(at: CGPoint(x: 3, y: 134), gap: 6)
+        // The crown: points of ember light.
+        for (n, x) in [-12.0, -6.0, 0.0, 6.0, 12.0].enumerated() {
+            let point = CGMutablePath()
+            let tall = n == 2 ? 14.0 : 9.0
+            point.addLines(between: [CGPoint(x: x - 3, y: 144), CGPoint(x: x + 3, y: 144), CGPoint(x: x, y: 144 + tall)])
+            point.closeSubpath()
+            let node = SKShapeNode(path: point)
+            light(node, color: Palette.ember, glow: 4)
+            figure.addChild(node)
+        }
+        // Lanterns hanging from the belt.
+        for x in [-28.0, -10.0, 26.0] {
+            let chain = SKShapeNode(rect: CGRect(x: x - 0.5, y: 52, width: 1, height: 14))
+            chain.strokeColor = Palette.gold.withAlphaComponent(0.6)
+            chain.zPosition = 2
+            figure.addChild(chain)
+            let lamp = SKShapeNode(rect: CGRect(x: x - 4, y: 42, width: 8, height: 10), cornerRadius: 2)
+            light(lamp, color: Palette.ember, glow: 5)
+            figure.addChild(lamp)
+        }
+        let glow = Effects.glow(color: Palette.ember, size: 120, alpha: 0.35)
+        glow.position = CGPoint(x: 0, y: 50)
+        glow.zPosition = -1.5
+        figure.addChild(glow)
+        blade(length: 110, color: Palette.gold, at: CGPoint(x: 30, y: 96))
+    }
+
     /// A Weaver's image: the same figure, thinner, flickering.
     private func buildWeaverImage() {
         buildWeaver()
@@ -789,6 +830,7 @@ final class FighterNode: SKNode {
         case .nimue: 30
         case .ratborn: 22
         case .smugglerBrute: 70
+        case .cinderKing: 110
         default: 76
         }
     }

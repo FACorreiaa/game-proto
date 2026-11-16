@@ -359,7 +359,7 @@ extension Level {
 
     /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
     public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .theProtocol,
-                                      .emberMarket, .lanternRoofs, .cinderDocks]
+                                      .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault]
 
     /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
     public static func chapter1(for lead: FighterKind) -> [Level] {
@@ -508,6 +508,19 @@ extension Level {
         l.enemies.append(Placement(.smugglerBrute, x: 4700))
         l.enemies.append(Placement(.lanternGunner, x: 4900))
         l.pickups.append(Pickup(id: 5, at: Vec2(5200, 40)))
+        return l
+    }()
+}
+
+extension Level {
+    /// Chapter 2's last room: the Cinder King's vault behind the docks.
+    public static let cinderVault: Level = {
+        var l = Level(name: "The Cinder Vault", width: 1700, start: Vec2(140, 0), exitX: .infinity)
+        l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("vault.wake", on: .bossWakes))
+        l.scenes.append(SceneTrigger("vault.end", on: .complete))
+        l.ground(-200, 1900)
+        l.boss = Placement(.cinderKing, x: 1200)
         return l
     }()
 }

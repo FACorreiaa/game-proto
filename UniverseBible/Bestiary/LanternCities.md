@@ -16,4 +16,9 @@ The game shows the Night Weaver's images without saying whether they are magic o
 Deals in light, people and time. A multi-phase fight with summoned enemies and environmental hazards. His role
 as a broker of desperation fits the themes; the limits of his power are **UNKNOWN**.
 
+- **Game only (gameplay, not canon):** three phases named the Offer, the Debt and the Price. Cane and thrown lanterns;
+  then he calls Ratborn, who shield him while they live, and fire bursts from the floor; then a sweep on both sides and
+  wider eruptions.
+- **Draft line (DRAFT-006):** "Everything has a price. Even light. Especially light." 
+
 **Open:** is the Night Weaver's power magic or trickery? (see `../Systems/Magic.md`)

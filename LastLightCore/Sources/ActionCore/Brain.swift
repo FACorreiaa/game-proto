@@ -223,6 +223,59 @@ public struct WeaverBrain: Brain {
     }
 }
 
+/// The Cinder King, in three phases.
+/// Offer: walks the hero down; cane up close, lanterns from further off.
+/// Debt: calls Ratborn whenever none are left, who shield him; between calls, fire from the floor and lanterns.
+/// Price: no more debtors. Faster, a sweep on both sides up close, wide eruptions from afar.
+public struct CinderKingBrain: Brain {
+    public init() {}
+
+    static let cane = 0, lantern = 1, debtors = 2, vents = 3, sweep = 4, wideVents = 5
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < tuning.cinderTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        let close = gap < me.spec.attacks[Self.cane].reach - 10
+        let debtorsLeft = allies.contains { $0.kind == .ratborn && $0.isAlive }
+        // While his debtors fight he keeps back and lets them.
+        let approach: Double = me.phase == 2 && debtorsLeft ? (gap < 220 ? -dir : 0) : (gap > 40 ? dir : dir * 0.02)
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: approach) }
+
+        let wait = Double(Int.random(in: tuning.cinderAttackGap, using: &rng))
+        me.aiCooldown = Int(wait * (me.phase >= 3 ? tuning.cinderPriceGapScale : 1))
+        let roll = Double.random(in: 0..<1, using: &rng)
+        switch me.phase {
+        case 1:
+            me.nextAttack = close && roll < tuning.cinderCloseChance ? Self.cane : Self.lantern
+        case 2:
+            if !debtorsLeft {
+                me.nextAttack = Self.debtors
+            } else {
+                me.nextAttack = close ? Self.cane : (roll < 0.5 ? Self.vents : Self.lantern)
+            }
+        default:
+            if close {
+                me.nextAttack = roll < tuning.cinderCloseChance ? Self.sweep : Self.cane
+            } else {
+                me.nextAttack = roll < 0.5 ? Self.wideVents : Self.lantern
+            }
+        }
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
 /// The Protocol, in three phases.
 /// Judgement: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
 /// Ascension: takes to the air, summons drones and calls down light, then crashes down open; and again.

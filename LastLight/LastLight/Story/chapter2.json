@@ -161,6 +161,116 @@
           "text": "The Cinder Docks. Everything that is bought in this city passes through here."
         }
       }
+    },
+    "vault.wake": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CINDER KING",
+          "text": "A Foundry man, in my vault. Did they send you to settle their account?",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "caelen2"
+        },
+        "caelen2": {
+          "speaker": "CAELEN",
+          "text": "I came to see who was buying.",
+          "next": "price"
+        },
+        "seraphine": {
+          "speaker": "CINDER KING",
+          "text": "The Dawnfaith's voice. Your sanctuaries sell me their bread, Oracle. Did you know?",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "seraphine2"
+        },
+        "seraphine2": {
+          "speaker": "SERAPHINE",
+          "text": "I know now.",
+          "next": "price"
+        },
+        "nimue": {
+          "speaker": "CINDER KING",
+          "text": "Little Nimue. You run my roads and you never pay the toll.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "nimue2"
+        },
+        "nimue2": {
+          "speaker": "NIMUE",
+          "text": "Where are my runners?",
+          "next": "nimue3"
+        },
+        "nimue3": {
+          "speaker": "CINDER KING",
+          "text": "Where every debt goes. Paid.",
+          "next": "price"
+        },
+        "neutral": {
+          "speaker": "CINDER KING",
+          "text": "Everyone who comes down here wants something. Everything has a price.",
+          "next": "price"
+        },
+        "price": {
+          "speaker": "CINDER KING",
+          "text": "Everything has a price. Even light. Especially light."
+        }
+      }
+    },
+    "vault.end": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Foundry seals, Dawnfaith seals, city seals. Everyone sold to him.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "orion"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "His ledgers have our seal on them. I will carry that home too.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "orion"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Names in his ledger. My runners are in it. So is where he sent them.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "orion"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "His ledgers. Every page is a trade.",
+          "next": "orion"
+        },
+        "orion": {
+          "speaker": "ORION",
+          "text": "He bought and sold. Someone was always buying from the other side.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "orion2"
+        },
+        "orion2": {
+          "speaker": "ORION",
+          "text": "Someone was always buying from the other side. You will want to watch me read these."
+        }
+      }
     }
   }
 }
