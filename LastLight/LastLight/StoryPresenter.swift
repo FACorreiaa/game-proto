@@ -57,9 +57,11 @@ final class StoryPresenter {
     }
 
     /// A new game: every decision and every scene played is forgotten.
-    func resetAll() {
+    /// Forgets every choice. With a lead, remembers who is leading, so shared scenes can speak to them.
+    func resetAll(lead: FighterKind? = nil) {
         runner = nil
         state = StoryState()
+        if let lead { state.flags["lead"] = lead.rawValue }
         save()
     }
 

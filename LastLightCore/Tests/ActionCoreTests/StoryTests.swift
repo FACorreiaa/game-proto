@@ -165,3 +165,28 @@ private func shipped() throws -> StoryLibrary {
     for _ in 0..<20 { events += world.step(InputFrame(moveX: 1)) }
     #expect(events.filter { $0 == .scene(id: "door") }.count == 1)
 }
+
+@Test func theSharedHallSpeaksToWhoeverLeads() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        var state = StoryState()
+        state.flags["lead"] = lead.rawValue
+        let runner = try #require(StoryRunner(sceneID: "hall.enter", library: story, state: state))
+        #expect(runner.line?.speaker == lead.rawValue.uppercased())
+    }
+    // A save from before leads were remembered still gets a line.
+    let old = try #require(StoryRunner(sceneID: "hall.enter", library: story, state: StoryState()))
+    #expect(old.line?.speaker == "ORION")
+}
+
+@Test func everyOpeningAsksOrionTheSameQuestion() throws {
+    let story = try shipped()
+    for id in ["awakening.orion", "gauges.orion", "undercroft.orion"] {
+        var runner = try #require(StoryRunner(sceneID: id, library: story, state: StoryState()))
+        while runner.choices.isEmpty, runner.line != nil { runner.advance() }
+        #expect(runner.choices.count == 2, "\(id)")
+        runner.choose(0)
+        while runner.line != nil { runner.advance() }
+        #expect(runner.state.flags["orion"] == "trusted", "\(id)")
+    }
+}

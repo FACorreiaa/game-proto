@@ -238,9 +238,9 @@ private func traverse(
     }
 }
 
-@Test(arguments: [FighterKind.seraphine, .nimue])
-func everyLevelCanBeFinishedWhileFightingWithEachLead(_ lead: FighterKind) {
-    for level in Level.all {
+@Test(arguments: [FighterKind.caelen, .seraphine, .nimue])
+func eachLeadsChapterCanBeFinishedWhileFighting(_ lead: FighterKind) {
+    for level in Level.chapter1(for: lead) {
         let result = traverse(level, seed: 1, frames: 60 * 240, fights: true, lead: lead)
         #expect(result.world.isComplete, "\(lead) in \(level.name) stopped at x \(hero(result.world).pos.x)")
     }
@@ -377,4 +377,24 @@ private func partner(_ world: World) -> Fighter {
     let b = traverse(.foundryYard, seed: 9, frames: 3000)
     #expect(a.events == b.events)
     #expect(!a.events.isEmpty)
+}
+
+// MARK: Openings
+
+@Test func eachFactionHasItsOwnOpeningAndSharesTheRest() {
+    let routes = Faction.allCases.map { Level.chapter1(for: $0.lead) }
+    #expect(Set(routes.map { $0[0].name }).count == 3)
+    for route in routes {
+        #expect(route.dropFirst().map(\.name) == ["Foundry Yard", "The Machine Hall", "The Protocol"])
+    }
+}
+
+@Test func everyOpeningIntroducesOrionWithAScene() {
+    for faction in Faction.allCases {
+        let opening = faction.opening
+        let world = World(level: opening, hero: faction.lead, seed: 1)
+        let orion = world.fighters.first { $0.kind == .orion }
+        #expect(orion?.awake == false, "\(opening.name): Orion should wait to be found")
+        #expect(opening.scenes.contains { $0.cue == .partnerJoins }, "\(opening.name)")
+    }
 }

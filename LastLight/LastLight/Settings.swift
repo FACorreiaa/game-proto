@@ -28,14 +28,6 @@ struct Settings: Equatable {
     var screenShake = true
     var debugOverlay = false
     var difficulty = Difficulty.normal
-    /// Test aid until the faction pick exists: which hero leads the levels.
-    var lead = Lead.caelen
-
-    enum Lead: String, CaseIterable {
-        case caelen, seraphine, nimue
-
-        var name: String { rawValue.capitalized }
-    }
 
     private static let defaults = UserDefaults.standard
 
@@ -46,7 +38,6 @@ struct Settings: Equatable {
         if defaults.object(forKey: "settings.shake") != nil { s.screenShake = defaults.bool(forKey: "settings.shake") }
         s.debugOverlay = defaults.bool(forKey: "settings.debug")
         s.difficulty = defaults.string(forKey: "settings.difficulty").flatMap(Difficulty.init(rawValue:)) ?? .normal
-        s.lead = defaults.string(forKey: "settings.lead").flatMap(Lead.init(rawValue:)) ?? .caelen
         return s
     }
 
@@ -56,6 +47,5 @@ struct Settings: Equatable {
         Self.defaults.set(screenShake, forKey: "settings.shake")
         Self.defaults.set(debugOverlay, forKey: "settings.debug")
         Self.defaults.set(difficulty.rawValue, forKey: "settings.difficulty")
-        Self.defaults.set(lead.rawValue, forKey: "settings.lead")
     }
 }
