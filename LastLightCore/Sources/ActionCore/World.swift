@@ -575,6 +575,12 @@ public struct World: Sendable {
 
     // MARK: Puzzles
 
+    /// True while a fighter stands in the glow of a lit lamp.
+    public func isLit(_ f: Fighter) -> Bool {
+        guard let level else { return false }
+        return level.levers.contains { $0.glow > 0 && signals.contains($0.id) && abs($0.pos.x - f.pos.x) <= $0.glow }
+    }
+
     /// The plate a fighter is standing on, if any.
     public func plate(under f: Fighter) -> Plate? {
         guard f.onGround, let level else { return nil }
@@ -612,6 +618,9 @@ public struct World: Sendable {
                 if lever.holdFrames > 0 { leverTimers[lever.id] = lever.holdFrames }
             }
         }
+        for i in fighters.indices where fighters[i].spec.needsLight {
+            fighters[i].inLight = isLit(fighters[i])
+        }
         for plate in level.plates {
             let down = fighters.contains { $0.team == .hero && $0.isAlive && self.plate(under: $0)?.id == plate.id }
             if down != signals.contains(plate.id) {
@@ -644,6 +653,7 @@ public struct World: Sendable {
 
     /// True while a living Dogma Frame stands close enough to shield this machine.
     public func isWarded(_ id: Int) -> Bool {
+        if let f = fighter(id), f.isAlive, f.spec.needsLight, !isLit(f) { return true }
         if let f = fighter(id), f.isAlive, let guardKind = f.spec.shieldedBy {
             return fighters.contains { $0.kind == guardKind && $0.isAlive && abs($0.pos.x - f.pos.x) <= tuning.debtorShieldRange }
         }
@@ -709,6 +719,13 @@ public struct World: Sendable {
                 dazzle(from: me, radius: radius, frames: daze, lookingAt: true, &events)
             case .eclipse(let radius, let daze):
                 dazzle(from: me, radius: radius, frames: daze, lookingAt: false, &events)
+            case .douse(let range):
+                for lamp in level?.levers ?? [] where lamp.glow > 0 && signals.contains(lamp.id)
+                    && abs(lamp.pos.x - me.pos.x) <= range {
+                    signals.remove(lamp.id)
+                    leverTimers[lamp.id] = nil
+                    events.append(.lever(id: lamp.id, on: false))
+                }
             case .prophecy(let width, let height, let warning, let active, let damage):
                 for h in fighters where h.team != me.team && h.isAlive && h.awake && !h.spec.isDecoy {
                     // Where they will be when it lands, if they keep going.

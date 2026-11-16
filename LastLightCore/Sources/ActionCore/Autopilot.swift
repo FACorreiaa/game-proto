@@ -134,6 +134,16 @@ public struct Autopilot: Sendable {
             return InputFrame(moveX: toward * 0.02, attack: world.frame % 8 == 0)
         }
 
+        // A boss that needs light: light the lamp nearest it, or wait by a lit one for it to come.
+        if boss.spec.needsLight, world.isWarded(boss.id), let level = world.level,
+           let lamp = level.levers.filter({ $0.glow > 0 })
+            .min(by: { abs($0.pos.x - boss.pos.x) < abs($1.pos.x - boss.pos.x) }) {
+            let ldx = lamp.pos.x - me.pos.x
+            if abs(ldx) > 30 { return InputFrame(moveX: ldx > 0 ? 1 : -1) }
+            let lit = world.signals.contains(lamp.id)
+            return InputFrame(moveX: (lit ? dir : (ldx >= 0 ? 1 : -1)) * 0.02, attack: !lit && world.frame % 8 == 0)
+        }
+
         // Up in the air it cannot be reached: wait near it, out of its way.
         if boss.flying || boss.descending {
             return InputFrame(moveX: abs(dx) > 170 ? dir : (abs(dx) < 110 ? -dir : 0))

@@ -54,6 +54,8 @@ final class GameScene: SKScene {
     private var gateLamps: [Int: [(input: Int, node: SKShapeNode)]] = [:]
     private var leverNodes: [Int: (handle: SKNode, ring: SKShapeNode)] = [:]
     private var plateNodes: [Int: SKShapeNode] = [:]
+    /// Each lamp's head and the light it throws, by lever id.
+    private var lampNodes: [Int: (head: SKShapeNode, pool: SKShapeNode)] = [:]
     private var hazardNodes: [SKShapeNode] = []
     private var checkpointNodes: [SKShapeNode] = []
     private var pickupNodes: [Int: SKNode] = [:]
@@ -190,6 +192,9 @@ final class GameScene: SKScene {
         case .cinderKing:
             ("THE CINDER KING", ["THE DEBT", "THE PRICE"],
              "Step out of the fire.  While his Ratborn live, he can't be hurt.")
+        case .lamplighter:
+            ("THE LAMPLIGHTER", ["LIGHTS OUT"],
+             "Nothing touches him in the dark.  Strike a lamp, then strike him in its light.")
         case .lineWarden:
             ("THE LINE WARDEN", ["OVERDRIVE"],
              "Its guard faces forward.  Get behind it, or parry to break its stance.")
@@ -375,6 +380,7 @@ final class GameScene: SKScene {
         gateLamps = [:]
         leverNodes = [:]
         plateNodes = [:]
+        lampNodes = [:]
         hazardNodes = []
         checkpointNodes = []
         pickupNodes = [:]
@@ -419,7 +425,35 @@ final class GameScene: SKScene {
             gateLamps[gate.id] = lamps
             node.zPosition = -1
         }
-        for lever in level.levers {
+        for lever in level.levers where lever.glow > 0 {
+            let post = SKShapeNode(rect: CGRect(x: lever.pos.x - 3, y: lever.pos.y, width: 6, height: 120))
+            post.fillColor = Palette.mid
+            post.strokeColor = .clear
+            post.zPosition = -2
+            worldNode.addChild(post)
+            let head = SKShapeNode(rect: CGRect(x: -9, y: -12, width: 18, height: 24), cornerRadius: 4)
+            head.position = CGPoint(x: lever.pos.x, y: lever.pos.y + 128)
+            head.lineWidth = 2
+            head.zPosition = -1
+            worldNode.addChild(head)
+            let pool = SKShapeNode(ellipseOf: CGSize(width: lever.glow * 2, height: 260))
+            pool.position = CGPoint(x: lever.pos.x, y: lever.pos.y + 70)
+            pool.fillColor = Palette.ember.withAlphaComponent(0.12)
+            pool.strokeColor = .clear
+            pool.zPosition = -4
+            pool.blendMode = .add
+            worldNode.addChild(pool)
+            // The burn-down ring reads round the lamp's head.
+            let ring = SKShapeNode()
+            ring.strokeColor = Palette.ember
+            ring.lineWidth = 3
+            ring.glowWidth = 3
+            ring.fillColor = .clear
+            head.addChild(ring)
+            leverNodes[lever.id] = (SKNode(), ring)
+            lampNodes[lever.id] = (head, pool)
+        }
+        for lever in level.levers where lever.glow == 0 {
             let colour = puzzleColour(lever.id, in: level)
             let base = SKShapeNode(rect: CGRect(x: -12, y: 0, width: 24, height: 10), cornerRadius: 2)
             base.position = CGPoint(x: lever.pos.x, y: lever.pos.y)
@@ -489,6 +523,14 @@ final class GameScene: SKScene {
             } else {
                 ring.isHidden = true
             }
+        }
+        for (id, lamp) in lampNodes {
+            let on = world.signals.contains(id)
+            lamp.head.fillColor = on ? Palette.ember : Palette.body
+            lamp.head.strokeColor = Palette.ember.withAlphaComponent(on ? 1 : 0.4)
+            lamp.head.glowWidth = on ? 8 : 0
+            lamp.pool.isHidden = !on
+            lamp.pool.alpha = 0.9 + 0.1 * sin(CGFloat(world.frame) * 0.2)
         }
         for plate in level.plates {
             guard let node = plateNodes[plate.id] else { continue }
@@ -1105,7 +1147,9 @@ final class GameScene: SKScene {
                 sound.play(.bossWake, volume: 0.35)
             case .lever(let id, let on):
                 if let lever = world.level?.levers.first(where: { $0.id == id }) {
-                    sparks(at: Vec2(lever.pos.x, lever.pos.y + 44), color: on ? Palette.gold : Palette.steel, count: on ? 10 : 4)
+                    // A lamp sparks at its head; a lever at its knob.
+                    let y = lever.glow > 0 ? 128.0 : 44
+                    sparks(at: Vec2(lever.pos.x, lever.pos.y + y), color: on ? Palette.gold : Palette.steel, count: on ? 10 : 4)
                 }
                 sound.play(on ? .checkpoint : .blocked, volume: on ? 0.6 : 0.4)
                 if on { haptics.rigid(0.6) }

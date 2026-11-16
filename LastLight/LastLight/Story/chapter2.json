@@ -271,6 +271,63 @@
           "text": "Someone was always buying from the other side. You will want to watch me read these."
         }
       }
+    },
+    "lamp.wake": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "LAMPLIGHTER",
+          "text": "Light costs. This row hasn't paid.",
+          "next": "caelen"
+        },
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "A whole street in the dark, and one man with a pole.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "trusted"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "He puts them out one by one. As if light were his to take back.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "trusted"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The Lamplighter. Runners used to pay him to leave a street dark. Tonight he's charging the other way.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "trusted",
+          "next": "trusted"
+        },
+        "trusted": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Strike a lamp to light it, and hit him while he stands in it. I will drive him toward the light.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Light a lamp near him and strike before he puts it out. Every lamp burns down.",
+          "requires": {
+            "orion": "watched"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Light a lamp near him and strike before he puts it out."
+        }
+      }
     }
   }
 }

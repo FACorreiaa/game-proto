@@ -29,7 +29,7 @@ public struct Chapter: Sendable, Identifiable {
     public static let lanternCities = Chapter(
         id: "chapter2", number: 2, title: "The Lantern Cities",
         ending: "The Cinder King is beaten. His ledgers are not finished.",
-        route: { _ in [.emberMarket, .lanternRoofs, .cinderDocks, .cinderVault] })
+        route: { _ in [.emberMarket, .lanternRoofs, .lampRow, .cinderDocks, .cinderVault] })
 
     public static let dawnfaith = Chapter(
         id: "chapter3", number: 3, title: "The Dawnfaith",

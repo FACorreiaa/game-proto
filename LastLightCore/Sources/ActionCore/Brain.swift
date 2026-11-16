@@ -392,6 +392,62 @@ public struct WardenBrain: Brain {
     }
 }
 
+/// The Lamplighter. Walks the hero down to hook them, throws embers from afar, and puts out any lamp he finds
+/// himself standing by, after which he needs a while before he can again: that is the hero's window. Overdrive: he
+/// snuffs the whole row now and then, and calls Ratborn when none are left.
+public struct LamplighterBrain: Brain {
+    public init() {}
+
+    static let hook = 0, douse = 1, ember = 2, call = 3, snuff = 4
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        if me.aiAux2 > 0 { me.aiAux2 -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+
+        // Caught in the light: put it out first, whatever he was doing.
+        if me.inLight, me.aiAux2 == 0 {
+            me.aiAux2 = tuning.lamplighterDouseRest
+            me.aiCooldown = Int.random(in: tuning.lamplighterAttackGap, using: &rng)
+            me.nextAttack = Self.douse
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+
+        let close = gap < me.spec.attacks[Self.hook].reach - 10
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: close ? dir * facingNudge : dir) }
+        me.aiCooldown = Int.random(in: tuning.lamplighterAttackGap, using: &rng)
+
+        if me.phase >= 2 {
+            let alone = !allies.contains { $0.id != me.id && $0.isAlive && $0.kind == .ratborn }
+            if alone, me.aiAux3 == 0 {
+                me.aiAux3 = 5
+                me.nextAttack = Self.call
+                return InputFrame(moveX: dir * facingNudge, attack: true)
+            }
+            if me.aiAux3 > 0 { me.aiAux3 -= 1 }
+            if me.aiAux2 == 0, Double.random(in: 0..<1, using: &rng) < 0.3 {
+                me.aiAux2 = tuning.lamplighterDouseRest
+                me.nextAttack = Self.snuff
+                return InputFrame(moveX: dir * facingNudge, attack: true)
+            }
+        }
+        if close {
+            me.nextAttack = Self.hook
+        } else if gap > tuning.lamplighterEmberFrom, Double.random(in: 0..<1, using: &rng) < tuning.lamplighterEmberChance {
+            me.nextAttack = Self.ember
+        } else {
+            return InputFrame(moveX: dir)
+        }
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
 /// The Last Oracle. Walks the hero down. Up close, her staff or her gaze; at mid range, her gaze; far off, a
 /// prophecy laid where the hero is heading or something from the ground.
 /// Dawn: the gaze is a flare (look away); sunfall. Dusk: Zealots when none are left; the gaze is an eclipse (look

@@ -9,7 +9,7 @@ extension FighterKind {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol, .lineWarden,
              .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing,
-             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle: .enemy
+             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle, .lamplighter: .enemy
         }
     }
 }
@@ -38,6 +38,8 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case weaverImage
     /// The Lantern Cities' boss.
     case cinderKing
+    /// Chapter 2's mid-boss: keeps the lamps on the Lamp Row, and puts them out.
+    case lamplighter
     // The Dawnfaith.
     case zealot
     case radiantAcolyte
@@ -68,6 +70,8 @@ public enum AttackEffect: Sendable, Equatable {
     case eclipse(radius: Double, daze: Int)
     /// A strike laid where each hero will be when it lands, judged from how they are moving now.
     case prophecy(width: Double, height: Double, warning: Int, active: Int, damage: Double)
+    /// Puts out every lit lamp within range of the attacker.
+    case douse(range: Double)
 }
 
 /// What a thrown thing leaves on the ground where it lands. It warns, then stays live for `active` frames and
@@ -250,6 +254,8 @@ public struct FighterSpec: Sendable {
     public var flightPhase = 0
     /// While any fighter of this kind lives nearby, hits on it do nothing.
     public var shieldedBy: FighterKind?
+    /// It can be hurt only while it stands in the glow of a lit lamp.
+    public var needsLight = false
     /// The attack it answers with at once when its frontal guard stops a hit.
     public var riposte: Int?
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
