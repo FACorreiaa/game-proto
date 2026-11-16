@@ -11,6 +11,12 @@
 
 **SHIPPED:** Caelen's companion in the 2D game. He "stopped obeying", knows the way out, can't open the last door alone (SH-002). The Protocol "judged me once" (SH-004). The player chooses whether he walks beside or ahead (SH-003). His special is **Adapt**: he guards the next hit and counters (SH-005).
 
+## Decided (WORKING)
+
+- **He cannot lie, not even to be kind** (WC-014, DEC-012). This was already in the cast sheet's Seraphine pairing; the
+  game now says it. He may be silent or wrong, never lying.
+- He meets each lead differently in their opening, and always asks the same thing: walk beside, or ahead (DEC-012).
+
 ## Personality (PROPOSED)
 
 Literal-minded and curious, with a deadpan humour he doesn't know he has. Asks questions that are too honest. Keeps small things the light touches; the butterfly in the art is one. *(cast sheet)*
