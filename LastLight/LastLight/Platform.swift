@@ -19,9 +19,11 @@ final class Haptics {
     private let heavyTap = UIImpactFeedbackGenerator(style: .heavy)
     private let rigidTap = UIImpactFeedbackGenerator(style: .rigid)
 
-    func light(_ intensity: CGFloat = 1) { lightTap.impactOccurred(intensity: intensity) }
-    func heavy() { heavyTap.impactOccurred() }
-    func rigid(_ intensity: CGFloat = 1) { rigidTap.impactOccurred(intensity: intensity) }
+    var enabled = true
+
+    func light(_ intensity: CGFloat = 1) { if enabled { lightTap.impactOccurred(intensity: intensity) } }
+    func heavy() { if enabled { heavyTap.impactOccurred() } }
+    func rigid(_ intensity: CGFloat = 1) { if enabled { rigidTap.impactOccurred(intensity: intensity) } }
 }
 
 extension SKView {
@@ -31,6 +33,7 @@ extension SKView {
 }
 #else
 final class Haptics {
+    var enabled = true
     func light(_ intensity: CGFloat = 1) {}
     func heavy() {}
     func rigid(_ intensity: CGFloat = 1) {}

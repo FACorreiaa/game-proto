@@ -16,7 +16,22 @@ final class GameScene: SKScene {
     private var mode: Mode
     private var world: World
     private var pilot = Autopilot(fights: true)
-    private var showDebug = true
+    private var showDebug = false
+    private var settings = Settings()
+    /// Asks for the pause menu.
+    var onPause: (() -> Void)?
+    /// Held still behind a menu. Time spent frozen is not simulated afterwards.
+    var frozen = false {
+        didSet {
+            lastTime = 0
+            accumulator = 0
+            // Keys held while a menu was open do not count as new presses.
+            if !frozen { _ = hardware.poll() }
+            // Menus sit over a clean picture: no HUD, no on-screen buttons.
+            hud.isHidden = frozen
+            controls.isHidden = frozen
+        }
+    }
     private var hardware = HardwareInput()
     private let controls = TouchControls()
     private let hud = HUD()
@@ -120,7 +135,7 @@ final class GameScene: SKScene {
             ? "Reach the gate.  Dodge passes through arcs.  ⇄ switches hero."
             : "Parry: attack just as the red flash comes.  Dodge passes through.  ⇄ switches hero.")
         #else
-        hud.showHint("A/D move   Space jump   J attack   K dodge   I special   L switch   R restart   M mode   P debug")
+        hud.showHint("A/D move   Space jump   J attack   K dodge   I special   L switch   R restart   Esc pause")
         #endif
     }
 
@@ -178,6 +193,41 @@ final class GameScene: SKScene {
         restart(fresh: true)
         showHint()
         if mode == .room { hud.announce("TRAINING ROOM") }
+    }
+
+    // MARK: Menus
+
+    var currentLevel: Int { levelIndex }
+    var levelNames: [String] { levels.map(\.name) }
+
+    func apply(_ settings: Settings) {
+        self.settings = settings
+        sound.volume = Float(settings.volume)
+        haptics.enabled = settings.haptics
+        showDebug = settings.debugOverlay
+    }
+
+    func play(levelAt index: Int) {
+        mode = .level
+        levelIndex = min(max(index, 0), levels.count - 1)
+        restart(fresh: true)
+        showHint()
+    }
+
+    func playTrainingRoom() {
+        mode = .room
+        restart(fresh: true)
+        showHint()
+        hud.announce("TRAINING ROOM")
+    }
+
+    /// Back to the last checkpoint, as after a fall in battle.
+    func retry() {
+        if world.isComplete { restart(fresh: true) } else { restart() }
+    }
+
+    func restartLevel() {
+        restart(fresh: true)
     }
 
     // MARK: Scenery
@@ -340,8 +390,16 @@ final class GameScene: SKScene {
         lastTime = currentTime
         accumulator += elapsed
 
+        guard !frozen else {
+            draw()
+            return
+        }
         let reading = hardware.poll()
         var presses = controls.takePresses()
+        if reading.pause, !story.isActive {
+            onPause?()
+            return
+        }
         // While someone is speaking the game holds still. Attack or jump moves the scene on.
         if story.isActive {
             if reading.attack || reading.jump { story.advance() }
@@ -440,7 +498,7 @@ final class GameScene: SKScene {
         }
 
         shake *= 0.86
-        let jolt = shake < 0.3 ? CGPoint.zero : CGPoint(
+        let jolt = shake < 0.3 || !settings.screenShake ? CGPoint.zero : CGPoint(
             x: CGFloat.random(in: -shake...shake), y: CGFloat.random(in: -shake...shake))
         for (layer, depth, drop) in [(worldNode, 1.0, 0.0), (midLayer, 0.55, 20.0), (farLayer, 0.25, 10.0)] {
             layer.setScale(zoom)
@@ -796,8 +854,7 @@ final class GameScene: SKScene {
         for touch in touches {
             let point = touch.location(in: self)
             switch hud.action(at: point) {
-            case .toggleMode: toggleMode()
-            case .toggleDebug: showDebug.toggle()
+            case .pause: onPause?()
             case nil: controls.began(ObjectIdentifier(touch), at: point)
             }
         }
@@ -816,11 +873,7 @@ final class GameScene: SKScene {
     }
     #else
     override func mouseDown(with event: NSEvent) {
-        switch hud.action(at: event.location(in: self)) {
-        case .toggleMode: toggleMode()
-        case .toggleDebug: showDebug.toggle()
-        case nil: break
-        }
+        if hud.action(at: event.location(in: self)) == .pause { onPause?() }
     }
     #endif
 }

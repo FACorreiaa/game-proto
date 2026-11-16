@@ -54,7 +54,13 @@ final class Sound {
         tick += 1
     }
 
+    var volume: Float {
+        get { engine.mainMixerNode.outputVolume }
+        set { engine.mainMixerNode.outputVolume = newValue }
+    }
+
     func play(_ effect: Effect, volume: Float = 1) {
+        guard self.volume > 0.001 else { return }
         if let last = lastPlayed[effect], tick - last < 2 { return }
         lastPlayed[effect] = tick
         // The engine stops when audio is interrupted or the output changes.

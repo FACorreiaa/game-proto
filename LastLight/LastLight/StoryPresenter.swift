@@ -56,6 +56,13 @@ final class StoryPresenter {
         save()
     }
 
+    /// A new game: every decision and every scene played is forgotten.
+    func resetAll() {
+        runner = nil
+        state = StoryState()
+        save()
+    }
+
     private func settle() {
         guard let runner, runner.isFinished else { return }
         state = runner.state
