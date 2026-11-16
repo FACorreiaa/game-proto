@@ -48,6 +48,7 @@ public struct Autopilot: Sendable {
             }
         }
         guard me.onGround else { return inp }
+        if let step = puzzleInput(me, world: world, level: level) { return step }
 
         // A hazard just ahead that is on, or will be before the hero is through.
         let waitForHazard = level.hazards.contains { h in
@@ -148,6 +149,56 @@ public struct Autopilot: Sendable {
             return InputFrame(moveX: dir * 0.02, special: true)
         }
         return InputFrame(moveX: gap > 45 ? dir : (gap < 25 ? -dir : dir * 0.02))
+    }
+
+    /// Puzzles: throw a lever on the way past when its gate lies ahead (a timed one only once the gate's other
+    /// inputs are on, so the clock isn't wasted); have Orion hold a plate a gate ahead needs (take him there, then
+    /// hand control back); and wait for an opening gate rather than jump at it.
+    private func puzzleInput(_ me: Fighter, world: World, level: Level) -> InputFrame? {
+        let ahead = level.gates.filter { $0.box.minX > me.pos.x - 10 && (world.gateOpen[$0.id] ?? 1) < 1 }
+
+        if me.kind == .orion {
+            if world.plate(under: me) != nil { return InputFrame(switchHero: world.frame % 20 == 0) }
+            let wanted = ahead.filter { $0.box.minX - me.pos.x < 700 }
+                .flatMap(\.opensWith)
+                .compactMap { id in level.plates.first { $0.id == id && !world.signals.contains(id) } }
+                .first
+            guard let plate = wanted else { return InputFrame(switchHero: world.frame % 20 == 0) }
+            let dx = (plate.x0 + plate.x1) / 2 - me.pos.x
+            return InputFrame(moveX: dx > 0 ? 1 : -1)
+        }
+
+        for lever in level.levers where !world.signals.contains(lever.id)
+            && abs(lever.pos.x - me.pos.x) < 34 && abs(lever.pos.y - me.pos.y) < 10 {
+            guard let gate = ahead.first(where: { $0.opensWith.contains(lever.id) }) else { continue }
+            let othersOn = gate.opensWith.allSatisfy { input in
+                input == lever.id || world.signals.contains(input) || level.levers.contains { $0.id == input }
+            }
+            if lever.holdFrames == 0 || othersOn {
+                let dir: Double = lever.pos.x >= me.pos.x ? 1 : -1
+                return InputFrame(moveX: dir * 0.02, attack: world.frame % 8 == 0)
+            }
+        }
+
+        guard let gate = ahead.filter({ g in
+            g.box.minX - me.pos.x < 260 && g.box.minY <= me.pos.y + 1 && g.box.maxY > me.pos.y + 1
+        }).min(by: { $0.box.minX < $1.box.minX }) else { return nil }
+        if world.wantsOpen(gate) {
+            return gate.box.minX - (me.pos.x + me.spec.width / 2) < 40 ? InputFrame() : nil
+        }
+        guard !gate.inverted, let missing = gate.opensWith.first(where: { !world.signals.contains($0) }) else { return nil }
+        if level.plates.contains(where: { $0.id == missing }) {
+            // Hand over to Orion to put him on it.
+            let orion = world.fighters.contains { $0.kind == .orion && $0.isAlive && $0.awake }
+            return orion ? InputFrame(switchHero: world.frame % 20 == 0) : nil
+        }
+        if let lever = level.levers.first(where: { $0.id == missing }) {
+            let dx = lever.pos.x - me.pos.x
+            let dir: Double = dx >= 0 ? 1 : -1
+            if abs(dx) > 34 { return InputFrame(moveX: dir) }
+            return InputFrame(moveX: dir * 0.02, attack: world.frame % 8 == 0)
+        }
+        return nil
     }
 
     /// Seraphine heals when someone is low; Nimue leaves a decoy when crowded. Caelen's Command is used in

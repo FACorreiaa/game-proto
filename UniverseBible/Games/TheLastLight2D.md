@@ -82,7 +82,23 @@ wakes, then Orion names it and says how to beat it, in words that follow the cho
 5. Nimue: "Runners went round this gate. There's no round any more." Her runners knew a way past it, and that way
    is gone.
 
-## Draft: Chapter 3, The Dawnfaith (DRAFT-008, PROPOSED)
+## Draft: The Lock Works (DRAFT-009, PROPOSED)
+
+A puzzle level in Chapter 1 for every lead, between **The Machine Hall** and **The Warden's Gate**. Gameplay (not
+canon): levers a swing throws, some springing back on a timer; plates that hold a gate open while someone stands on
+them; Orion, left on a plate when control passes back, stays to hold it. Each lead speaks on arrival; Orion explains
+each lock.
+
+**New world claims in this draft, each needing a verdict:**
+
+1. A part of the Foundry called **the Lock Works**, where every door is a lock. The Foundry "still answers its own
+   handles" (Orion).
+2. Caelen: "Locks and levers. My hands know these before I do." (Consistent with WC-015; why stays UNKNOWN.)
+3. Seraphine: "Every door here wants a hand on a lever. The Foundry trusts nothing that walks."
+4. Nimue: "Runners went under this place, never through it. Now I see why." Her runners had a way under the Lock
+   Works; it says nothing about whether that way is still open.
+
+## Chapter 3, The Dawnfaith (DEC-015, WORKING)
 
 Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**, and the
 boss room, **The Oracle's Terrace**, where the Last Oracle is fought.
@@ -90,7 +106,7 @@ boss room, **The Oracle's Terrace**, where the Last Oracle is fought.
 Guards kept: the Last Oracle and Seraphine stay separate, with nothing hinting at a link (open question 9); nothing
 says how the Dawnfaith is organised (open question 6); its people are believers, not monsters.
 
-**New world claims in these drafts, each needing a verdict:**
+**World claims, approved (DEC-015; WC-019, WC-021 to WC-023):**
 
 1. The Dawnfaith's road runs through farmland and over a river crossed by a pilgrim ferry.
 2. Caelen goes because the Dawnfaith's seal was in the Cinder King's ledger: "I want to know what they bought."

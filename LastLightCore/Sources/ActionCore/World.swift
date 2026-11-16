@@ -36,6 +36,13 @@ public struct World: Sendable {
     /// Columns of light a boss has called down.
     public private(set) var strikes: [Strike] = []
     var platformDeltas: [Vec2]
+    /// Levers and plates that are on, by id.
+    public private(set) var signals: Set<Int> = []
+    public private(set) var leverTimers: [Int: Int] = [:]
+    /// How far each gate is open, from 0 (shut) to 1, by gate id.
+    public private(set) var gateOpen: [Int: Double] = [:]
+    /// Index into `platforms` of each gate's block, by gate id.
+    public private(set) var gatePlatform: [Int: Int] = [:]
 
     var waves: [[Spawn]] = []
     var waveLive = false
@@ -63,7 +70,12 @@ public struct World: Sendable {
         self.level = level
         arena = 0...level.width
         rng = SeededRandom(seed: seed)
-        platforms = level.platforms
+        // Gates are solid blocks that move; they go after the level's own platforms.
+        platforms = level.platforms + level.gates.map { Platform($0.box) }
+        for (n, g) in level.gates.enumerated() {
+            gatePlatform[g.id] = level.platforms.count + n
+            gateOpen[g.id] = 0
+        }
         platformBoxes = platforms.map { $0.box(at: 0) }
         platformDeltas = platforms.map { _ in .zero }
         self.collected = collected
@@ -174,6 +186,11 @@ public struct World: Sendable {
                     }
                     inp = InputFrame(moveX: f.facing * tuning.patrolSpeed)
                 }
+            } else if f.isAlive, f.holding, f.team == .hero {
+                // Holding a plate: stays put, facing the way the lead went.
+                if let lead = snapshot.first(where: { $0.id == controlledID }) {
+                    inp = InputFrame(moveX: (lead.pos.x >= f.pos.x ? 1 : -1) * 0.02)
+                }
             } else if f.isAlive, let brain = f.spec.brain {
                 // A boss sees the whole room, even from the air.
                 let sight = f.team == .enemy && !f.spec.boss ? tuning.enemySightHeight : .infinity
@@ -206,6 +223,7 @@ public struct World: Sendable {
         applyEffects(&events)
         updateStrikes(&events)
         for id in explosions { explode(id, &events) }
+        puzzleRules(&events)
         levelRules(&events)
         housekeeping(&events)
         cueScenes(&events)
@@ -241,6 +259,12 @@ public struct World: Sendable {
     }
 
     private mutating func passControl(to id: Int, _ events: inout [GameEvent]) {
+        // Whoever is left standing on a plate stays to hold it.
+        if let old = index(of: controlledID), fighters[old].isAlive, plate(under: fighters[old]) != nil {
+            fighters[old].holding = true
+            events.append(.holding(id: fighters[old].id))
+        }
+        if let new = index(of: id) { fighters[new].holding = false }
         controlledID = id
         switchCooldown = tuning.switchCooldown
         events.append(.controlChanged(id: id))
@@ -531,9 +555,11 @@ public struct World: Sendable {
             var f = fighters[i]
             let apart = abs(f.pos.y - lead.pos.y) > tuning.partnerStrandedHeight && f.onGround
             f.strandedFrames = apart ? f.strandedFrames + 1 : 0
+            // A partner holding a plate is only fetched once the lead has gone well on.
             let lost = abs(f.pos.x - lead.pos.x) > tuning.partnerRegroupDistance
-                || f.strandedFrames >= tuning.partnerStrandedFrames || f.pos.y < (level?.killY ?? -.infinity) + 40
+                || (!f.holding && f.strandedFrames >= tuning.partnerStrandedFrames) || f.pos.y < (level?.killY ?? -.infinity) + 40
             if lost {
+                f.holding = false
                 f.pos = spot
                 f.vel = .zero
                 f.onGround = false
@@ -544,6 +570,71 @@ public struct World: Sendable {
                 events.append(.regrouped(id: f.id, at: Vec2(spot.x, spot.y + f.spec.height / 2)))
             }
             fighters[i] = f
+        }
+    }
+
+    // MARK: Puzzles
+
+    /// The plate a fighter is standing on, if any.
+    public func plate(under f: Fighter) -> Plate? {
+        guard f.onGround, let level else { return nil }
+        return level.plates.first { f.pos.x >= $0.x0 && f.pos.x <= $0.x1 && abs(f.pos.y - $0.top) < 2 }
+    }
+
+    /// True when a gate's levers and plates would have it open.
+    public func wantsOpen(_ gate: Gate) -> Bool {
+        let all = gate.opensWith.allSatisfy { signals.contains($0) }
+        return gate.inverted ? !all : all
+    }
+
+    /// Levers thrown by heroes' swings and springing back; plates under heroes; gates sliding toward what their
+    /// inputs ask. A gate will not shut on someone standing in its way.
+    private mutating func puzzleRules(_ events: inout [GameEvent]) {
+        guard let level else { return }
+        for lever in level.levers {
+            if let left = leverTimers[lever.id] {
+                if left <= 1 {
+                    leverTimers[lever.id] = nil
+                    signals.remove(lever.id)
+                    events.append(.lever(id: lever.id, on: false))
+                } else {
+                    leverTimers[lever.id] = left - 1
+                }
+            }
+            let tag = -1000 - lever.id
+            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && !fighters[i].spec.isDecoy {
+                guard let box = fighters[i].hitbox, box.intersects(lever.box), !fighters[i].hitIDs.contains(tag) else { continue }
+                fighters[i].hitIDs.insert(tag)
+                if !signals.contains(lever.id) {
+                    signals.insert(lever.id)
+                    events.append(.lever(id: lever.id, on: true))
+                }
+                if lever.holdFrames > 0 { leverTimers[lever.id] = lever.holdFrames }
+            }
+        }
+        for plate in level.plates {
+            let down = fighters.contains { $0.team == .hero && $0.isAlive && self.plate(under: $0)?.id == plate.id }
+            if down != signals.contains(plate.id) {
+                if down { signals.insert(plate.id) } else { signals.remove(plate.id) }
+                events.append(.plate(id: plate.id, down: down))
+            }
+        }
+        for gate in level.gates {
+            guard let p = gatePlatform[gate.id], let open = gateOpen[gate.id] else { continue }
+            let target: Double = wantsOpen(gate) ? 1 : 0
+            guard open != target else { platformDeltas[p] = .zero; continue }
+            // Someone under it holds a closing gate up.
+            if target < open, fighters.contains(where: { $0.isAlive && $0.hurtbox.intersects(gate.box) }) {
+                platformDeltas[p] = .zero
+                continue
+            }
+            if open == 0 || open == 1 { events.append(.gate(id: gate.id, opening: target > open)) }
+            let next = target > open ? min(1, open + tuning.gateSpeed) : max(0, open - tuning.gateSpeed)
+            gateOpen[gate.id] = next
+            let lift = next * (gate.box.maxY - gate.box.minY + 20)
+            let moved = gate.box.offset(by: Vec2(0, lift))
+            platformDeltas[p] = Vec2(0, moved.minY - platformBoxes[p].minY)
+            platformBoxes[p] = moved
         }
     }
 

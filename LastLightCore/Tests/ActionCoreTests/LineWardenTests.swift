@@ -99,10 +99,10 @@ private func hits(_ events: [GameEvent], on id: Int) -> Int {
     #expect(world.fighters.filter { $0.kind == .forgedSoldier && $0.isAlive }.count == 1)
 }
 
-@Test func theWardensGateSitsBetweenTheHallAndTheProtocolForEveryLead() {
+@Test func theWardensGateSitsBetweenTheLocksAndTheProtocolForEveryLead() {
     for lead in [FighterKind.caelen, .seraphine, .nimue] {
         let names = Level.chapter1(for: lead).map(\.name)
         let i = names.firstIndex(of: "The Warden's Gate")
-        #expect(i != nil && names[i! - 1] == "The Machine Hall" && names[i! + 1] == "The Protocol", "\(lead)")
+        #expect(i != nil && names[i! - 1] == "The Lock Works" && names[i! + 1] == "The Protocol", "\(lead)")
     }
 }

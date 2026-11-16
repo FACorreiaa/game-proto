@@ -21,6 +21,7 @@ decision are listed separately.
 | DEC-012 | 2026-11-16 | DRAFT-005 approved: the three openings, the faction pick and their nine world claims (Sun Gauges, behind the Protocol, Orion cannot lie, Caelen's familiarity, runners, the Chapter 1 ending line). Creator: "LGTM!" | WORKING | CANON (WC-012 to WC-015, WC-019), Games/TheLastLight2D, Characters/Orion, Caelen, Nimue, Locations |
 | DEC-013 | 2026-11-16 | DRAFT-006 approved: Chapter 2, the Lantern Cities and the Cinder King, and their sixteen world claims. Creator: "LGTM!" | WORKING | CANON (WC-016 to WC-019), Games/TheLastLight2D, Bestiary/LanternCities, Locations |
 | DEC-014 | 2026-11-16 | DRAFT-007 approved: the Line Warden keeps the Warden's Gate before the Protocol; Orion knows it; the three lead lines, including Nimue's that her runners once went round the gate. Creator: "The five Line Warden claims: LGTM". | WORKING | CANON (WC-020), Bestiary/Foundry, Games/TheLastLight2D, Locations |
+| DEC-015 | 2026-11-16 | DRAFT-008 approved: Chapter 3, the Dawnfaith lands, the Last Oracle and their fifteen world claims. Creator: "15 Chapter 3 claims: Looks good to me." | WORKING | CANON (WC-019, WC-021 to WC-023), Games/TheLastLight2D, Bestiary/Dawnfaith, Locations |
 
 ## Drafts awaiting a decision
 
@@ -28,7 +29,7 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
-| DRAFT-008 | 2026-11-16 | Chapter 3, The Dawnfaith: three levels, enemy and boss behaviour, lead-aware lines and the chapter-end line. The Last Oracle's fight on the Oracle's Terrace closes it. Every line and claim is a draft. | Games/TheLastLight2D, Bestiary/Dawnfaith, Locations |
+| DRAFT-009 | 2026-11-16 | The Lock Works, a Chapter 1 puzzle level between the Machine Hall and the Warden's Gate: its name and the lead and Orion lines. | Games/TheLastLight2D, Locations |
 
 ## How to amend
 

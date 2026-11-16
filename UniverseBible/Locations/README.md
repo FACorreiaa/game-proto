@@ -11,21 +11,22 @@ Steel, navy and cyan; machine light; industrial scale.
 | Foundry Yard | SHIPPED | First level of the 2D game: outer works, scrap, the first drones |
 | The line (Awakening) | SHIPPED | Where Caelen wakes and "the others … never woke" (SH-002); where Orion finds him |
 | The Machine Hall | SHIPPED | Production floor; Sentry Cores and Dogma Frames |
-| The Warden's Gate | WORKING (DEC-014) | Between the Machine Hall and the Protocol's chamber; held by the Line Warden |
+| The Lock Works | PROPOSED (DRAFT-009) | Gates, levers and plates between the Machine Hall and the Warden's Gate; Nimue's runners went under it |
+| The Warden's Gate | WORKING (DEC-014) | Between the Lock Works and the Protocol's chamber; held by the Line Warden |
 | The Protocol's chamber | SHIPPED | The arena where the AI speaks through The Protocol |
 
 What the line was making, and why Caelen was on it, is **UNKNOWN**.
 
-## The Dawnfaith lands (ART; places PROPOSED)
+## The Dawnfaith lands (ART; places WORKING)
 
 Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hospitals (PROPOSED).
 
 | Place | Status | Notes |
 |---|---|---|
-| The Pilgrim Road | PROPOSED (DRAFT-008) | An ivory road through farmland, crossed by a river ferry |
-| The Sun Cloister | PROPOSED (DRAFT-008) | Galleries round a sunlit court; once open to runners in bad weather |
-| The Oracle's Terrace | PROPOSED (DRAFT-008) | The top of the Choir Stair, where the Last Oracle waits |
-| The Choir Stair | PROPOSED (DRAFT-008) | A long stair up a hill where the hours were once sung; the Last Oracle waits at the top |
+| The Pilgrim Road | WORKING (DEC-015) | An ivory road through farmland, crossed by a river ferry |
+| The Sun Cloister | WORKING (DEC-015) | Galleries round a sunlit court; once open to runners in bad weather |
+| The Oracle's Terrace | WORKING (DEC-015) | The top of the Choir Stair, where the Last Oracle waits |
+| The Choir Stair | WORKING (DEC-015) | A long stair up a hill where the hours were once sung; the Last Oracle waits at the top |
 
 ## The Lantern Cities (ART; places WORKING)
 

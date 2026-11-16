@@ -91,6 +91,10 @@ public struct Tuning: Sendable {
     public var weaverFar = 360.0
     public var weaverAttackGap = 100...150
 
+    // Puzzles.
+    /// How much of its travel a gate covers each frame: 1/30 opens or shuts it in half a second.
+    public var gateSpeed = 1.0 / 30
+
     // The Dawnfaith.
     public var zealotAttackGap = 40...80
     /// Below half health a Zealot presses harder: its gap between flurries is scaled by this.

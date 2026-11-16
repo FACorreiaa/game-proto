@@ -20,7 +20,7 @@ ending drive the fight.
   that dazes anyone looking at her, columns of light, and a "prophecy" strike laid where the hero is heading. Dusk:
   the room darkens, her eclipse dazes anyone looking *away*, she calls Zealots and raises a dark fire from the floor.
   The Ending: flare and eclipse alternate, faster. Whether her sight of the future is real stays UNKNOWN.
-- **Draft lines (DRAFT-008):** "I have seen how this ends. The light goes out, and everyone is finally still." /
+- **Lines (DEC-015, WORKING; WC-022):** "I have seen how this ends. The light goes out, and everyone is finally still." /
   "I will not stop it. I will only make it gentle." 
 
 **Note for writers:** these are believers, not monsters. A Zealot has a family; a Solar Guard took an oath.
