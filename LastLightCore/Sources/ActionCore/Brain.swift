@@ -12,8 +12,14 @@ public protocol Brain: Sendable {
 private let facingNudge = 0.02
 
 private func nearest(_ foes: [Fighter], to me: Fighter) -> Fighter? {
-    foes.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+    // A decoy in sight is too tempting to ignore.
+    let decoy = foes.filter { $0.spec.isDecoy && abs($0.pos.x - me.pos.x) <= decoyLure }
+        .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
+    return decoy ?? foes.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
 }
+
+/// How far away a decoy still draws an enemy.
+let decoyLure = 600.0
 
 private func strikeDistance(_ me: Fighter, _ target: Fighter) -> Double {
     guard let attack = me.spec.attacks.first else { return 0 }
@@ -213,6 +219,18 @@ public struct PartnerBrain: Brain {
             }
         }
         if !threatened { me.aiAux = 0 }
+
+        // Under AI, Seraphine heals when either of them is badly hurt.
+        if case .heal(_, let range, _)? = me.spec.special, me.specialCooldown == 0, me.isActionable {
+            let hurt = ([me] + allies.filter { $0.id != me.id && abs($0.pos.x - me.pos.x) <= range })
+                .contains { $0.hp < $0.spec.maxHP * 0.5 }
+            if hurt { return InputFrame(special: true) }
+        }
+        // Under AI, Nimue leaves a decoy when she is crowded.
+        if case .decoy? = me.spec.special, me.specialCooldown == 0, me.isActionable,
+           foes.filter({ !$0.spec.isDecoy && abs($0.pos.x - me.pos.x) < 160 }).count >= 2 {
+            return InputFrame(special: true)
+        }
 
         // Fight what is near the leader, or near itself when it is alone.
         let anchor = leader ?? me

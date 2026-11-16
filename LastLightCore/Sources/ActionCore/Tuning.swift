@@ -118,6 +118,51 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    public var seraphine: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 86, maxHP: 90, runSpeed: 255)
+        // Levels are built for this jump; a lower one can't clear their walls.
+        s.jumpSpeed = 660
+        s.attacks = [
+            // A close swing of the staff, then a bolt of light that reaches across the room.
+            AttackSpec(windup: 4, active: 4, recovery: 12, damage: 9, reach: 58, height: 70, yOffset: 10,
+                       knockback: 120, lunge: 60, hitstun: 14, hitStop: 3),
+            AttackSpec(windup: 9, active: 3, recovery: 18, damage: 14, reach: 240, height: 26, yOffset: 44,
+                       knockback: 200, lunge: 0, hitstun: 18, hitStop: 4),
+        ]
+        s.dodge = DodgeSpec(duration: 16, speed: 560, invulnerable: 1...11, cooldown: 24)
+        s.parryWindow = 6
+        s.hurtInvulnerable = 40
+        s.special = .heal(amount: 30, range: 300, cooldown: 720)
+        s.brain = PartnerBrain()
+        return s
+    }()
+
+    public var nimue: FighterSpec = {
+        var s = FighterSpec(width: 32, height: 80, maxHP: 85, runSpeed: 300)
+        s.jumpSpeed = 700
+        s.attacks = [
+            // Thrown blades: quick and light, the third one heavier.
+            AttackSpec(windup: 2, active: 3, recovery: 9, damage: 7, reach: 140, height: 24, yOffset: 46,
+                       knockback: 80, lunge: 30, hitstun: 10, hitStop: 2),
+            AttackSpec(windup: 2, active: 3, recovery: 10, damage: 7, reach: 140, height: 24, yOffset: 40,
+                       knockback: 80, lunge: 30, hitstun: 10, hitStop: 2),
+            AttackSpec(windup: 5, active: 4, recovery: 16, damage: 15, reach: 160, height: 30, yOffset: 42,
+                       knockback: 260, lunge: 40, hitstun: 20, hitStop: 5),
+        ]
+        s.dodge = DodgeSpec(duration: 14, speed: 620, invulnerable: 1...10, cooldown: 20)
+        s.parryWindow = 6
+        s.hurtInvulnerable = 40
+        s.special = .decoy(frames: 180, cooldown: 600)
+        s.brain = PartnerBrain()
+        return s
+    }()
+
+    public var decoy: FighterSpec = {
+        var s = FighterSpec(width: 32, height: 80, maxHP: 35, runSpeed: 0)
+        s.isDecoy = true
+        return s
+    }()
+
     public var orion: FighterSpec = {
         var s = FighterSpec(width: 34, height: 86, maxHP: 90, runSpeed: 285)
         s.jumpSpeed = 660
@@ -225,6 +270,9 @@ public struct Tuning: Sendable {
         switch kind {
         case .caelen: caelen
         case .orion: orion
+        case .seraphine: seraphine
+        case .nimue: nimue
+        case .decoy: decoy
         case .dummy: dummy
         case .scrapDrone: scrapDrone
         case .forgedSoldier: forgedSoldier

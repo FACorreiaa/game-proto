@@ -215,10 +215,14 @@ private func flat(width: Double = 2000, _ build: (inout Level) -> Void = { _ in 
 // MARK: The yard
 
 /// The hero is given health to spare, so these are about the route, not the fights.
-private func traverse(_ level: Level, seed: UInt64, frames: Int, fights: Bool = false) -> (world: World, events: [GameEvent]) {
+private func traverse(
+    _ level: Level, seed: UInt64, frames: Int, fights: Bool = false, lead: FighterKind = .caelen
+) -> (world: World, events: [GameEvent]) {
     var tuning = Tuning()
     tuning.caelen.maxHP = 100_000
-    var world = World(level: level, tuning: tuning, seed: seed)
+    tuning.seraphine.maxHP = 100_000
+    tuning.nimue.maxHP = 100_000
+    var world = World(level: level, hero: lead, tuning: tuning, seed: seed)
     var pilot = Autopilot(fights: fights)
     var events: [GameEvent] = []
     for _ in 0..<frames where !world.isOver { events += world.step(pilot.input(for: world)) }
@@ -231,6 +235,14 @@ private func traverse(_ level: Level, seed: UInt64, frames: Int, fights: Bool = 
             let result = traverse(level, seed: UInt64(seed), frames: 60 * 240, fights: true)
             #expect(result.world.isComplete, "\(level.name) seed \(seed) stopped at x \(hero(result.world).pos.x)")
         }
+    }
+}
+
+@Test(arguments: [FighterKind.seraphine, .nimue])
+func everyLevelCanBeFinishedWhileFightingWithEachLead(_ lead: FighterKind) {
+    for level in Level.all {
+        let result = traverse(level, seed: 1, frames: 60 * 240, fights: true, lead: lead)
+        #expect(result.world.isComplete, "\(lead) in \(level.name) stopped at x \(hero(result.world).pos.x)")
     }
 }
 

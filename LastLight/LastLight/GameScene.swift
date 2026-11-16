@@ -1,3 +1,4 @@
+import ImageIO
 import ActionCore
 import SpriteKit
 
@@ -88,7 +89,8 @@ final class GameScene: SKScene {
         let asked = args.firstIndex(of: "-level").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil }
         let saved = asked ?? (demo ? 0 : UserDefaults.standard.integer(forKey: "levelIndex"))
         levelIndex = min(max(saved, 0), Level.all.count - 1)
-        world = mode == .level ? World(level: Level.all[levelIndex], seed: 1) : World.partnerSlice(seed: 1)
+        let lead = args.firstIndex(of: "-lead").flatMap { $0 + 1 < args.count ? FighterKind(rawValue: args[$0 + 1]) : nil }
+        world = mode == .level ? World(level: Level.all[levelIndex], hero: lead ?? .caelen, seed: 1) : World.partnerSlice(seed: 1)
         super.init(size: CGSize(width: 874, height: 402))
         scaleMode = .resizeFill
         if mode == .level { story.forget(Level.all[levelIndex].scenes.map(\.scene)) }
@@ -176,7 +178,7 @@ final class GameScene: SKScene {
             }
             var tuning = Tuning()
             tuning.heroDamageScale = settings.difficulty.damageTaken
-            world = World(level: level, tuning: tuning, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
+            world = World(level: level, hero: leadKind, tuning: tuning, seed: seed, fromCheckpoint: resume ? world.checkpointIndex : -1,
                           collected: resume ? world.collected : [])
             pilot = Autopilot(fights: true)
             // A level started over plays its scenes again; a retry from a checkpoint does not.
@@ -207,6 +209,45 @@ final class GameScene: SKScene {
         showHint()
         if mode == .room { hud.announce("TRAINING ROOM") }
     }
+
+    /// The hero who leads the levels. `-lead seraphine` or `-lead nimue` overrides the setting, for checks.
+    private var leadKind: FighterKind {
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-lead"), i + 1 < args.count, let kind = FighterKind(rawValue: args[i + 1]) {
+            return kind
+        }
+        return FighterKind(rawValue: settings.lead.rawValue) ?? .caelen
+    }
+
+    #if DEBUG
+    /// `-snapshot <folder>` saves what the scene shows every two seconds, so it can be checked without a screen
+    /// capture. Debug builds only.
+    private var lastSnapshot: TimeInterval = 0
+    private var snapshotCount = 0
+
+    private func saveSnapshotIfAsked(_ time: TimeInterval) {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-snapshot"), i + 1 < args.count else { return }
+        guard let view else { return }
+        guard time - lastSnapshot >= 2 else { return }
+        lastSnapshot = time
+        // Only draws while the window is on screen; a hidden window saves nothing.
+        guard let image = view.texture(from: self)?.cgImage() else { return }
+        snapshotCount += 1
+        // A sandboxed app can only write inside its own container, so the folder is the app's temporary one
+        // when the one asked for isn't writable.
+        var folder = URL(fileURLWithPath: args[i + 1])
+        if !FileManager.default.isWritableFile(atPath: folder.path) {
+            folder = FileManager.default.temporaryDirectory.appendingPathComponent("snapshots")
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            if snapshotCount == 1 { FileHandle.standardError.write(Data("SNAPSHOTS \(folder.path)\n".utf8)) }
+        }
+        let url = folder.appendingPathComponent(String(format: "shot%03d.png", snapshotCount))
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { return }
+        CGImageDestinationAddImage(destination, image, nil)
+        CGImageDestinationFinalize(destination)
+    }
+    #endif
 
     // MARK: Menus
 
@@ -404,6 +445,9 @@ final class GameScene: SKScene {
     // MARK: Loop
 
     override func update(_ currentTime: TimeInterval) {
+        #if DEBUG
+        saveSnapshotIfAsked(currentTime)
+        #endif
         let elapsed = lastTime == 0 ? 0 : min(currentTime - lastTime, 0.1)
         lastTime = currentTime
         accumulator += elapsed
@@ -500,7 +544,7 @@ final class GameScene: SKScene {
             // Rise with a boss that takes to the air, so it stays in view.
             if let boss = world.boss, boss.isAlive, !boss.onGround { lift = max(lift, 60) }
             cameraY += (lift - cameraY) * 0.08
-            let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id && $0.awake }
+            let partner = world.fighters.first { $0.team == .hero && $0.id != hero.id && $0.awake && !$0.spec.isDecoy }
             hud.setSpecial(hero.spec.special.map { ($0.name, hero.specialCooldown) })
             controls.setSpecial(ready: hero.spec.special != nil && hero.specialCooldown == 0)
             hud.setHeroes(
@@ -791,8 +835,26 @@ final class GameScene: SKScene {
                     popup("SLOWED", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.ember, size: 14)
                 }
             case .scene(let id):
-                // The demo bot does not read.
-                if !demo { story.begin(id) }
+                // The demo bot does not read. Chapter 1's lines are written to Caelen; the other leads play
+                // it without dialogue until their own openings exist.
+                if !demo, leadKind == .caelen {
+                    story.begin(id)
+                }
+            case .healed(let id, let amount):
+                if let f = world.fighter(id) {
+                    let at = CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2)
+                    Effects.motes(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + 10), color: Palette.gold, count: 18, width: 24)
+                    ring(at: Vec2(at.x, at.y), radius: 60, color: Palette.gold)
+                    popup("+\(Int(amount.rounded()))", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 10), color: Palette.gold, size: 14)
+                }
+                sound.play(.checkpoint, volume: 0.7)
+            case .decoyPlaced(_, let at):
+                Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y + 40), color: Palette.violet, count: 18, speed: 120, life: 0.4, size: 12)
+                sound.play(.dodge)
+            case .decoyGone(_, let at):
+                Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.lantern, count: 22, speed: 180, life: 0.4, size: 12)
+                Effects.dust(worldNode, at: CGPoint(x: at.x, y: at.y - 30), amount: 8)
+                sound.play(.fuse, volume: 0.6)
             case .bossPhase(_, let phase):
                 Effects.flash(self, color: Palette.gold, alpha: 0.3, duration: 0.4)
                 if let b = world.boss { Effects.motes(worldNode, at: CGPoint(x: b.pos.x, y: b.pos.y + 40), color: Palette.gold, count: 40, width: 140) }

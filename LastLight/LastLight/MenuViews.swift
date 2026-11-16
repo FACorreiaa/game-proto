@@ -210,10 +210,20 @@ private struct SettingsPanel: View {
 }
 
 private struct ChapterPanel: View {
-    let game: Game
+    @Bindable var game: Game
 
     var body: some View {
         PanelFrame(title: "CHAPTERS", close: { game.panel = nil }) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Lead (test)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+                Picker("Lead", selection: $game.settings.lead) {
+                    ForEach(Settings.Lead.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(Array(game.levelNames.enumerated()), id: \.offset) { index, name in

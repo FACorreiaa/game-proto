@@ -65,6 +65,10 @@ public struct Fighter: Sendable, Identifiable {
     var swingScale = 1.0
     var specialBuffer = 0
     var wantsCommand = false
+    /// A heal or a decoy waiting for the world, which needs the other fighters to carry it out.
+    var wantsSpecial = false
+    /// Frames left before a decoy goes. Zero for everyone else.
+    public internal(set) var expires = 0
 
     /// False for a placed enemy that has not noticed a hero yet; it patrols instead of fighting.
     public var awake = true

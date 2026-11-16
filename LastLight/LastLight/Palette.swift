@@ -14,4 +14,9 @@ enum Palette {
     static let steel = SKColor(red: 0.62, green: 0.66, blue: 0.72, alpha: 1)
     static let gold = SKColor(red: 1.0, green: 0.82, blue: 0.4, alpha: 1)
     static let white = SKColor.white
+    /// The Dawnfaith: ivory robes, gold light.
+    static let ivory = SKColor(red: 0.93, green: 0.89, blue: 0.8, alpha: 1)
+    /// The Lantern Cities' night: violet edges, a red lantern.
+    static let violet = SKColor(red: 0.7, green: 0.45, blue: 1.0, alpha: 1)
+    static let lantern = SKColor(red: 1.0, green: 0.3, blue: 0.22, alpha: 1)
 }

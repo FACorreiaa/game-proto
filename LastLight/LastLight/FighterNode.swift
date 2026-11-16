@@ -37,8 +37,13 @@ final class FighterNode: SKNode {
 
     init(kind: FighterKind) {
         self.kind = kind
-        rim = kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
+        rim = switch kind {
+        case .seraphine: Palette.gold
+        case .nimue, .decoy: Palette.violet
+        default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
+        }
         if kind == .orion { baseFill = Palette.plate }
+        if kind == .seraphine { baseFill = Palette.ivory }
         super.init()
         addChild(figure)
         buildMarker()
@@ -47,6 +52,9 @@ final class FighterNode: SKNode {
         switch kind {
         case .caelen: buildCaelen()
         case .orion: buildOrion()
+        case .seraphine: buildSeraphine()
+        case .nimue: buildNimue()
+        case .decoy: buildDecoy()
         case .dummy: buildDummy()
         case .scrapDrone: buildDrone()
         case .forgedSoldier: buildSoldier()
@@ -543,6 +551,74 @@ final class FighterNode: SKNode {
         }
     }
 
+    /// Seraphine: an ivory gown, a crown of gold rays, a staff with a sun at its head.
+    private func buildSeraphine() {
+        let gown = CGMutablePath()
+        gown.addLines(between: [
+            CGPoint(x: -8, y: 66), CGPoint(x: 9, y: 66), CGPoint(x: 15, y: 0), CGPoint(x: -17, y: 0),
+        ])
+        gown.closeSubpath()
+        _ = part(gown)
+        _ = part(CGPath(ellipseIn: CGRect(x: -8, y: 66, width: 18, height: 18), transform: nil), z: 1)
+        for i in 0..<5 {
+            let angle = CGFloat.pi / 2 + CGFloat(i - 2) * 0.38
+            let ray = SKShapeNode(rect: CGRect(x: -0.9, y: 0, width: 1.8, height: 8))
+            ray.position = CGPoint(x: 1 + cos(angle) * 10, y: 75 + sin(angle) * 10)
+            ray.zRotation = angle - .pi / 2
+            light(ray, color: Palette.gold, glow: 2)
+            figure.addChild(ray)
+        }
+        let dot = SKShapeNode(circleOfRadius: 1.8)
+        dot.position = CGPoint(x: 7, y: 76)
+        light(dot, color: Palette.gold, glow: 2)
+        figure.addChild(dot)
+        eye = dot
+        blade(length: 64, color: Palette.gold, at: CGPoint(x: 6, y: 50))
+        let sun = SKShapeNode(circleOfRadius: 5)
+        sun.position = CGPoint(x: 0, y: 64)
+        light(sun, color: Palette.gold, glow: 5)
+        weapon?.addChild(sun)
+    }
+
+    /// Nimue: black and violet, long hair, a red lantern carried low, short throwing blades.
+    private func buildNimue() {
+        leg(x: -5, hipY: 30, length: 30, width: 7)
+        leg(x: 5, hipY: 30, length: 30, width: 7)
+        _ = part(CGPath(roundedRect: CGRect(x: -9, y: 28, width: 18, height: 34), cornerWidth: 5, cornerHeight: 5, transform: nil))
+        let hair = CGMutablePath()
+        hair.addLines(between: [
+            CGPoint(x: -8, y: 78), CGPoint(x: 4, y: 80), CGPoint(x: -4, y: 66), CGPoint(x: -14, y: 40),
+            CGPoint(x: -17, y: 50),
+        ])
+        hair.closeSubpath()
+        _ = part(hair, z: -1)
+        _ = part(CGPath(ellipseIn: CGRect(x: -7, y: 62, width: 17, height: 17), transform: nil), z: 1)
+        let dot = SKShapeNode(circleOfRadius: 1.8)
+        dot.position = CGPoint(x: 6, y: 72)
+        light(dot, color: Palette.violet, glow: 2)
+        figure.addChild(dot)
+        eye = dot
+        let lantern = SKShapeNode(rect: CGRect(x: -3, y: -4, width: 6, height: 8), cornerRadius: 2)
+        lantern.position = CGPoint(x: -12, y: 22)
+        light(lantern, color: Palette.lantern, glow: 5)
+        figure.addChild(lantern)
+        let glow = Effects.glow(color: Palette.lantern, size: 46, alpha: 0.5)
+        glow.position = lantern.position
+        glow.zPosition = 1.5
+        figure.addChild(glow)
+        blade(length: 30, color: Palette.violet, at: CGPoint(x: 6, y: 48))
+    }
+
+    /// Nimue's stand-in: her outline in lantern light, see-through.
+    private func buildDecoy() {
+        buildNimue()
+        for node in bodyParts {
+            node.fillColor = Palette.violet.withAlphaComponent(0.18)
+            node.strokeColor = Palette.violet.withAlphaComponent(0.8)
+        }
+        figure.alpha = 0.75
+    }
+
     /// Blade angles are measured from straight up; negative swings forward.
     private func animateWeapon(_ f: Fighter) {
         guard weapon != nil else { return }
@@ -555,6 +631,8 @@ final class FighterNode: SKNode {
         let sweeps: [(CGFloat, CGFloat)] = switch kind {
         case .caelen: [(0.9, -2.0), (-2.7, 0.2), (1.7, -2.5)]
         case .orion: [(-0.4, -2.2), (-2.6, 0.4)]
+        case .seraphine: [(0.4, -1.9), (-1.57, -1.57)]
+        case .nimue: [(0.6, -1.8), (0.3, -1.9), (1.2, -2.2)]
         default: [(1.1, -2.3)]
         }
         let (from, to) = sweeps[index % sweeps.count]
@@ -568,7 +646,12 @@ final class FighterNode: SKNode {
             weaponPivot.zRotation = from + (to - from) * min(1, t)
             if !arcDrawn {
                 arcDrawn = true
-                drawArc(from: from, to: to, radius: weaponLength)
+                // Seraphine's second strike and all of Nimue's reach out past the weapon: draw how far.
+                if (kind == .seraphine && index == 1) || kind == .nimue {
+                    drawStreak(length: CGFloat(a.reach), y: CGFloat(a.yOffset + a.height / 2), width: kind == .nimue ? 3 : 6)
+                } else {
+                    drawArc(from: from, to: to, radius: weaponLength)
+                }
             }
         case .recovery, .none:
             let t = (frame - CGFloat(a.windup + a.active)) / CGFloat(max(a.recovery, 1))
@@ -576,14 +659,37 @@ final class FighterNode: SKNode {
         }
     }
 
-    private var weaponLength: CGFloat { kind == .caelen ? 62 : (kind == .orion ? 46 : 76) }
+    private var weaponLength: CGFloat {
+        switch kind {
+        case .caelen: 62
+        case .orion: 46
+        case .seraphine: 64
+        case .nimue: 30
+        default: 76
+        }
+    }
+
+    /// A bolt of light or a thrown blade's path, straight out from the body.
+    private func drawStreak(length: CGFloat, y: CGFloat, width: CGFloat) {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 12, y: y))
+        path.addLine(to: CGPoint(x: 12 + length, y: y))
+        let streak = SKShapeNode(path: path)
+        streak.strokeColor = rim
+        streak.lineWidth = width
+        streak.glowWidth = width
+        streak.lineCap = .round
+        streak.zPosition = 5
+        figure.addChild(streak)
+        streak.run(.sequence([.fadeOut(withDuration: 0.18), .removeFromParent()]))
+    }
 
     private func drawArc(from: CGFloat, to: CGFloat, radius: CGFloat) {
         let path = CGMutablePath()
         path.addArc(center: .zero, radius: radius, startAngle: from + .pi / 2, endAngle: to + .pi / 2, clockwise: to < from)
         let arc = SKShapeNode(path: path)
         arc.position = weaponPivot.position
-        arc.strokeColor = kind.team == .hero ? Palette.cyan : Palette.red
+        arc.strokeColor = rim
         arc.lineWidth = 7
         arc.glowWidth = 5
         arc.lineCap = .round
