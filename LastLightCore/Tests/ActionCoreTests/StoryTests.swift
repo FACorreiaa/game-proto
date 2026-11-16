@@ -190,3 +190,31 @@ private func shipped() throws -> StoryLibrary {
         #expect(runner.state.flags["orion"] == "trusted", "\(id)")
     }
 }
+
+@Test func theChapterEndsOnTheLeadThenOrionAnsweringTheirChoice() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        for (choice, words) in [("trusted", "beside you"), ("watched", "stop watching")] {
+            var state = StoryState()
+            state.flags = ["lead": lead.rawValue, "orion": choice]
+            var runner = try #require(StoryRunner(sceneID: "protocol.end", library: story, state: state))
+            #expect(runner.line?.speaker == lead.rawValue.uppercased())
+            runner.advance()
+            #expect(runner.line?.speaker == "ORION")
+            #expect(runner.line?.text.contains(words) == true, "\(lead) \(choice)")
+            runner.advance()
+            #expect(runner.isFinished)
+        }
+    }
+}
+
+@Test func theEndingSceneIsCuedWhenTheProtocolFalls() {
+    var tuning = Tuning()
+    tuning.caelen.maxHP = 100_000
+    var world = World(level: .theProtocol, hero: .caelen, tuning: tuning, seed: 1)
+    var pilot = Autopilot(fights: true)
+    var events: [GameEvent] = []
+    for _ in 0..<(60 * 240) where !world.isOver { events += world.step(pilot.input(for: world)) }
+    #expect(world.isComplete)
+    #expect(events.contains(.scene(id: "protocol.end")))
+}
