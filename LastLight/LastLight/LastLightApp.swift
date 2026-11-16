@@ -16,10 +16,11 @@ struct LastLightApp: App {
 @MainActor
 @Observable
 final class Game {
-    enum Screen {
+    enum Screen: Equatable {
         case title
         case playing
         case paused
+        case results(LevelResult)
     }
 
     enum Panel {
@@ -51,12 +52,28 @@ final class Game {
         scene.apply(settings)
         scene.frozen = screen != .playing
         scene.onPause = { [weak self] in self?.pause() }
+        scene.demoShowsResults = args.contains("-results")
+        scene.onComplete = { [weak self] result in
+            // A moment for the clear sound and the last effects before the screen comes up.
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(1.2))
+                // A closing scene plays first.
+                while self?.story.isActive == true { try? await Task.sleep(for: .seconds(0.2)) }
+                guard let self, self.screen == .playing else { return }
+                if self.scene.demoShowsResults { FileHandle.standardError.write(Data("RESULTS \(result)\n".utf8)) }
+                self.screen = .results(result)
+            }
+        }
         // `-menu paused`, `-menu settings` or `-menu chapters` opens that menu, for checking it by screenshot.
         if let i = args.firstIndex(of: "-menu"), i + 1 < args.count {
             switch args[i + 1] {
             case "paused": screen = .paused
             case "settings": panel = .settings
             case "chapters": panel = .chapters
+            case "results", "chapter":
+                screen = .results(LevelResult(
+                    name: args[i + 1] == "chapter" ? "The Protocol" : "The Machine Hall", index: 2,
+                    isLast: args[i + 1] == "chapter", seconds: 263, defeated: 14, downs: 1, found: 3, hidden: 5))
             default: break
             }
         }
@@ -111,8 +128,27 @@ final class Game {
         resume()
     }
 
+    /// From the results screen: on to the next level.
+    func nextLevel() {
+        scene.advance()
+        screen = .playing
+    }
+
+    /// From the chapter's last results screen: back to the start of the chapter.
+    func replayChapter() {
+        scene.play(levelAt: 0)
+        screen = .playing
+    }
+
+    func finishChapter() {
+        scene.play(levelAt: 0)
+        quitToTitle()
+    }
+
     func quitToTitle() {
         panel = nil
+        // Leaving a results screen still counts the level as done, so Continue goes to the next one.
+        if case .results(let result) = screen, !result.isLast { scene.play(levelAt: result.index + 1) }
         screen = .title
     }
 }

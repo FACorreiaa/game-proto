@@ -18,6 +18,8 @@ public struct Tuning: Sendable {
 
     /// Health lost by falling out of the level; the hero is put back on the last safe ground.
     public var fallDamage = 15.0
+    /// Damage heroes take from enemies is multiplied by this. The difficulty setting: below 1 is easier.
+    public var heroDamageScale = 1.0
     public var checkpointHeal = 30.0
     public var pickupReach = 16.0
     /// A placed enemy notices a hero inside this box around itself.
