@@ -58,6 +58,7 @@ public struct Fighter: Sendable, Identifiable {
     public internal(set) var descending = false
     /// Second scratch counter for brains.
     var aiAux2 = 0
+    var aiAux3 = 0
     /// An attack whose effect the world applies after this frame.
     var pendingEffect: Int?
     var markScale = 1.0
@@ -135,7 +136,11 @@ public struct Fighter: Sendable, Identifiable {
 
     /// True while a frontal hit would be stopped by its shield.
     public var isGuarding: Bool {
-        spec.frontalBlock && (state == .idle || state == .run)
+        guard spec.frontalBlock else { return false }
+        if state == .idle || state == .run { return true }
+        // A duellist keeps its guard up through the windup and the swing; it opens only as it recovers.
+        if spec.guardsWhileSwinging, case .attack = state { return attackPhase != .recovery }
+        return false
     }
 
     /// True while an armoured fighter can be hurt: after its own attack, or staggered by a parry.

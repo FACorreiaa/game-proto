@@ -69,6 +69,7 @@ final class FighterNode: SKNode {
         case .nightWeaver: buildWeaver()
         case .weaverImage: buildWeaverImage()
         case .cinderKing: buildCinderKing()
+        case .lineWarden: buildWarden()
         }
         addGlows()
     }
@@ -228,6 +229,36 @@ final class FighterNode: SKNode {
         plate.zPosition = 4
         figure.addChild(plate)
         shield = plate
+    }
+
+    /// The Line Warden: a tall soldier frame, a tower shield held forward and a long blade. The shield dims when it
+    /// drops its guard, the same as a Forged Soldier's.
+    private func buildWarden() {
+        leg(x: -11, hipY: 52, length: 52, width: 14)
+        leg(x: 11, hipY: 52, length: 52, width: 14)
+        _ = part(CGPath(roundedRect: CGRect(x: -24, y: 50, width: 48, height: 58), cornerWidth: 6, cornerHeight: 6, transform: nil))
+        // Shoulder plates and a narrow helm.
+        _ = part(CGPath(roundedRect: CGRect(x: -30, y: 96, width: 60, height: 14), cornerWidth: 5, cornerHeight: 5, transform: nil), z: 1)
+        _ = part(CGPath(roundedRect: CGRect(x: -10, y: 108, width: 22, height: 24), cornerWidth: 4, cornerHeight: 4, transform: nil), z: 1)
+        let visor = SKShapeNode(rect: CGRect(x: 0, y: 120, width: 12, height: 3))
+        light(visor, color: Palette.red, glow: 4)
+        figure.addChild(visor)
+        eye = visor
+        // A line of red down its chest: the line it keeps.
+        let seam = SKShapeNode(rect: CGRect(x: -1.5, y: 56, width: 3, height: 40))
+        light(seam, color: Palette.red, glow: 2)
+        figure.addChild(seam)
+        blade(length: 96, color: Palette.red, at: CGPoint(x: 6, y: 88))
+        let tower = SKShapeNode(rect: CGRect(x: 22, y: 14, width: 13, height: 104), cornerRadius: 4)
+        tower.fillColor = Palette.body
+        tower.strokeColor = Palette.steel
+        tower.lineWidth = 2.5
+        tower.zPosition = 4
+        let boss = SKShapeNode(rect: CGRect(x: 26, y: 60, width: 5, height: 14), cornerRadius: 2)
+        light(boss, color: Palette.red, glow: 2)
+        tower.addChild(boss)
+        figure.addChild(tower)
+        shield = tower
     }
 
     /// Sentry Core: a floating shell around one red lens.
@@ -831,6 +862,7 @@ final class FighterNode: SKNode {
         case .ratborn: 22
         case .smugglerBrute: 70
         case .cinderKing: 110
+        case .lineWarden: 96
         default: 76
         }
     }

@@ -27,6 +27,7 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
+| DRAFT-007 | 2026-11-16 | The Line Warden, a Chapter 1 mid-boss that is not in the concept art, and the Warden's Gate between the Machine Hall and the Protocol. Its name, its role and the gate lines are drafts. | Bestiary/Foundry, Games/TheLastLight2D, Locations |
 
 ## How to amend
 

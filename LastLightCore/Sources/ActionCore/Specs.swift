@@ -7,7 +7,7 @@ extension FighterKind {
     public var team: Team {
         switch self {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
-        case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol,
+        case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol, .lineWarden,
              .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: .enemy
         }
     }
@@ -26,6 +26,8 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case sentryCore
     case dogmaFrame
     case theProtocol
+    /// Chapter 1's mid-boss: the machine that keeps the line.
+    case lineWarden
     // The Lantern Cities.
     case ratborn
     case lanternGunner
@@ -205,8 +207,12 @@ public struct FighterSpec: Sendable {
     public var hurtInvulnerable = 0
     /// Hits from the front do nothing while it is standing or walking.
     public var frontalBlock = false
+    /// The frontal guard stays up through its own windup and swing, dropping only in recovery.
+    public var guardsWhileSwinging = false
     /// Being hit during its own swing does not interrupt the swing.
     public var poise = false
+    /// Hits never knock it into hitstun; only a parry staggers it.
+    public var unflinching = false
     public var selfDestruct: SelfDestructSpec?
     public var immortal = false
     public var rooted = false

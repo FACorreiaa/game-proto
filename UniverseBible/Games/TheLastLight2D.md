@@ -67,6 +67,21 @@ screen and its chapter-end text (SH-006) follow.
 
 Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards were approved with DEC-012.
 
+## Draft: the Line Warden (DRAFT-007, PROPOSED)
+
+A mid-boss between **The Machine Hall** and **The Protocol** for every lead, in a short room called **The Warden's
+Gate**. It teaches the defence the Protocol later tests: read the guard, get behind it, parry. Each lead speaks as it
+wakes, then Orion names it and says how to beat it, in words that follow the choice made when they met.
+
+**New world claims in this draft, each needing a verdict:**
+
+1. A machine called the **Line Warden** keeps the gate to the Protocol. It is not in the concept art.
+2. Orion knows its name and how it fights.
+3. Caelen: "Something still keeps the gate. It was waiting for whoever woke." (It doesn't say it waited for him.)
+4. Seraphine compares it to a temple guard (a simile, no claim about the Dawnfaith).
+5. Nimue: "Runners went round this gate. There's no round any more." Her runners knew a way past it, and that way
+   is gone.
+
 ## Chapter 2, The Lantern Cities (DEC-013, WORKING)
 
 Chosen by the creator on 2026-11-16: "Lantern Cities … but follow the lore". Lines and claims approved the same day ("LGTM!"). Every lead follows the trade out of the

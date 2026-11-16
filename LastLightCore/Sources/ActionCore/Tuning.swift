@@ -91,6 +91,16 @@ public struct Tuning: Sendable {
     public var weaverFar = 360.0
     public var weaverAttackGap = 100...150
 
+    // The Line Warden.
+    public var wardenAttackGap = 45...80
+    /// Frames it takes to turn round: the time to get behind it.
+    public var wardenTurnDelay = 40
+    /// After it changes phase it turns faster.
+    public var wardenFastTurnDelay = 22
+    public var wardenThrustChance = 0.35
+    /// Frames someone has to stay close behind it before it spins.
+    public var wardenSpinAfter = 50
+
     // The Cinder King.
     public var cinderAttackGap = 60...100
     /// In the last phase it acts this much sooner.
@@ -364,6 +374,36 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Line Warden. A duellist: its guard faces forward, so it is hurt from behind, while it swings, or after a
+    /// parry staggers it. Overdrive: turns faster and calls a Forged Soldier to the line.
+    public var lineWarden: FighterSpec = {
+        var s = FighterSpec(width: 64, height: 132, maxHP: 420, runSpeed: 150)
+        let cut = AttackSpec(windup: 22, active: 5, recovery: 22, damage: 14, reach: 92, height: 100,
+                             knockback: 300, lunge: 90, hitstun: 18, hitStop: 6)
+        let crossCut = AttackSpec(windup: 16, active: 5, recovery: 30, damage: 16, reach: 96, height: 100,
+                                  knockback: 340, lunge: 110, hitstun: 20, hitStop: 6)
+        let thrust = AttackSpec(windup: 44, active: 16, recovery: 52, damage: 18, reach: 40, height: 110,
+                                knockback: 420, lunge: 560, hitstun: 22, hitStop: 7)
+            .with { $0.holdsStill = true }
+        let call = AttackSpec(windup: 40, active: 1, recovery: 50, damage: 0, reach: 0, height: 0,
+                              knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .summon(.forgedSoldier, count: 1) }
+        // Someone close behind it: it spins, the blade reaching round both sides.
+        let spin = AttackSpec(windup: 26, active: 6, recovery: 34, damage: 14, reach: 80, height: 90,
+                              knockback: 340, lunge: 0, hitstun: 18, hitStop: 6)
+            .with { $0.bothSides = true }
+        s.attacks = [cut, crossCut, thrust, call, spin]
+        s.frontalBlock = true
+        s.guardsWhileSwinging = true
+        s.unflinching = true
+        s.poise = true
+        s.phaseThresholds = [0.5]
+        s.boss = true
+        s.wakeDelay = 80
+        s.brain = WardenBrain()
+        return s
+    }()
+
     /// The Cinder King. Offer: a cane and thrown lanterns. Debt: calls Ratborn, who shield him while they live,
     /// and fire bursts from the floor. Price: faster, with a sweep on both sides and wider eruptions.
     public var cinderKing: FighterSpec = {
@@ -410,6 +450,7 @@ public struct Tuning: Sendable {
         case .sentryCore: sentryCore
         case .dogmaFrame: dogmaFrame
         case .theProtocol: theProtocol
+        case .lineWarden: lineWarden
         case .ratborn: ratborn
         case .lanternGunner: lanternGunner
         case .smugglerBrute: smugglerBrute
