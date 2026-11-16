@@ -398,3 +398,21 @@ private func partner(_ world: World) -> Fighter {
         #expect(opening.scenes.contains { $0.cue == .partnerJoins }, "\(opening.name)")
     }
 }
+
+// MARK: Chapters
+
+@Test(arguments: [FighterKind.caelen, .seraphine, .nimue])
+func chapterTwoCanBeFinishedWhileFightingWithEachLead(_ lead: FighterKind) {
+    for level in Chapter.lanternCities.levels(for: lead) {
+        for seed in 1...3 {
+            let result = traverse(level, seed: UInt64(seed), frames: 60 * 300, fights: true, lead: lead)
+            #expect(result.world.isComplete, "\(level.name) as \(lead) seed \(seed) stopped at x \(hero(result.world).pos.x)")
+        }
+    }
+}
+
+@Test func chaptersHaveUniqueIDsAndEveryLevelBelongsToOne() {
+    #expect(Set(Chapter.all.map(\.id)).count == Chapter.all.count)
+    let used = Set(Chapter.all.flatMap { c in [FighterKind.caelen, .seraphine, .nimue].flatMap { c.levels(for: $0).map(\.name) } })
+    #expect(used == Set(Level.all.map(\.name)))
+}

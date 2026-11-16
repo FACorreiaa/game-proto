@@ -13,6 +13,7 @@ The first game. Stage-based 2D action-platformer for iPhone, iPad and Mac. The c
 | Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Chosen at New Game by faction. Each has her own opening (DRAFT-005). Kits are gameplay, not canon: Seraphine's **Light Listens** heals, Nimue's **Lantern Trick** leaves a decoy |
 | The AI's goal | WORKING (WC-010) | Implied: a line where the others never woke |
 | The Eclipse Engine | WORKING (ART); details UNKNOWN | Hook at the end of Chapter 1 (DEC-011) |
+| The Lantern Cities, their enemies, The Cinder King | WORKING (ART) | Chapter 2 region; the Cinder King's fight is next |
 
 ## Local canon this game has shipped
 
@@ -65,3 +66,32 @@ when they met: beside (`trusted`), ahead (`watched`), or a plain line for saves 
 screen and its chapter-end text (SH-006) follow.
 
 Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards are drafts.
+
+## Draft: Chapter 2, The Lantern Cities (DRAFT-006, PROPOSED)
+
+Chosen by the creator on 2026-11-16: "Lantern Cities … but follow the lore". Every lead follows the trade out of the
+Foundry into the Cities. Levels: **The Ember Market**, **The Lantern Roofs**, **The Cinder Docks**. The Cinder King's
+fight is the next piece of work.
+
+How the drafts follow the bible:
+
+- The thread is the working one in `Factions/Relations.md`: someone in the Cities trades with the Foundry's
+  machines, and that is why Nimue's routes exist.
+- The Cities are a home, not a lawless backdrop. Nimue says half the market is honest; Orion says the Ratborn
+  "are not machines … they are hungry".
+- Who governs the Cities stays UNKNOWN (open question 7). No line says who rules.
+- The Night Weaver's images are shown, never explained (magic or trickery stays open).
+- The Cinder King is only mentioned, as someone people fear and pay. His limits stay UNKNOWN.
+
+**New world claims in these drafts, each needing a verdict:**
+
+1. Foundry crates are sold on market stalls in the Cities.
+2. In the Cities, light is something you buy (Orion to Seraphine).
+3. Seraphine's order calls the Cities godless.
+4. The Ratborn are "drain kids, grown up hungry" (Nimue).
+5. Night Weavers keep the roofs.
+6. The roofs are the only road no one charges for.
+7. Dawnfaith sanctuary bread is resold on the docks at three times its cost.
+8. Every crate on the Cinder Docks pays the Cinder King "once in coin, once in fear" (Nimue's view).
+9. Someone in the Cities sold Nimue's runners to the line (Nimue's belief).
+10. Chapter-end line: "The docks are quiet. Every road out of here still runs through the Cinder King."

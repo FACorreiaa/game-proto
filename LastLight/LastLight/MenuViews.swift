@@ -121,7 +121,7 @@ private struct TitleMenu: View {
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                Text("CHAPTER 1  ·  THE FOUNDRY")
+                Text("CHAPTER \(game.scene.currentChapter.number)  ·  \(game.scene.currentChapter.title.uppercased())")
                     .font(.system(size: 13, weight: .heavy))
                     .tracking(3)
                     .foregroundStyle(cyan)
@@ -223,9 +223,18 @@ private struct ChapterPanel: View {
         PanelFrame(title: "CHAPTERS", close: { game.panel = nil }) {
             ScrollView {
                 VStack(spacing: 8) {
-                    ForEach(Array(game.levelNames.enumerated()), id: \.offset) { index, name in
-                        row(number: "\(index + 1)", name: name, note: index == 0 ? "opening" : nil) {
-                            game.play(chapter: index)
+                    ForEach(game.scene.chapterList, id: \.chapter.id) { entry in
+                        Text("CHAPTER \(entry.chapter.number)  ·  \(entry.chapter.title.uppercased())")
+                            .font(.system(size: 11, weight: .heavy))
+                            .tracking(2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, entry.start == 0 ? 0 : 6)
+                        ForEach(Array(entry.names.enumerated()), id: \.offset) { offset, name in
+                            row(number: "\(offset + 1)", name: name,
+                                note: entry.start == 0 && offset == 0 ? "opening" : nil) {
+                                game.play(chapter: entry.start + offset)
+                            }
                         }
                     }
                     row(number: "·", name: "Training Room", note: "waves") { game.trainingRoom() }
@@ -268,17 +277,17 @@ private struct ResultsScreen: View {
     var body: some View {
         HStack(alignment: .center, spacing: 40) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(result.isLast ? "CHAPTER 1 COMPLETE" : "LEVEL CLEAR")
+                Text(result.isLast ? "CHAPTER \(result.chapterNumber) COMPLETE" : "LEVEL CLEAR")
                     .font(.system(size: 13, weight: .heavy))
                     .tracking(3)
                     .foregroundStyle(result.isLast ? gold : cyan)
-                Text(result.isLast ? "The Foundry" : result.name)
+                Text(result.isLast ? result.chapterTitle : result.name)
                     .font(.system(size: 34, weight: .black))
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                 if result.isLast {
-                    Text("The Protocol is silent. It was only a voice. The Eclipse Engine has not stopped.")
+                    Text(result.ending ?? "")
                         .font(.system(size: 14))
                         .foregroundStyle(.white.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
@@ -295,7 +304,11 @@ private struct ResultsScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(spacing: 10) {
-                if result.isLast {
+                if result.isLast, !result.isFinal {
+                    MenuButton(title: "NEXT CHAPTER", primary: true, shortcut: .return) { game.nextLevel() }
+                    MenuButton(title: "PLAY AGAIN") { game.replayChapter() }
+                    MenuButton(title: "BACK TO TITLE") { game.finishChapter() }
+                } else if result.isLast {
                     MenuButton(title: "BACK TO TITLE", primary: true, shortcut: .return) { game.finishChapter() }
                     MenuButton(title: "PLAY AGAIN") { game.replayChapter() }
                 } else {

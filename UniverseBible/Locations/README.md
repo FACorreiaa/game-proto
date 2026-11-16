@@ -19,9 +19,16 @@ What the line was making, and why Caelen was on it, is **UNKNOWN**.
 
 Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hospitals (PROPOSED).
 
-## The Lantern Cities (ART only)
+## The Lantern Cities (ART; places PROPOSED)
 
 Ember and amber, coal black, copper, fabric awnings, hanging lanterns, rooftops, markets, smuggling routes.
+
+| Place | Status | Notes |
+|---|---|---|
+| The Ember Market | PROPOSED (DRAFT-006) | A market street under awnings, crossed by a canal |
+| The Lantern Roofs | PROPOSED (DRAFT-006) | Rooftops, cargo lines, chimneys; Night Weavers |
+| The Cinder Docks | PROPOSED (DRAFT-006) | Warehouses and furnace vents; where the Cities' trade passes |
+| The Undercroft | PROPOSED (DRAFT-005) | Nimue's route under the Foundry |
 
 ## The Dimmed (name LOCKED, LC-006; everything else PROPOSED)
 

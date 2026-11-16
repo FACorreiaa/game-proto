@@ -1,7 +1,20 @@
-/// A column of light called down by a boss. It warns, then burns for a few frames, then is gone.
+/// What a strike looks like and what it is.
+public enum StrikeKind: String, Sendable, Equatable {
+    /// A column of light called down by The Protocol.
+    case light
+    /// A thrown lantern burning on the ground.
+    case fire
+    /// A Night Weaver's snare: it catches and slows.
+    case snare
+}
+
+/// Something that warns, then is live for a few frames, then is gone: a column of light, a burning patch, a snare.
 /// Strikes hurt heroes only, and each hero at most once.
 public struct Strike: Sendable, Equatable {
+    public var kind: StrikeKind = .light
     public var box: Box
+    /// Frames a hero it catches moves at reduced speed.
+    public var slowFrames = 0
     /// Frames of warning before it burns.
     public var warning: Int
     public var active: Int

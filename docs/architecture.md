@@ -127,8 +127,10 @@ keeps verdicts on all art. The planned sources are Blender and, with approval, H
 
 ## Pillar 4: DLC-ready content manifests
 
-**Now.** Content is compiled in. `Level.all` lists every level once; `Level.chapter1(for:)` is one lead's route (her
-opening from `Faction`, then the shared levels).
+**Now.** Content is compiled in. A `Chapter` (`Chapter.swift`) is the pack in all but name: an ID that also names its
+story file (`chapter1.json`, `chapter2.json`), a number, a title, its ending line, and its levels for a given lead.
+`Chapter.all` is the order of play; the run is every chapter's route for the chosen lead. `Level.all` lists every
+level once.
 
 **Follow:**
 
@@ -137,7 +139,7 @@ opening from `Faction`, then the shared levels).
 - **Put new content in places a pack could own.** Use one file per level group and one story file per chapter,
   and don't let one chapter's code reach into another's.
 - **Save data names content by ID, not by array position.** Today the current level is saved as an index
-  (`progress.level`, a position in the lead's route, with `progress.lead`); that's fine for one chapter. Switch it to a level ID when the second chapter or pack arrives,
+  (`progress.levelName` with `progress.lead`). Since Chapter 2 it is saved by the level's name, its ID, so a new chapter never moves a save. Switch it to a level ID when the second chapter or pack arrives,
   before it ships, so old saves migrate once.
 - **Owned content is decided by the app**, never by data inside a pack. When paid content exists, StoreKit
   entitlements decide what loads.
@@ -165,8 +167,8 @@ downloads (On-Demand Resources or Background Assets) is a separate later step.
 
 | Move | Trigger |
 |---|---|
-| Manifest file and loader; `Level.all` built from manifests | Work starts on a second chapter or pack |
-| Saves keyed by content ID | Same moment, before that content ships |
+| Manifest file and loader; `Chapter.all` built from manifests | A pack must load without an app update. Chapter 2 got a `Chapter` type instead, with no loader |
+| Saves keyed by content ID | Done with Chapter 2: the level's name is its ID |
 | Entitlements (StoreKit) | The owner decides to sell content (monetization is out of the first release) |
 | Downloaded content | The app size or a pack's size makes bundling a problem |
 

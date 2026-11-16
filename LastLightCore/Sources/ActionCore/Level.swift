@@ -357,11 +357,157 @@ extension Level {
         return l
     }()
 
-    /// Every level once: the three openings, then the levels all three share.
-    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .theProtocol]
+    /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
+    public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .theProtocol,
+                                      .emberMarket, .lanternRoofs, .cinderDocks]
 
     /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
     public static func chapter1(for lead: FighterKind) -> [Level] {
         [Faction(lead: lead).opening, .foundryYard, .machineHall, .theProtocol]
     }
+}
+
+// MARK: Chapter 2: The Lantern Cities
+
+extension Level {
+    /// The way into the Cities: a market street under awnings. Ratborn one at a time, then in pairs, and the first
+    /// Lantern Gunner. A secret up on the awnings.
+    public static let emberMarket: Level = {
+        var l = Level(name: "The Ember Market", width: 4900, start: Vec2(120, 0), exitX: 4800)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("market.arrive", on: .start))
+
+        l.scenes.append(SceneTrigger("market.ratborn", on: .reach(700)))
+
+        l.ground(-200, 1300)
+        // Awnings: one-way, so they can be jumped up through.
+        l.ledge(500, 640, top: 95)
+        l.ledge(700, 840, top: 180)
+        l.pickups.append(Pickup(id: 1, at: Vec2(770, 225)))
+        l.enemies.append(Placement(.ratborn, x: 950))
+
+        // A gap between stalls.
+        l.ground(1400, 2500)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1360, 90)))
+        l.checkpoints.append(Vec2(1500, 0))
+        l.enemies.append(Placement(.ratborn, x: 1750))
+        l.enemies.append(Placement(.ratborn, x: 1830))
+        l.enemies.append(Placement(.lanternGunner, x: 2300))
+        // Up the awnings to the secret.
+        l.ledge(1980, 2100, top: 90)
+        l.ledge(2150, 2270, top: 175)
+        l.ledge(2320, 2440, top: 260)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2380, 305), secret: true))
+
+        // A step up onto the square, and down again.
+        l.ground(2500, 2620, top: 70)
+        l.ground(2620, 3900)
+        l.checkpoints.append(Vec2(2700, 0))
+        l.enemies.append(Placement(.ratborn, x: 3000))
+        l.enemies.append(Placement(.ratborn, x: 3080))
+        l.enemies.append(Placement(.lanternGunner, x: 3350))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3200, 40)))
+
+        // The canal, crossed on a moving barge.
+        l.ledge(3920, 4040, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(4300, 5100)
+        l.checkpoints.append(Vec2(4370, 0))
+        // Only a Gunner past the canal, and out of throwing range of the landing.
+        l.enemies.append(Placement(.lanternGunner, x: 4760))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4650, 40)))
+        return l
+    }()
+
+    /// Over the rooftops: gaps, a cargo line to ride, a lift, and the first Night Weaver.
+    public static let lanternRoofs: Level = {
+        var l = Level(name: "The Lantern Roofs", width: 5300, start: Vec2(120, 0), exitX: 5050)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("roofs.arrive", on: .start))
+
+        l.ground(-200, 900)
+        l.pickups.append(Pickup(id: 1, at: Vec2(300, 40)))
+        // Roof to roof, then up.
+        l.ground(1000, 1700)
+        l.checkpoints.append(Vec2(1060, 0))
+        l.enemies.append(Placement(.ratborn, x: 1450))
+        l.ground(1620, 1700, top: 70)
+        l.ground(1700, 2500, top: 150)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1660, 115)))
+        // The first Night Weaver waits on the high roof, away from the edge.
+        l.enemies.append(Placement(.nightWeaver, x: 2250, y: 150))
+
+        // A cargo line across the alley.
+        l.ledge(2520, 2640, top: 150, travel: Vec2(300, 0), period: 300)
+        l.ground(2950, 3700, top: 100)
+        l.checkpoints.append(Vec2(3020, 100))
+        l.enemies.append(Placement(.ratborn, x: 3200, y: 100))
+        l.enemies.append(Placement(.lanternGunner, x: 3550, y: 100))
+        // Chimneys to a secret.
+        l.ledge(3100, 3220, top: 185)
+        l.ledge(3270, 3390, top: 270)
+        l.pickups.append(Pickup(id: 3, at: Vec2(3330, 315), secret: true))
+
+        // Down to a lower roof.
+        l.ground(3700, 4400)
+        l.pickups.append(Pickup(id: 4, at: Vec2(3760, 40)))
+        l.checkpoints.append(Vec2(3800, 0))
+        l.enemies.append(Placement(.nightWeaver, x: 4150))
+        l.enemies.append(Placement(.ratborn, x: 4250))
+
+        // A lift up to the high roof and the stairs down to the docks.
+        l.ledge(4400, 4500, top: 0, travel: Vec2(0, 170), period: 240)
+        l.ground(4510, 5500, top: 150)
+        l.enemies.append(Placement(.lanternGunner, x: 4850, y: 150))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4950, 195)))
+        return l
+    }()
+
+    /// The docks: furnace vents that flare in turn, a barge, and the Smuggler Brute.
+    public static let cinderDocks: Level = {
+        var l = Level(name: "The Cinder Docks", width: 5700, start: Vec2(120, 0), exitX: 5450)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("docks.arrive", on: .start))
+
+        l.ground(-200, 1200)
+        l.pickups.append(Pickup(id: 1, at: Vec2(350, 40)))
+        // A furnace vent: wait for it, or dodge through.
+        l.hazards.append(Hazard(Box(minX: 700, minY: 0, maxX: 732, maxY: 150), damage: 12, period: 150, onFrames: 70))
+        l.enemies.append(Placement(.ratborn, x: 950))
+
+        // A barge across the slip.
+        l.ledge(1220, 1340, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(1600, 2700)
+        l.checkpoints.append(Vec2(1670, 0))
+        // The first Smuggler Brute, with room to fight it.
+        l.enemies.append(Placement(.smugglerBrute, x: 2000))
+        l.enemies.append(Placement(.ratborn, x: 2200))
+        l.enemies.append(Placement(.lanternGunner, x: 2350))
+        l.pickups.append(Pickup(id: 2, at: Vec2(1800, 40)))
+        // Crates up to a secret.
+        l.ground(2400, 2520, top: 80)
+        l.ledge(2560, 2680, top: 165)
+        l.ledge(2730, 2850, top: 250)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2790, 295), secret: true))
+
+        // The warehouse row: two vents that take turns.
+        l.ground(2800, 3900)
+        l.checkpoints.append(Vec2(3000, 0))
+        l.hazards.append(Hazard(Box(minX: 3100, minY: 0, maxX: 3132, maxY: 150), damage: 12, period: 160, onFrames: 80))
+        l.hazards.append(Hazard(Box(minX: 3220, minY: 0, maxX: 3252, maxY: 150), damage: 12, period: 160, onFrames: 80,
+                                phase: 80))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3176, 40)))
+        l.enemies.append(Placement(.smugglerBrute, x: 3500))
+        l.enemies.append(Placement(.nightWeaver, x: 3720))
+
+        // The last pier.
+        l.ground(3900, 3980, top: 70)
+        l.ground(3980, 5900)
+        l.checkpoints.append(Vec2(4200, 0))
+        l.enemies.append(Placement(.ratborn, x: 4550))
+        l.enemies.append(Placement(.ratborn, x: 4620))
+        l.enemies.append(Placement(.smugglerBrute, x: 4700))
+        l.enemies.append(Placement(.lanternGunner, x: 4900))
+        l.pickups.append(Pickup(id: 5, at: Vec2(5200, 40)))
+        return l
+    }()
 }

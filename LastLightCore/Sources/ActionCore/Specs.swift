@@ -7,7 +7,8 @@ extension FighterKind {
     public var team: Team {
         switch self {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
-        case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol: .enemy
+        case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol,
+             .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage: .enemy
         }
     }
 }
@@ -25,6 +26,13 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case sentryCore
     case dogmaFrame
     case theProtocol
+    // The Lantern Cities.
+    case ratborn
+    case lanternGunner
+    case smugglerBrute
+    case nightWeaver
+    /// One of a Night Weaver's copies of itself: one hit breaks it, and it fades on its own.
+    case weaverImage
 }
 
 /// What an attack does when its active frames begin.
@@ -35,6 +43,35 @@ public enum AttackEffect: Sendable, Equatable {
     case summon(FighterKind, count: Int)
     /// Calls down columns of light: one over each hero, the rest spread over the room.
     case rain(columns: Int, width: Double, warning: Int, active: Int, damage: Double)
+    /// Throws something that lands under the target: a burning patch or a snare.
+    case lob(Lob)
+}
+
+/// What a thrown thing leaves on the ground where it lands. It warns, then stays live for `active` frames and
+/// catches each hero at most once.
+public struct Lob: Sendable, Equatable {
+    public var kind: StrikeKind
+    public var width: Double
+    public var height: Double
+    public var warning: Int
+    public var active: Int
+    public var damage: Double
+    /// Frames a hero it catches moves at reduced speed.
+    public var slowFrames: Int
+    /// It lands under the target when the target is this close; otherwise this far ahead.
+    public var range: Double
+
+    public init(_ kind: StrikeKind, width: Double, height: Double, warning: Int, active: Int, damage: Double,
+                slowFrames: Int = 0, range: Double) {
+        self.kind = kind
+        self.width = width
+        self.height = height
+        self.warning = warning
+        self.active = active
+        self.damage = damage
+        self.slowFrames = slowFrames
+        self.range = range
+    }
 }
 
 /// One swing. All durations are in frames at 60 per second.
@@ -61,6 +98,13 @@ public struct AttackSpec: Sendable, Equatable {
     public var effect = AttackEffect.strike
 
     public var total: Int { windup + active + recovery }
+
+    /// A copy with some fields changed, for specs written as literals.
+    public func with(_ change: (inout AttackSpec) -> Void) -> AttackSpec {
+        var copy = self
+        change(&copy)
+        return copy
+    }
     /// First frame on which a buffered attack press chains into the next swing.
     public var chainFrom: Int { windup + 2 }
 
@@ -165,6 +209,10 @@ public struct FighterSpec: Sendable {
     public var special: SpecialSpec?
     /// A stand-in, not a person: it can't be controlled, picks nothing up and never ends the game by falling.
     public var isDecoy = false
+    /// Frames it lasts after appearing before it fades by itself. Zero means it stays.
+    public var lifetime = 0
+    /// Its brain chooses which attack to use next, instead of always opening with the first.
+    public var choosesAttacks = false
     /// Floats at the height it was placed at and ignores gravity while it lives.
     public var hovers = false
     /// Machines this close to it cannot be hurt while it lives. Zero means it shields nobody.

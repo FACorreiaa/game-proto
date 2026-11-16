@@ -13,9 +13,15 @@ final class StoryPresenter {
     private let saveURL: URL
 
     init() {
-        let file = Bundle.main.url(forResource: "chapter1", withExtension: "json")
-            ?? Bundle.main.url(forResource: "chapter1", withExtension: "json", subdirectory: "Story")
-        library = file.flatMap { try? Data(contentsOf: $0) }.flatMap { try? StoryLibrary(json: $0) } ?? StoryLibrary()
+        // One story file per chapter, named by the chapter's ID.
+        var scenes: [String: StoryScene] = [:]
+        for chapter in Chapter.all {
+            let file = Bundle.main.url(forResource: chapter.id, withExtension: "json")
+                ?? Bundle.main.url(forResource: chapter.id, withExtension: "json", subdirectory: "Story")
+            guard let library = file.flatMap({ try? Data(contentsOf: $0) }).flatMap({ try? StoryLibrary(json: $0) }) else { continue }
+            scenes.merge(library.scenes) { first, _ in first }
+        }
+        library = StoryLibrary(scenes: scenes)
 
         let folder = (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory).appendingPathComponent("LastLight", isDirectory: true)

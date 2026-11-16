@@ -72,6 +72,24 @@ public struct Tuning: Sendable {
     public var protocolLandOpen = 150
     /// Machines it summons are capped at this many alive at once.
     public var protocolMaxMinions = 2
+    /// How many of one summoned kind an ordinary enemy keeps alive near it.
+    public var maxSummoned = 2
+
+    // Lantern Cities enemies.
+    public var ratbornAttackGap = 50...90
+    /// Frames a Ratborn backs off after it bites.
+    public var ratbornRetreat = 30...70
+    /// Chance a Ratborn breaks off its approach for a moment, so it's never a straight line in.
+    public var ratbornFeintChance = 0.012
+    public var gunnerNear = 220.0
+    public var gunnerFar = 380.0
+    public var gunnerAttackGap = 110...160
+    public var bruteAttackGap = 70...110
+    public var bruteSlamChance = 0.45
+    public var bruteTurnDelay = 20
+    public var weaverNear = 200.0
+    public var weaverFar = 360.0
+    public var weaverAttackGap = 100...150
     /// Frames it needs to turn around, which is the time a hero behind it has.
     public var protocolTurnDelay = 26
     /// How often it slams a hero standing close, rather than charging or sending a surge.
@@ -264,6 +282,77 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    // MARK: The Lantern Cities
+
+    /// Ratborn: small, quick and erratic. Darts in, bites, backs off.
+    public var ratborn: FighterSpec = {
+        var s = FighterSpec(width: 30, height: 58, maxHP: 22, runSpeed: 270)
+        s.jumpSpeed = 560
+        s.attacks = [
+            AttackSpec(windup: 10, active: 3, recovery: 12, damage: 6, reach: 30, height: 40,
+                       knockback: 120, lunge: 230, hitstun: 12, hitStop: 3),
+        ]
+        s.brain = RatbornBrain()
+        return s
+    }()
+
+    /// Lantern Gunner: keeps its distance and throws lanterns that leave the ground burning.
+    public var lanternGunner: FighterSpec = {
+        var s = FighterSpec(width: 36, height: 80, maxHP: 40, runSpeed: 150)
+        s.attacks = [
+            AttackSpec(windup: 30, active: 2, recovery: 40, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .lob(Lob(.fire, width: 84, height: 26, warning: 44, active: 70, damage: 10, range: 420)) },
+        ]
+        s.brain = GunnerBrain()
+        return s
+    }()
+
+    /// Smuggler Brute: a wall of health. Its swing isn't stopped by being hit, and its slam hits both sides.
+    public var smugglerBrute: FighterSpec = {
+        var s = FighterSpec(width: 60, height: 104, maxHP: 170, runSpeed: 120)
+        s.attacks = [
+            AttackSpec(windup: 22, active: 5, recovery: 30, damage: 16, reach: 70, height: 80,
+                       knockback: 300, lunge: 60, hitstun: 18, hitStop: 6),
+            AttackSpec(windup: 46, active: 6, recovery: 50, damage: 22, reach: 120, height: 50, yOffset: 0,
+                       knockback: 380, lunge: 0, hitstun: 24, hitStop: 8)
+                .with { $0.bothSides = true },
+        ]
+        s.poise = true
+        s.choosesAttacks = true
+        s.brain = BruteBrain()
+        return s
+    }()
+
+    /// Night Weaver: stays back, sends copies of itself in, and lays snares where the hero will walk.
+    public var nightWeaver: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 88, maxHP: 70, runSpeed: 210)
+        s.attacks = [
+            AttackSpec(windup: 36, active: 2, recovery: 40, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .summon(.weaverImage, count: 2) },
+            AttackSpec(windup: 24, active: 2, recovery: 36, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .lob(Lob(.snare, width: 70, height: 14, warning: 30, active: 240, damage: 4,
+                                             slowFrames: 90, range: 380)) },
+        ]
+        s.choosesAttacks = true
+        s.brain = WeaverBrain()
+        return s
+    }()
+
+    /// A Night Weaver's image: looks like the Weaver, breaks in one hit, hits lightly, and fades in six seconds.
+    public var weaverImage: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 88, maxHP: 1, runSpeed: 230)
+        s.attacks = [
+            AttackSpec(windup: 14, active: 3, recovery: 16, damage: 3, reach: 40, height: 60,
+                       knockback: 60, lunge: 120, hitstun: 8, hitStop: 2),
+        ]
+        s.lifetime = 360
+        s.brain = DroneBrain()
+        return s
+    }()
+
     public init() {}
 
     public func spec(for kind: FighterKind) -> FighterSpec {
@@ -279,6 +368,11 @@ public struct Tuning: Sendable {
         case .sentryCore: sentryCore
         case .dogmaFrame: dogmaFrame
         case .theProtocol: theProtocol
+        case .ratborn: ratborn
+        case .lanternGunner: lanternGunner
+        case .smugglerBrute: smugglerBrute
+        case .nightWeaver: nightWeaver
+        case .weaverImage: weaverImage
         }
     }
 }
