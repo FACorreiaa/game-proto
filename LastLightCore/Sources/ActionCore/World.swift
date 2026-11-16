@@ -605,6 +605,29 @@ public struct World: Sendable {
                     strike.kind = .fire
                     strikes.append(strike)
                 }
+            case .mend(let amount, let range):
+                for t in fighters.indices where t != i && fighters[t].team == me.team && fighters[t].isAlive
+                    && !fighters[t].spec.immortal && abs(fighters[t].pos.x - me.pos.x) <= range
+                    && abs(fighters[t].pos.y - me.pos.y) <= 220 {
+                    let gained = min(amount, fighters[t].spec.maxHP - fighters[t].hp)
+                    guard gained > 0 else { continue }
+                    fighters[t].hp += gained
+                    events.append(.healed(id: fighters[t].id, amount: gained))
+                }
+            case .flare(let radius, let daze):
+                let centre = Vec2(me.pos.x, me.pos.y + me.spec.height / 2)
+                events.append(.flared(id: me.id, at: centre, radius: radius))
+                for t in fighters.indices where fighters[t].team != me.team && fighters[t].isAlive
+                    && !fighters[t].spec.isDecoy && !fighters[t].isDodgeInvulnerable {
+                    let h = fighters[t]
+                    let dx = me.pos.x - h.pos.x
+                    let dy = centre.y - (h.pos.y + h.spec.height / 2)
+                    // Looking at it: facing toward it, or standing right on it.
+                    guard dx * dx + dy * dy <= radius * radius, dx * h.facing > 0 || abs(dx) < 8 else { continue }
+                    fighters[t].vel.x = 0
+                    fighters[t].enter(.hitstun, duration: daze)
+                    events.append(.dazed(id: h.id))
+                }
             case .rain(let columns, let width, let warning, let active, let damage):
                 var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
                 var tries = 0
@@ -820,6 +843,11 @@ public struct World: Sendable {
         let fromFront = (attacker.pos.x - target.pos.x) * target.facing >= 0
         if !target.isOpen || (target.isGuarding && fromFront) || isWarded(target.id) {
             events.append(.blocked(attacker: attacker.id, target: target.id, at: contact))
+            if let r = target.spec.riposte, target.isGuarding, fromFront, target.isActionable {
+                var g = fighters[t]
+                startAttack(&g, r, .neutral, &events)
+                fighters[t] = g
+            }
             return
         }
 

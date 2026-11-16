@@ -8,7 +8,8 @@ extension FighterKind {
         switch self {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol, .lineWarden,
-             .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: .enemy
+             .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing,
+             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple: .enemy
         }
     }
 }
@@ -37,6 +38,11 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case weaverImage
     /// The Lantern Cities' boss.
     case cinderKing
+    // The Dawnfaith.
+    case zealot
+    case radiantAcolyte
+    case solarGuard
+    case haloDisciple
 }
 
 /// What an attack does when its active frames begin.
@@ -51,6 +57,10 @@ public enum AttackEffect: Sendable, Equatable {
     case lob(Lob)
     /// Fire bursts up from the floor: one column under each hero, the rest spread over the room.
     case eruption(columns: Int, width: Double, height: Double, warning: Int, active: Int, damage: Double)
+    /// Restores health to its own side within range, the attacker excepted.
+    case mend(amount: Double, range: Double)
+    /// A burst of light. Anyone within the radius who is facing it, and not dodging, is dazed for a while.
+    case flare(radius: Double, daze: Int)
 }
 
 /// What a thrown thing leaves on the ground where it lands. It warns, then stays live for `active` frames and
@@ -233,6 +243,8 @@ public struct FighterSpec: Sendable {
     public var flightPhase = 0
     /// While any fighter of this kind lives nearby, hits on it do nothing.
     public var shieldedBy: FighterKind?
+    /// The attack it answers with at once when its frontal guard stops a hit.
+    public var riposte: Int?
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.

@@ -20,6 +20,7 @@ decision are listed separately.
 | DEC-011 | 2026-11-16 | CF-006, option B, chosen by Claude on the creator's delegation ("you decide"): the chapter-end line no longer says the Eclipse Engine is "still turning". New line: "The Protocol is silent. It was only a voice. The Eclipse Engine has not stopped." The Engine's physical form stays UNKNOWN. | WORKING (wording is the creator's verdict) | CANON, Bestiary/EclipseEngine, Games/TheLastLight2D, game text |
 | DEC-012 | 2026-11-16 | DRAFT-005 approved: the three openings, the faction pick and their nine world claims (Sun Gauges, behind the Protocol, Orion cannot lie, Caelen's familiarity, runners, the Chapter 1 ending line). Creator: "LGTM!" | WORKING | CANON (WC-012 to WC-015, WC-019), Games/TheLastLight2D, Characters/Orion, Caelen, Nimue, Locations |
 | DEC-013 | 2026-11-16 | DRAFT-006 approved: Chapter 2, the Lantern Cities and the Cinder King, and their sixteen world claims. Creator: "LGTM!" | WORKING | CANON (WC-016 to WC-019), Games/TheLastLight2D, Bestiary/LanternCities, Locations |
+| DEC-014 | 2026-11-16 | DRAFT-007 approved: the Line Warden keeps the Warden's Gate before the Protocol; Orion knows it; the three lead lines, including Nimue's that her runners once went round the gate. Creator: "The five Line Warden claims: LGTM". | WORKING | CANON (WC-020), Bestiary/Foundry, Games/TheLastLight2D, Locations |
 
 ## Drafts awaiting a decision
 
@@ -27,7 +28,7 @@ decision are listed separately.
 |---|---|---|---|
 | DRAFT-002 | 2026-11-16 | Faction theories: Cascade Hypothesis, the Severance, the Stolen Light. | COLLAPSE_MYSTERY, Factions/* |
 | DRAFT-004 | 2026-11-15 | Cast sheet: backstories, Jax's new name, the Last Oracle title clash. | Characters/* |
-| DRAFT-007 | 2026-11-16 | The Line Warden, a Chapter 1 mid-boss that is not in the concept art, and the Warden's Gate between the Machine Hall and the Protocol. Its name, its role and the gate lines are drafts. | Bestiary/Foundry, Games/TheLastLight2D, Locations |
+| DRAFT-008 | 2026-11-16 | Chapter 3, The Dawnfaith: three levels, enemy behaviour, lead-aware lines and a placeholder chapter-end line until the Last Oracle's fight. Every line and claim is a draft. | Games/TheLastLight2D, Bestiary/Dawnfaith, Locations |
 
 ## How to amend
 

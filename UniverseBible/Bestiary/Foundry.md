@@ -9,9 +9,9 @@ Names, classes and broad behaviour are **ART**. Detailed behaviour, motives and 
 | Sentry Core | Elite | Ranged control, precise beams; debuffs or disrupts the battlefield | Hovers at range; its beam slows heroes |
 | Dogma Frame | Elite | Shielding and support; purifies debuffs and strengthens nearby allies | Projects a ward that makes nearby machines immune |
 
-## Mid-boss: The Line Warden (PROPOSED, DRAFT-007)
+## Mid-boss: The Line Warden (WORKING, DEC-014)
 
-**Not in the concept art.** A tall soldier frame with a tower shield and a long blade that keeps the gate between the
+**Not in the concept art; approved by the creator.** A tall soldier frame with a tower shield and a long blade that keeps the gate between the
 Machine Hall and the Protocol. Orion knows it by name. Whether it is a Forged Soldier pattern, a one-off, or one of
 many is UNKNOWN.
 

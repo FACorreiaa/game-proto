@@ -2,12 +2,12 @@
 
 Names, classes and broad behaviour are **ART**. Everything deeper is **PROPOSED**.
 
-| Enemy | Class | From the art |
-|---|---|---|
-| Zealot | Common | Aggressive, devoted warrior |
-| Radiant Acolyte | Common | Healing and light magic; empowers allies |
-| Solar Guard | Elite | Heavy armour; protects allies and counters attacks |
-| Halo Disciple | Elite | Aerial mobility and blinding light |
+| Enemy | Class | From the art | In the 2D game (gameplay, not canon) |
+|---|---|---|---|
+| Zealot | Common | Aggressive, devoted warrior | Rushes in with a three-cut flurry; presses harder when hurt |
+| Radiant Acolyte | Common | Healing and light magic; empowers allies | Stays back; mends hurt allies, otherwise calls light down on a hero |
+| Solar Guard | Elite | Heavy armour; protects allies and counters attacks | Shield held forward; a blow on the shield brings an instant bash |
+| Halo Disciple | Elite | Aerial mobility and blinding light | Floats above the fight; its flare dazes anyone facing it, so turn your back |
 
 ## Boss: The Last Oracle (ART)
 

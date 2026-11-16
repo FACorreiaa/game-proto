@@ -1,0 +1,137 @@
+{
+  "scenes": {
+    "road.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Dawnfaith land. Their seal was in the Cinder King's ledger. I want to know what they bought.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "orion"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "Home. I'm coming back with a Foundry machine at my side. No one will sing for that.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "orion"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Sanctuary land. They sold their bread to the Cinder King. Let's see who else they deal with.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "orion"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Dawnfaith land. The road is watched.",
+          "next": "orion"
+        },
+        "orion": {
+          "speaker": "ORION",
+          "text": "These ones believe. Hurting them will not make them stop. It makes them faster."
+        }
+      }
+    },
+    "cloister.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Every wall is lit, and it's still dimmer here than it should be.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "The cloister where I learned to read the light. The lamps were brighter then.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Runners slept here when the roads were bad. The doors were open then.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "A cloister. Every wall is lit."
+        }
+      }
+    },
+    "cloister.halo": {
+      "start": "line",
+      "lines": {
+        "line": {
+          "speaker": "ORION",
+          "text": "Above us. When the light gathers on it, turn your back. Whoever looks at it will not see for a moment."
+        }
+      }
+    },
+    "stair.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "A long way up. Whoever built this wanted you tired when you got there.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "The Choir Stair. They used to sing the hours from these steps. No one is singing.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Long stair, no exits. Runners hate a place like this.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Choir Stair. A long way up."
+        }
+      }
+    },
+    "stair.listen": {
+      "start": "trusted",
+      "lines": {
+        "trusted": {
+          "speaker": "ORION",
+          "text": "Someone at the top has been listening to us all the way up. I am beside you.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "other"
+        },
+        "other": {
+          "speaker": "ORION",
+          "text": "Someone at the top has been listening to us all the way up. I will go first."
+        }
+      }
+    }
+  }
+}

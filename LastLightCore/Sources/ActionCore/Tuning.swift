@@ -91,6 +91,21 @@ public struct Tuning: Sendable {
     public var weaverFar = 360.0
     public var weaverAttackGap = 100...150
 
+    // The Dawnfaith.
+    public var zealotAttackGap = 40...80
+    /// Below half health a Zealot presses harder: its gap between flurries is scaled by this.
+    public var zealotFervourScale = 0.5
+    public var acolyteNear = 230.0
+    public var acolyteFar = 400.0
+    public var acolyteAttackGap = 90...140
+    /// An Acolyte mends when an ally within reach is below this share of its health.
+    public var acolyteMendBelow = 0.85
+    public var guardAttackGap = 70...110
+    public var guardTurnDelay = 32
+    public var discipleNear = 110.0
+    public var discipleFar = 260.0
+    public var discipleAttackGap = 80...130
+
     // The Line Warden.
     public var wardenAttackGap = 45...80
     /// Frames it takes to turn round: the time to get behind it.
@@ -374,6 +389,70 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// Zealot: fast and devoted. Rushes in with a three-cut flurry; a parry breaks it. Presses harder when hurt.
+    public var zealot: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 84, maxHP: 38, runSpeed: 230)
+        s.attacks = [
+            AttackSpec(windup: 14, active: 4, recovery: 14, damage: 7, reach: 50, height: 60,
+                       knockback: 120, lunge: 160, hitstun: 12, hitStop: 3),
+            AttackSpec(windup: 8, active: 4, recovery: 14, damage: 7, reach: 52, height: 60,
+                       knockback: 120, lunge: 120, hitstun: 12, hitStop: 3),
+            AttackSpec(windup: 14, active: 5, recovery: 30, damage: 11, reach: 60, height: 64,
+                       knockback: 300, lunge: 220, hitstun: 18, hitStop: 5),
+        ]
+        s.brain = ZealotBrain()
+        return s
+    }()
+
+    /// Radiant Acolyte: stays back. Mends hurt allies near it; otherwise calls light down where a hero stands.
+    public var radiantAcolyte: FighterSpec = {
+        var s = FighterSpec(width: 34, height: 82, maxHP: 36, runSpeed: 140)
+        s.attacks = [
+            AttackSpec(windup: 50, active: 1, recovery: 50, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .mend(amount: 24, range: 340) },
+            AttackSpec(windup: 30, active: 1, recovery: 44, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .lob(Lob(.light, width: 56, height: 90, warning: 40, active: 14, damage: 9, range: 420)) },
+        ]
+        s.choosesAttacks = true
+        s.brain = AcolyteBrain()
+        return s
+    }()
+
+    /// Solar Guard: a heavy shield held forward. Strike its shield and it answers with a bash at once.
+    public var solarGuard: FighterSpec = {
+        var s = FighterSpec(width: 52, height: 112, maxHP: 130, runSpeed: 85)
+        s.attacks = [
+            AttackSpec(windup: 30, active: 6, recovery: 34, damage: 16, reach: 74, height: 100,
+                       knockback: 340, lunge: 80, hitstun: 20, hitStop: 6),
+            AttackSpec(windup: 7, active: 5, recovery: 28, damage: 10, reach: 52, height: 90,
+                       knockback: 380, lunge: 140, hitstun: 22, hitStop: 6),
+        ]
+        s.choosesAttacks = true
+        s.frontalBlock = true
+        s.riposte = 1
+        s.poise = true
+        s.brain = SolarGuardBrain()
+        return s
+    }()
+
+    /// Halo Disciple: floats above the fight. Its flare dazes anyone looking at it; it also cuts down at those below.
+    public var haloDisciple: FighterSpec = {
+        var s = FighterSpec(width: 36, height: 70, maxHP: 46, runSpeed: 170)
+        s.attacks = [
+            AttackSpec(windup: 54, active: 1, recovery: 50, damage: 0, reach: 0, height: 0,
+                       knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+                .with { $0.effect = .flare(radius: 300, daze: 60) },
+            AttackSpec(windup: 18, active: 5, recovery: 26, damage: 9, reach: 46, height: 200, yOffset: -150,
+                       knockback: 200, lunge: 180, hitstun: 14, hitStop: 4),
+        ]
+        s.choosesAttacks = true
+        s.hovers = true
+        s.brain = DiscipleBrain()
+        return s
+    }()
+
     /// The Line Warden. A duellist: its guard faces forward, so it is hurt from behind, while it swings, or after a
     /// parry staggers it. Overdrive: turns faster and calls a Forged Soldier to the line.
     public var lineWarden: FighterSpec = {
@@ -457,6 +536,10 @@ public struct Tuning: Sendable {
         case .nightWeaver: nightWeaver
         case .weaverImage: weaverImage
         case .cinderKing: cinderKing
+        case .zealot: zealot
+        case .radiantAcolyte: radiantAcolyte
+        case .solarGuard: solarGuard
+        case .haloDisciple: haloDisciple
         }
     }
 }

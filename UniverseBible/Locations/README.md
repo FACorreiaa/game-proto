@@ -11,14 +11,20 @@ Steel, navy and cyan; machine light; industrial scale.
 | Foundry Yard | SHIPPED | First level of the 2D game: outer works, scrap, the first drones |
 | The line (Awakening) | SHIPPED | Where Caelen wakes and "the others … never woke" (SH-002); where Orion finds him |
 | The Machine Hall | SHIPPED | Production floor; Sentry Cores and Dogma Frames |
-| The Warden's Gate | PROPOSED (DRAFT-007) | Between the Machine Hall and the Protocol's chamber; held by the Line Warden |
+| The Warden's Gate | WORKING (DEC-014) | Between the Machine Hall and the Protocol's chamber; held by the Line Warden |
 | The Protocol's chamber | SHIPPED | The arena where the AI speaks through The Protocol |
 
 What the line was making, and why Caelen was on it, is **UNKNOWN**.
 
-## The Dawnfaith lands (ART only)
+## The Dawnfaith lands (ART; places PROPOSED)
 
 Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hospitals (PROPOSED).
+
+| Place | Status | Notes |
+|---|---|---|
+| The Pilgrim Road | PROPOSED (DRAFT-008) | An ivory road through farmland, crossed by a river ferry |
+| The Sun Cloister | PROPOSED (DRAFT-008) | Galleries round a sunlit court; once open to runners in bad weather |
+| The Choir Stair | PROPOSED (DRAFT-008) | A long stair up a hill where the hours were once sung; the Last Oracle waits at the top |
 
 ## The Lantern Cities (ART; places WORKING)
 

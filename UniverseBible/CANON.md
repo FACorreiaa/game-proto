@@ -37,6 +37,7 @@ register, the register wins until the conflict is resolved.
 | WC-017 | The Cinder King | Keeps a vault of ledgers behind the docks. Crates on the docks pay him "once in coin, once in fear"; he calls the smuggling routes his roads. Reach, not rule: who governs stays UNKNOWN (open question 7). His line: "Everything has a price. Even light. Especially light." | DEC-013 |
 | WC-018 | The ledgers | Someone in the Cities sold Nimue's runners to the line; they went "where every debt goes. Paid." (fate UNKNOWN). The ledgers carry Foundry, Dawnfaith and city seals: all three sold to him. Someone was always buying from the other side; who is UNKNOWN. | DEC-013 |
 | WC-019 | Chapter endings | Chapter 1: the Protocol was "the voice of this place. Not the hand that built it." Chapter 2: "The Cinder King is beaten. His ledgers are not finished." | DEC-012, DEC-013 |
+| WC-020 | The Line Warden | A machine that keeps the Warden's Gate before the Protocol. Orion knows its name and how it fights. Nimue's runners once went round the gate; that way is gone. Whether it is one of many is UNKNOWN. | DEC-014 |
 
 ## SHIPPED: in a build players have played
 
