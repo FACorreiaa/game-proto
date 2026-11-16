@@ -28,8 +28,8 @@ public struct Chapter: Sendable, Identifiable {
 
     public static let lanternCities = Chapter(
         id: "chapter2", number: 2, title: "The Lantern Cities",
-        ending: "The docks are quiet. Every road out of here still runs through the Cinder King.",
-        route: { _ in [.emberMarket, .lanternRoofs, .cinderDocks] })
+        ending: "The Cinder King is beaten. His ledgers are not finished.",
+        route: { _ in [.emberMarket, .lanternRoofs, .cinderDocks, .cinderVault] })
 
     /// Every chapter, in play order.
     public static let all: [Chapter] = [.foundry, .lanternCities]

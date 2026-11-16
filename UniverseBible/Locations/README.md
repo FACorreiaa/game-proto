@@ -28,6 +28,7 @@ Ember and amber, coal black, copper, fabric awnings, hanging lanterns, rooftops,
 | The Ember Market | PROPOSED (DRAFT-006) | A market street under awnings, crossed by a canal |
 | The Lantern Roofs | PROPOSED (DRAFT-006) | Rooftops, cargo lines, chimneys; Night Weavers |
 | The Cinder Docks | PROPOSED (DRAFT-006) | Warehouses and furnace vents; where the Cities' trade passes |
+| The Cinder Vault | PROPOSED (DRAFT-006) | Behind the docks; the Cinder King's ledgers |
 | The Undercroft | PROPOSED (DRAFT-005) | Nimue's route under the Foundry |
 
 ## The Dimmed (name LOCKED, LC-006; everything else PROPOSED)

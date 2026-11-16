@@ -8,7 +8,7 @@ extension FighterKind {
         switch self {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol,
-             .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage: .enemy
+             .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: .enemy
         }
     }
 }
@@ -33,6 +33,8 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case nightWeaver
     /// One of a Night Weaver's copies of itself: one hit breaks it, and it fades on its own.
     case weaverImage
+    /// The Lantern Cities' boss.
+    case cinderKing
 }
 
 /// What an attack does when its active frames begin.
@@ -45,6 +47,8 @@ public enum AttackEffect: Sendable, Equatable {
     case rain(columns: Int, width: Double, warning: Int, active: Int, damage: Double)
     /// Throws something that lands under the target: a burning patch or a snare.
     case lob(Lob)
+    /// Fire bursts up from the floor: one column under each hero, the rest spread over the room.
+    case eruption(columns: Int, width: Double, height: Double, warning: Int, active: Int, damage: Double)
 }
 
 /// What a thrown thing leaves on the ground where it lands. It warns, then stays live for `active` frames and
@@ -219,6 +223,10 @@ public struct FighterSpec: Sendable {
     public var wardRadius = 0.0
     /// Fractions of health at which a boss moves to its next phase. It cannot be hurt past one in a single hit.
     public var phaseThresholds: [Double] = []
+    /// The phase a boss spends in the air. Zero means it never flies.
+    public var flightPhase = 0
+    /// While any fighter of this kind lives nearby, hits on it do nothing.
+    public var shieldedBy: FighterKind?
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.

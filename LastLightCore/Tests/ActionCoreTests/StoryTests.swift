@@ -243,3 +243,30 @@ private func shipped() throws -> StoryLibrary {
         #expect(try #require(StoryRunner(sceneID: id, library: story, state: StoryState())).line != nil)
     }
 }
+
+@Test func theCinderKingSpeaksToEachLeadThenNamesHisPrice() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        var state = StoryState()
+        state.flags["lead"] = lead.rawValue
+        var runner = try #require(StoryRunner(sceneID: "vault.wake", library: story, state: state))
+        #expect(runner.line?.speaker == "CINDER KING")
+        var speakers: [String] = []
+        var last = ""
+        while let line = runner.line { speakers.append(line.speaker); last = line.text; runner.advance() }
+        #expect(speakers.contains(lead.rawValue.uppercased()), "\(lead)")
+        #expect(last.hasPrefix("Everything has a price"))
+    }
+}
+
+@Test func afterTheVaultOrionAnswersTheChoiceMadeWhenTheyMet() throws {
+    let story = try shipped()
+    for (choice, words) in [("trusted", "He bought and sold"), ("watched", "watch me read")] {
+        var state = StoryState()
+        state.flags = ["lead": "nimue", "orion": choice]
+        var runner = try #require(StoryRunner(sceneID: "vault.end", library: story, state: state))
+        var last = ""
+        while let line = runner.line { last = line.text; runner.advance() }
+        #expect(last.contains(words), "\(choice)")
+    }
+}

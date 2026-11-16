@@ -90,6 +90,16 @@ public struct Tuning: Sendable {
     public var weaverNear = 200.0
     public var weaverFar = 360.0
     public var weaverAttackGap = 100...150
+
+    // The Cinder King.
+    public var cinderAttackGap = 60...100
+    /// In the last phase it acts this much sooner.
+    public var cinderPriceGapScale = 0.7
+    public var cinderTurnDelay = 12
+    /// Up close it swings or sweeps this often instead of throwing.
+    public var cinderCloseChance = 0.7
+    /// How far from him his debtors still shield him.
+    public var debtorShieldRange = 900.0
     /// Frames it needs to turn around, which is the time a hero behind it has.
     public var protocolTurnDelay = 26
     /// How often it slams a hero standing close, rather than charging or sending a surge.
@@ -274,6 +284,7 @@ public struct Tuning: Sendable {
                               knockback: 300, lunge: 0, hitstun: 20, hitStop: 6)
         s.attacks = [slam, charge, surge, summon, rain, pulse, beam]
         s.phaseThresholds = [0.6, 0.3]
+        s.flightPhase = 2
         s.armored = true
         s.boss = true
         s.poise = true
@@ -353,6 +364,37 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Cinder King. Offer: a cane and thrown lanterns. Debt: calls Ratborn, who shield him while they live,
+    /// and fire bursts from the floor. Price: faster, with a sweep on both sides and wider eruptions.
+    public var cinderKing: FighterSpec = {
+        var s = FighterSpec(width: 76, height: 150, maxHP: 720, runSpeed: 95)
+        let cane = AttackSpec(windup: 28, active: 6, recovery: 36, damage: 16, reach: 110, height: 100,
+                              knockback: 320, lunge: 80, hitstun: 18, hitStop: 6)
+        let lantern = AttackSpec(windup: 34, active: 1, recovery: 46, damage: 0, reach: 0, height: 0,
+                                 knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .lob(Lob(.fire, width: 100, height: 30, warning: 50, active: 90, damage: 12, range: 700)) }
+        let debtors = AttackSpec(windup: 44, active: 1, recovery: 60, damage: 0, reach: 0, height: 0,
+                                 knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .summon(.ratborn, count: 2) }
+        let vents = AttackSpec(windup: 40, active: 1, recovery: 56, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .eruption(columns: 3, width: 70, height: 170, warning: 56, active: 22, damage: 16) }
+        let sweep = AttackSpec(windup: 42, active: 7, recovery: 48, damage: 20, reach: 160, height: 60, yOffset: 0,
+                               knockback: 380, lunge: 0, hitstun: 22, hitStop: 7)
+            .with { $0.bothSides = true }
+        let wideVents = vents.with {
+            $0.effect = .eruption(columns: 5, width: 70, height: 170, warning: 50, active: 22, damage: 16)
+        }
+        s.attacks = [cane, lantern, debtors, vents, sweep, wideVents]
+        s.phaseThresholds = [0.65, 0.3]
+        s.shieldedBy = .ratborn
+        s.boss = true
+        s.poise = true
+        s.wakeDelay = 100
+        s.brain = CinderKingBrain()
+        return s
+    }()
+
     public init() {}
 
     public func spec(for kind: FighterKind) -> FighterSpec {
@@ -373,6 +415,7 @@ public struct Tuning: Sendable {
         case .smugglerBrute: smugglerBrute
         case .nightWeaver: nightWeaver
         case .weaverImage: weaverImage
+        case .cinderKing: cinderKing
         }
     }
 }

@@ -174,7 +174,16 @@ final class GameScene: SKScene {
         }
     }
 
-    private let bossHint = "Strike only when the core opens.  Jump the surge.  Dodge the charge."
+    /// What the screen calls each boss, its phases after the first, and the tip shown when it wakes.
+    private func bossTitle(_ kind: FighterKind) -> (name: String, phases: [String], hint: String) {
+        switch kind {
+        case .cinderKing:
+            ("THE CINDER KING", ["THE DEBT", "THE PRICE"],
+             "Step out of the fire.  While his Ratborn live, he can't be hurt.")
+        default:
+            ("THE PROTOCOL", ["ASCENSION", "EXECUTION"], "Strike only when the core opens.  Jump the surge.  Dodge the charge.")
+        }
+    }
 
     private func showHint() {
         if demo {
@@ -603,9 +612,9 @@ final class GameScene: SKScene {
         }
         drawLevel()
         if let boss = world.boss, boss.awake, boss.isAlive {
-            let phase = boss.phase == 2 ? " · ASCENSION" : (boss.phase >= 3 ? " · EXECUTION" : "")
-            hud.setBoss(((boss.kind == .theProtocol ? "THE PROTOCOL" : boss.kind.rawValue.uppercased()) + phase,
-                         boss.hp / boss.spec.maxHP, boss.isOpen))
+            let title = bossTitle(boss.kind)
+            let phase = boss.phase >= 2 ? " · " + title.phases[min(boss.phase - 2, title.phases.count - 1)] : ""
+            hud.setBoss((title.name + phase, boss.hp / boss.spec.maxHP, boss.isOpen && !world.isWarded(boss.id)))
         } else {
             hud.setBoss(nil)
         }
@@ -845,9 +854,10 @@ final class GameScene: SKScene {
                 haptics.light(0.7)
             case .woke(let id):
                 if id == world.bossID {
-                    hud.announce("THE PROTOCOL")
+                    let title = bossTitle(world.boss?.kind ?? .theProtocol)
+                    hud.announce(title.name)
                     sound.play(.bossWake)
-                    hud.showHint(bossHint)
+                    hud.showHint(title.hint)
                     shake = max(shake, 10)
                     haptics.heavy()
                 } else if let f = world.fighter(id) {
@@ -959,7 +969,8 @@ final class GameScene: SKScene {
             case .bossPhase(_, let phase):
                 Effects.flash(self, color: Palette.gold, alpha: 0.3, duration: 0.4)
                 if let b = world.boss { Effects.motes(worldNode, at: CGPoint(x: b.pos.x, y: b.pos.y + 40), color: Palette.gold, count: 40, width: 140) }
-                hud.announce(phase == 2 ? "ASCENSION" : "EXECUTION")
+                let phases = bossTitle(world.boss?.kind ?? .theProtocol).phases
+                hud.announce(phases[min(max(phase - 2, 0), phases.count - 1)])
                 shake = max(shake, 12)
                 sound.play(.bossWake)
                 haptics.heavy()

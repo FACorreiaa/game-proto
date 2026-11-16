@@ -553,6 +553,9 @@ public struct World: Sendable {
 
     /// True while a living Dogma Frame stands close enough to shield this machine.
     public func isWarded(_ id: Int) -> Bool {
+        if let f = fighter(id), f.isAlive, let guardKind = f.spec.shieldedBy {
+            return fighters.contains { $0.kind == guardKind && $0.isAlive && abs($0.pos.x - f.pos.x) <= tuning.debtorShieldRange }
+        }
         guard let f = fighter(id), f.isAlive, f.spec.wardRadius == 0, !f.spec.boss else { return false }
         return fighters.contains {
             $0.spec.wardRadius > 0 && $0.isAlive && $0.awake && $0.team == f.team
@@ -588,6 +591,20 @@ public struct World: Sendable {
                 }
             case .lob(let lob):
                 lobbed(lob, from: me, &events)
+            case .eruption(let columns, let width, let height, let warning, let active, let damage):
+                var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
+                var tries = 0
+                while xs.count < columns, tries < 40 {
+                    tries += 1
+                    let x = Double.random(in: (arena.lowerBound + width)...(arena.upperBound - width), using: &rng)
+                    if xs.allSatisfy({ abs($0 - x) > width * 1.5 }) { xs.append(x) }
+                }
+                for x in xs.prefix(columns) {
+                    var strike = Strike(box: Box(minX: x - width / 2, minY: -4, maxX: x + width / 2, maxY: height),
+                                        warning: warning, active: active, damage: damage)
+                    strike.kind = .fire
+                    strikes.append(strike)
+                }
             case .rain(let columns, let width, let warning, let active, let damage):
                 var xs = fighters.filter { $0.team != me.team && $0.isAlive && $0.awake }.map(\.pos.x)
                 var tries = 0
@@ -834,7 +851,7 @@ public struct World: Sendable {
             if f.hp <= floor {
                 f.hp = floor
                 f.phase += 1
-                f.flying = f.phase == 2
+                f.flying = f.spec.flightPhase > 0 && f.phase == f.spec.flightPhase
                 f.descending = false
                 f.aiAux2 = 0
                 f.aiCooldown = 0
