@@ -286,3 +286,28 @@ private func shipped() throws -> StoryLibrary {
         }
     }
 }
+
+@Test func everyChapterThreeSceneSpeaksToWhoeverLeads() throws {
+    let story = try shipped()
+    for id in ["road.arrive", "cloister.arrive", "stair.arrive"] {
+        for lead in [FighterKind.caelen, .seraphine, .nimue] {
+            var state = StoryState()
+            state.flags["lead"] = lead.rawValue
+            var runner = try #require(StoryRunner(sceneID: id, library: story, state: state))
+            #expect(runner.line?.speaker == lead.rawValue.uppercased(), "\(id) as \(lead)")
+            var speakers: Set<String> = []
+            while let line = runner.line { speakers.insert(line.speaker); runner.advance() }
+            #expect(speakers.isSubset(of: [lead.rawValue.uppercased(), "ORION"]), "\(id) as \(lead)")
+        }
+        #expect(try #require(StoryRunner(sceneID: id, library: story, state: StoryState())).line != nil)
+    }
+}
+
+@Test func orionWarnsAboutTheFlareBeforeTheFirstDisciple() throws {
+    let story = try shipped()
+    let runner = try #require(StoryRunner(sceneID: "cloister.halo", library: story, state: StoryState()))
+    #expect(runner.line?.text.contains("turn your back") == true)
+    let cue = try #require(Level.sunCloister.scenes.first { $0.scene == "cloister.halo" })
+    let disciple = try #require(Level.sunCloister.enemies.first { $0.kind == .haloDisciple })
+    if case .reach(let x) = cue.cue { #expect(x < disciple.pos.x - 300) } else { Issue.record("not a reach cue") }
+}

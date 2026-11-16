@@ -954,6 +954,18 @@ final class GameScene: SKScene {
             case .scene(let id):
                 // The demo bot does not read.
                 if !demo { story.begin(id) }
+            case .flared(_, let at, let radius):
+                ring(at: at, radius: radius, color: Palette.gold)
+                Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.gold, count: 26, speed: 260, life: 0.35, size: 10)
+                sound.play(.bossWake, volume: 0.35)
+            case .dazed(let id):
+                if let f = world.fighter(id) {
+                    popup("DAZED", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 14), color: Palette.gold, size: 14)
+                    if id == world.controlledID {
+                        Effects.flash(self, color: Palette.white, alpha: 0.55, duration: 0.5)
+                        haptics.heavy()
+                    }
+                }
             case .healed(let id, let amount):
                 if let f = world.fighter(id) {
                     let at = CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2)

@@ -67,13 +67,13 @@ screen and its chapter-end text (SH-006) follow.
 
 Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards were approved with DEC-012.
 
-## Draft: the Line Warden (DRAFT-007, PROPOSED)
+## The Line Warden (DEC-014, WORKING)
 
 A mid-boss between **The Machine Hall** and **The Protocol** for every lead, in a short room called **The Warden's
 Gate**. It teaches the defence the Protocol later tests: read the guard, get behind it, parry. Each lead speaks as it
 wakes, then Orion names it and says how to beat it, in words that follow the choice made when they met.
 
-**New world claims in this draft, each needing a verdict:**
+**World claims, approved (DEC-014; WC-020):**
 
 1. A machine called the **Line Warden** keeps the gate to the Protocol. It is not in the concept art.
 2. Orion knows its name and how it fights.
@@ -81,6 +81,28 @@ wakes, then Orion names it and says how to beat it, in words that follow the cho
 4. Seraphine compares it to a temple guard (a simile, no claim about the Dawnfaith).
 5. Nimue: "Runners went round this gate. There's no round any more." Her runners knew a way past it, and that way
    is gone.
+
+## Draft: Chapter 3, The Dawnfaith (DRAFT-008, PROPOSED)
+
+Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**. The
+Last Oracle's fight comes next and will replace the placeholder chapter-end line.
+
+Guards kept: the Last Oracle and Seraphine stay separate, with nothing hinting at a link (open question 9); nothing
+says how the Dawnfaith is organised (open question 6); its people are believers, not monsters.
+
+**New world claims in these drafts, each needing a verdict:**
+
+1. The Dawnfaith's road runs through farmland and over a river crossed by a pilgrim ferry.
+2. Caelen goes because the Dawnfaith's seal was in the Cinder King's ledger: "I want to know what they bought."
+3. Seraphine comes home with a Foundry machine at her side: "No one will sing for that."
+4. Nimue: the sanctuaries sold their bread to the Cinder King (WC-016), "let's see who else they deal with".
+5. Orion: the believers don't stop when hurt; it makes them faster.
+6. Caelen finds the cloister "dimmer here than it should be", although every wall is lit (consistent with LC-005).
+7. Seraphine learned to read the light in the Sun Cloister; the lamps were brighter then.
+8. Runners used to sleep in the cloister when the roads were bad; "the doors were open then".
+9. The Choir Stair is where the hours were once sung; no one sings now.
+10. Someone at the top has been listening as they climb (Orion).
+11. Placeholder chapter-end line: "The Choir Stair is climbed. The Last Oracle waits at the top."
 
 ## Chapter 2, The Lantern Cities (DEC-013, WORKING)
 

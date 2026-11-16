@@ -12,6 +12,8 @@ final class FighterNode: SKNode {
     private var weapon: SKShapeNode?
     private var eye: SKShapeNode?
     private var shield: SKShapeNode?
+    /// A Halo Disciple's halo, which swells as its flare gathers.
+    private var halo: SKShapeNode?
     private var core: SKShapeNode?
     /// The Protocol shows where its next attack will land.
     private let zone = SKShapeNode()
@@ -42,6 +44,8 @@ final class FighterNode: SKNode {
         case .nimue, .decoy: Palette.violet
         // The Lantern Cities' people are lit by their lanterns, not by machine red.
         case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: Palette.ember
+        // The Dawnfaith's believers carry their own light: gold, not machine red.
+        case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple: Palette.gold
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
         }
         if kind == .orion { baseFill = Palette.plate }
@@ -70,6 +74,10 @@ final class FighterNode: SKNode {
         case .weaverImage: buildWeaverImage()
         case .cinderKing: buildCinderKing()
         case .lineWarden: buildWarden()
+        case .zealot: buildZealot()
+        case .radiantAcolyte: buildAcolyte()
+        case .solarGuard: buildSolarGuard()
+        case .haloDisciple: buildDisciple()
         }
         addGlows()
     }
@@ -259,6 +267,113 @@ final class FighterNode: SKNode {
         tower.addChild(boss)
         figure.addChild(tower)
         shield = tower
+    }
+
+    /// A small gold sun on the chest: the Dawnfaith's mark.
+    private func sunMark(at point: CGPoint, radius: CGFloat = 4) {
+        let sun = SKShapeNode(circleOfRadius: radius)
+        sun.position = point
+        light(sun, color: Palette.gold, glow: 3)
+        sun.zPosition = 2
+        figure.addChild(sun)
+    }
+
+    /// Zealot: lean, hooded, a short tunic over bare legs, a curved blade held ready.
+    private func buildZealot() {
+        leg(x: -6, hipY: 38, length: 38, width: 8)
+        leg(x: 6, hipY: 38, length: 38, width: 8)
+        let tunic = CGMutablePath()
+        tunic.addLines(between: [CGPoint(x: -10, y: 68), CGPoint(x: 10, y: 68), CGPoint(x: 14, y: 30), CGPoint(x: -14, y: 30)])
+        tunic.closeSubpath()
+        _ = part(tunic)
+        let hood = CGMutablePath()
+        hood.addLines(between: [CGPoint(x: -9, y: 66), CGPoint(x: 9, y: 68), CGPoint(x: 4, y: 86), CGPoint(x: -6, y: 84)])
+        hood.closeSubpath()
+        _ = part(hood, z: 1)
+        let eyeDot = SKShapeNode(circleOfRadius: 1.8)
+        eyeDot.position = CGPoint(x: 5, y: 76)
+        light(eyeDot, color: Palette.gold, glow: 2)
+        figure.addChild(eyeDot)
+        eye = eyeDot
+        sunMark(at: CGPoint(x: 0, y: 54))
+        blade(length: 50, color: Palette.gold, at: CGPoint(x: 6, y: 56))
+    }
+
+    /// Radiant Acolyte: long robe, a small halo, a staff topped with a sun.
+    private func buildAcolyte() {
+        let robe = CGMutablePath()
+        robe.addLines(between: [CGPoint(x: -8, y: 64), CGPoint(x: 9, y: 64), CGPoint(x: 15, y: 0), CGPoint(x: -15, y: 0)])
+        robe.closeSubpath()
+        _ = part(robe)
+        _ = part(CGPath(ellipseIn: CGRect(x: -8, y: 62, width: 17, height: 17), transform: nil), z: 1)
+        let ring = SKShapeNode(circleOfRadius: 10)
+        ring.position = CGPoint(x: 0, y: 84)
+        ring.fillColor = .clear
+        ring.strokeColor = Palette.gold
+        ring.lineWidth = 1.5
+        ring.glowWidth = 3
+        ring.yScale = 0.35
+        ring.zPosition = 2
+        figure.addChild(ring)
+        let eyeDot = SKShapeNode(circleOfRadius: 1.8)
+        eyeDot.position = CGPoint(x: 6, y: 71)
+        light(eyeDot, color: Palette.gold, glow: 2)
+        figure.addChild(eyeDot)
+        eye = eyeDot
+        blade(length: 54, color: Palette.ivory, at: CGPoint(x: 8, y: 44))
+        let sun = SKShapeNode(circleOfRadius: 5)
+        sun.position = CGPoint(x: 0, y: 54)
+        light(sun, color: Palette.gold, glow: 6)
+        weapon?.addChild(sun)
+    }
+
+    /// Solar Guard: broad armour, a round sun shield held forward, a short mace.
+    private func buildSolarGuard() {
+        leg(x: -10, hipY: 46, length: 46, width: 13)
+        leg(x: 10, hipY: 46, length: 46, width: 13)
+        _ = part(CGPath(roundedRect: CGRect(x: -21, y: 44, width: 42, height: 46), cornerWidth: 6, cornerHeight: 6, transform: nil))
+        _ = part(CGPath(roundedRect: CGRect(x: -26, y: 82, width: 52, height: 12), cornerWidth: 5, cornerHeight: 5, transform: nil), z: 1)
+        _ = part(CGPath(roundedRect: CGRect(x: -10, y: 92, width: 21, height: 20), cornerWidth: 6, cornerHeight: 6, transform: nil), z: 1)
+        let visor = SKShapeNode(rect: CGRect(x: 1, y: 100, width: 9, height: 2.5))
+        light(visor, color: Palette.gold, glow: 3)
+        figure.addChild(visor)
+        eye = visor
+        blade(length: 58, color: Palette.gold, at: CGPoint(x: 4, y: 64))
+        let disc = SKShapeNode(ellipseOf: CGSize(width: 16, height: 70))
+        disc.position = CGPoint(x: 28, y: 58)
+        disc.fillColor = Palette.body
+        disc.strokeColor = Palette.gold
+        disc.lineWidth = 2.5
+        disc.zPosition = 4
+        let boss = SKShapeNode(circleOfRadius: 4)
+        light(boss, color: Palette.gold, glow: 4)
+        disc.addChild(boss)
+        figure.addChild(disc)
+        shield = disc
+    }
+
+    /// Halo Disciple: a robed figure that floats, its robe trailing to a point, under a wide halo.
+    private func buildDisciple() {
+        let robe = CGMutablePath()
+        robe.addLines(between: [CGPoint(x: -9, y: 54), CGPoint(x: 10, y: 54), CGPoint(x: 6, y: 6), CGPoint(x: -2, y: -10), CGPoint(x: -8, y: 8)])
+        robe.closeSubpath()
+        _ = part(robe)
+        _ = part(CGPath(ellipseIn: CGRect(x: -7, y: 52, width: 16, height: 16), transform: nil), z: 1)
+        let eyeDot = SKShapeNode(circleOfRadius: 1.8)
+        eyeDot.position = CGPoint(x: 5, y: 61)
+        light(eyeDot, color: Palette.gold, glow: 2)
+        figure.addChild(eyeDot)
+        eye = eyeDot
+        let ring = SKShapeNode(circleOfRadius: 20)
+        ring.position = CGPoint(x: 0, y: 62)
+        ring.fillColor = .clear
+        ring.strokeColor = Palette.gold
+        ring.lineWidth = 3
+        ring.glowWidth = 3
+        ring.zPosition = -1
+        figure.addChild(ring)
+        halo = ring
+        blade(length: 40, color: Palette.gold, at: CGPoint(x: 6, y: 40))
     }
 
     /// Sentry Core: a floating shell around one red lens.
@@ -461,6 +576,16 @@ final class FighterNode: SKNode {
         marker.isHidden = !controlled || !f.isAlive
         marker.position = CGPoint(x: 0, y: f.spec.height + 12 + 2 * sin(CGFloat(frame) * 0.12))
         position = CGPoint(x: f.pos.x, y: f.pos.y)
+        if let halo {
+            // The flare gathers on the halo through its windup, the cue to look away.
+            var gather: CGFloat = 0
+            if case .attack(0) = f.state, let a = f.currentAttack, f.attackPhase == .windup {
+                gather = CGFloat(f.stateFrame) / CGFloat(max(a.windup, 1))
+            }
+            halo.setScale(1 + gather * 0.9)
+            halo.glowWidth = 3 + gather * 14
+            halo.lineWidth = 3 + gather * 3
+        }
         mark.isHidden = f.markedFrames == 0 || !f.isAlive
         mark.position = CGPoint(x: 0, y: f.spec.height + 22)
         mark.zRotation = CGFloat(frame) * 0.05
@@ -863,6 +988,10 @@ final class FighterNode: SKNode {
         case .smugglerBrute: 70
         case .cinderKing: 110
         case .lineWarden: 96
+        case .zealot: 50
+        case .radiantAcolyte: 54
+        case .solarGuard: 58
+        case .haloDisciple: 40
         default: 76
         }
     }

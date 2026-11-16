@@ -223,6 +223,117 @@ public struct WeaverBrain: Brain {
     }
 }
 
+/// Zealot: runs straight in and cuts three times. Once hurt below half, it hardly pauses between flurries.
+public struct ZealotBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        // Mid-flurry it keeps pressing, so each cut chains into the next.
+        if case .attack(let i) = me.state { return InputFrame(attack: i + 1 < me.spec.attacks.count) }
+        guard me.isActionable else { return .neutral }
+        // The pause runs between flurries, not during them.
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        if abs(dx) > strikeDistance(me, target) + 60 { return InputFrame(moveX: dir) }
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: dir * facingNudge) }
+        let gap = Int.random(in: tuning.zealotAttackGap, using: &rng)
+        me.aiCooldown = me.hp < me.spec.maxHP / 2 ? Int(Double(gap) * tuning.zealotFervourScale) : gap
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
+/// Radiant Acolyte: keeps its distance. Mends a hurt ally in reach before anything else; otherwise calls light down.
+public struct AcolyteBrain: Brain {
+    public init() {}
+
+    static let mend = 0, light = 1
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        guard me.isActionable else { return .neutral }
+        if abs(dx) < tuning.acolyteNear { return InputFrame(moveX: -dir) }
+        if abs(dx) > tuning.acolyteFar { return InputFrame(moveX: dir) }
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: dir * facingNudge) }
+        guard case .mend(_, let range) = me.spec.attacks[Self.mend].effect else { return .neutral }
+        let hurt = allies.contains {
+            $0.id != me.id && $0.isAlive && abs($0.pos.x - me.pos.x) <= range
+                && $0.hp < $0.spec.maxHP * tuning.acolyteMendBelow
+        }
+        me.nextAttack = hurt ? Self.mend : Self.light
+        me.aiCooldown = Int.random(in: tuning.acolyteAttackGap, using: &rng)
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
+/// Solar Guard: walks the hero down behind its shield, slow to turn. Its bash answers blows on the shield by itself.
+public struct SolarGuardBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < tuning.guardTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+        if abs(dx) > strikeDistance(me, target) { return InputFrame(moveX: dir) }
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: dir * facingNudge) }
+        me.aiCooldown = Int.random(in: tuning.guardAttackGap, using: &rng)
+        me.nextAttack = 0
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
+/// Halo Disciple: drifts above the fight at a little distance. Flares when a hero is in reach of it; cuts down at a
+/// hero right below.
+public struct DiscipleBrain: Brain {
+    public init() {}
+
+    static let flare = 0, cut = 1
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        let reach: Double
+        if case .flare(let r, _) = me.spec.attacks[Self.flare].effect { reach = r } else { reach = 0 }
+        if me.aiCooldown == 0 {
+            if abs(dx) < tuning.discipleNear {
+                me.nextAttack = Self.cut
+            } else if abs(dx) < reach * 0.8 {
+                me.nextAttack = Self.flare
+            } else {
+                return InputFrame(moveX: dir)
+            }
+            me.aiCooldown = Int.random(in: tuning.discipleAttackGap, using: &rng)
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        // Between attacks it keeps to the edge of the fight, facing in.
+        if abs(dx) < tuning.discipleNear { return InputFrame(moveX: -dir) }
+        if abs(dx) > tuning.discipleFar { return InputFrame(moveX: dir) }
+        return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
 /// The Line Warden. Faces the hero behind its guard and turns slowly, so getting behind it is the way in.
 /// Two cuts up close, a thrust from further off. In overdrive it turns faster and, when alone, calls a soldier.
 public struct WardenBrain: Brain {

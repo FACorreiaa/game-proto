@@ -416,3 +416,13 @@ func chapterTwoCanBeFinishedWhileFightingWithEachLead(_ lead: FighterKind) {
     let used = Set(Chapter.all.flatMap { c in [FighterKind.caelen, .seraphine, .nimue].flatMap { c.levels(for: $0).map(\.name) } })
     #expect(used == Set(Level.all.map(\.name)))
 }
+
+@Test(arguments: [FighterKind.caelen, .seraphine, .nimue])
+func chapterThreeCanBeFinishedWhileFightingWithEachLead(_ lead: FighterKind) {
+    for level in Chapter.dawnfaith.levels(for: lead) {
+        for seed in 1...3 {
+            let result = traverse(level, seed: UInt64(seed), frames: 60 * 300, fights: true, lead: lead)
+            #expect(result.world.isComplete, "\(level.name) as \(lead) seed \(seed) stopped at x \(hero(result.world).pos.x)")
+        }
+    }
+}

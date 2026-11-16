@@ -370,7 +370,139 @@ extension Level {
     /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
     public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .wardensGate,
                                       .theProtocol,
-                                      .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault]
+                                      .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault,
+                                      .pilgrimRoad, .sunCloister, .choirStair]
+
+    // MARK: Chapter 3, The Dawnfaith
+
+    /// Ivory road through the Dawnfaith's farmland: the first Zealots and Acolytes, a Solar Guard, a pilgrim ferry.
+    public static let pilgrimRoad: Level = {
+        var l = Level(name: "The Pilgrim Road", width: 4800, start: Vec2(120, 0), exitX: 4700)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("road.arrive", on: .start))
+
+        l.ground(-200, 1500)
+        l.pickups.append(Pickup(id: 1, at: Vec2(700, 40)))
+        l.enemies.append(Placement(.zealot, x: 900))
+        // Shrine steps beside the road.
+        l.ledge(1100, 1220, top: 90)
+        l.ledge(1260, 1380, top: 175)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1320, 220)))
+
+        l.ground(1600, 2900)
+        l.checkpoints.append(Vec2(1700, 0))
+        l.enemies.append(Placement(.zealot, x: 2000))
+        l.enemies.append(Placement(.zealot, x: 2080))
+        l.enemies.append(Placement(.radiantAcolyte, x: 2600))
+        // Up the bell frame to the secret.
+        l.ledge(2200, 2320, top: 90)
+        l.ledge(2360, 2480, top: 175)
+        l.ledge(2520, 2640, top: 260)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2580, 305), secret: true))
+
+        // A wayside wall, and down again.
+        l.ground(2900, 3020, top: 70)
+        l.ground(3020, 3900)
+        l.checkpoints.append(Vec2(3100, 0))
+        l.enemies.append(Placement(.zealot, x: 3150))
+        l.enemies.append(Placement(.solarGuard, x: 3350))
+        l.enemies.append(Placement(.radiantAcolyte, x: 3520))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3450, 40)))
+
+        // The river, crossed on a pilgrim ferry.
+        l.ledge(3920, 4040, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(4300, 5000)
+        l.checkpoints.append(Vec2(4370, 0))
+        // Only an Acolyte past the river, so nothing rushes the landing.
+        l.enemies.append(Placement(.radiantAcolyte, x: 4760))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4500, 40)))
+        return l
+    }()
+
+    /// Galleries round a sunlit court: Halo Disciples overhead, and Solar Guards shielding the Acolytes behind them.
+    public static let sunCloister: Level = {
+        var l = Level(name: "The Sun Cloister", width: 5200, start: Vec2(120, 0), exitX: 5000)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("cloister.arrive", on: .start))
+        l.scenes.append(SceneTrigger("cloister.halo", on: .reach(650)))
+
+        l.ground(-200, 1400)
+        l.pickups.append(Pickup(id: 1, at: Vec2(500, 40)))
+        l.enemies.append(Placement(.haloDisciple, x: 1000, y: 150))
+        l.ledge(1080, 1260, top: 110)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1170, 155)))
+
+        l.ground(1500, 2900)
+        l.checkpoints.append(Vec2(1600, 0))
+        l.enemies.append(Placement(.solarGuard, x: 2000))
+        l.enemies.append(Placement(.radiantAcolyte, x: 2250))
+        l.enemies.append(Placement(.haloDisciple, x: 2450, y: 150))
+        // The upper gallery, out over the gap.
+        l.ledge(2550, 2670, top: 95)
+        l.ledge(2700, 2820, top: 185)
+        l.ledge(2850, 2970, top: 270)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2910, 315), secret: true))
+
+        l.ground(3000, 4100)
+        l.checkpoints.append(Vec2(3100, 0))
+        l.enemies.append(Placement(.zealot, x: 3400))
+        l.enemies.append(Placement(.zealot, x: 3480))
+        l.enemies.append(Placement(.haloDisciple, x: 3800, y: 150))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3600, 40)))
+
+        // The court's fountain, crossed on a turning bridge.
+        l.ledge(4120, 4240, top: 0, travel: Vec2(240, 0), period: 260)
+        l.ground(4500, 5400)
+        l.checkpoints.append(Vec2(4570, 0))
+        l.enemies.append(Placement(.radiantAcolyte, x: 4850))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4700, 40)))
+        return l
+    }()
+
+    /// A long stair up the hill, terrace after terrace, with everything the Dawnfaith fields so far.
+    public static let choirStair: Level = {
+        var l = Level(name: "The Choir Stair", width: 5600, start: Vec2(120, 0), exitX: 5450)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("stair.arrive", on: .start))
+        l.scenes.append(SceneTrigger("stair.listen", on: .reach(4200)))
+
+        l.ground(-200, 1200)
+        l.pickups.append(Pickup(id: 1, at: Vec2(500, 40)))
+        l.enemies.append(Placement(.zealot, x: 800))
+        l.enemies.append(Placement(.radiantAcolyte, x: 1050))
+
+        // The first flight.
+        l.ground(1200, 1350, top: 70)
+        l.ground(1350, 1500, top: 140)
+        l.ground(1500, 2700, top: 210)
+        l.pickups.append(Pickup(id: 2, at: Vec2(1420, 185)))
+        l.checkpoints.append(Vec2(1600, 210))
+        l.enemies.append(Placement(.solarGuard, x: 1900, y: 210))
+        l.enemies.append(Placement(.zealot, x: 2200, y: 210))
+        l.enemies.append(Placement(.haloDisciple, x: 2450, y: 360))
+        l.ledge(2300, 2420, top: 300)
+        l.ledge(2450, 2570, top: 385)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2510, 430), secret: true))
+
+        // A landing across a broken step.
+        l.ground(2800, 4000, top: 210)
+        l.checkpoints.append(Vec2(2900, 210))
+        l.enemies.append(Placement(.solarGuard, x: 3200, y: 210))
+        l.enemies.append(Placement(.radiantAcolyte, x: 3450, y: 210))
+        l.enemies.append(Placement(.zealot, x: 3650, y: 210))
+        l.enemies.append(Placement(.zealot, x: 3720, y: 210))
+        l.pickups.append(Pickup(id: 4, at: Vec2(3350, 250)))
+
+        // The last flight to the top terrace.
+        l.ground(4000, 4150, top: 280)
+        l.ground(4150, 5800, top: 350)
+        l.checkpoints.append(Vec2(4300, 350))
+        l.enemies.append(Placement(.haloDisciple, x: 4600, y: 500))
+        l.enemies.append(Placement(.solarGuard, x: 4900, y: 350))
+        l.enemies.append(Placement(.radiantAcolyte, x: 5150, y: 350))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4450, 390)))
+        return l
+    }()
 
     /// Chapter 1 as one lead plays it: their own opening, then the Foundry levels everyone shares.
     public static func chapter1(for lead: FighterKind) -> [Level] {

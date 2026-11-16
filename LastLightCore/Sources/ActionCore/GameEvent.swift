@@ -49,6 +49,10 @@ public enum GameEvent: Equatable, Sendable {
     case scene(id: String)
     /// A hero got health back from a heal.
     case healed(id: Int, amount: Double)
+    /// A flare went off; `radius` is how far it reaches.
+    case flared(id: Int, at: Vec2, radius: Double)
+    /// Caught looking into a flare.
+    case dazed(id: Int)
     case decoyPlaced(id: Int, at: Vec2)
     /// A decoy broke or ran out.
     case decoyGone(id: Int, at: Vec2)
