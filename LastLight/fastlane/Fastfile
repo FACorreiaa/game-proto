@@ -93,6 +93,13 @@ platform :ios do
     UI.user_error!("Create #{BUNDLE_ID} in App Store Connect first (docs/release.md)") unless app
 
     build_numbers = app.get_builds.map { |build| Integer(build.version, exception: false) }.compact
+    # An upload still processing isn't in the build list yet. Two pushes to main in quick succession then pick
+    # the same number and the second upload is rejected as a duplicate, so count the deliveries too.
+    begin
+      build_numbers += app.get_build_deliveries.map { |d| Integer(d.cf_build_version, exception: false) }.compact
+    rescue StandardError => e
+      UI.important("Couldn't read processing uploads (#{e.message}); using finished builds only")
+    end
     increment_build_number(build_number: (build_numbers.max || 0) + 1, xcodeproj: PROJECT)
   end
 end
