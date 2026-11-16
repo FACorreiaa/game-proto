@@ -7,7 +7,7 @@ extension FighterKind {
     public var team: Team {
         switch self {
         case .caelen, .orion: .hero
-        case .dummy, .scrapDrone, .forgedSoldier, .theProtocol: .enemy
+        case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol: .enemy
         }
     }
 }
@@ -18,6 +18,8 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case dummy
     case scrapDrone
     case forgedSoldier
+    case sentryCore
+    case dogmaFrame
     case theProtocol
 }
 
@@ -38,6 +40,8 @@ public struct AttackSpec: Sendable, Equatable {
     public var hitStop: Int
     /// Stands still through the windup and moves only while striking: a charge.
     public var holdsStill = false
+    /// Frames the target moves at reduced speed after being hit.
+    public var slowFrames = 0
 
     public var total: Int { windup + active + recovery }
     /// First frame on which a buffered attack press chains into the next swing.
@@ -135,6 +139,10 @@ public struct FighterSpec: Sendable {
     public var immortal = false
     public var rooted = false
     public var special: SpecialSpec?
+    /// Floats at the height it was placed at and ignores gravity while it lives.
+    public var hovers = false
+    /// Machines this close to it cannot be hurt while it lives. Zero means it shields nobody.
+    public var wardRadius = 0.0
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.

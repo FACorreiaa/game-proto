@@ -71,6 +71,42 @@ public struct SoldierBrain: Brain {
     }
 }
 
+/// Sentry Core: holds its distance, turns to face its target, and fires when the target is level with it.
+public struct SentryBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if abs(dx) < tuning.sentryNear { return InputFrame(moveX: -dir) }
+        if abs(dx) > tuning.sentryFar { return InputFrame(moveX: dir) }
+        if me.aiCooldown == 0, me.isActionable {
+            me.aiCooldown = Int.random(in: tuning.sentryAttackGap, using: &rng)
+            return InputFrame(moveX: dir * facingNudge, attack: true)
+        }
+        return InputFrame(moveX: dir * facingNudge)
+    }
+}
+
+/// Dogma Frame: walks beside the nearest other machine so its shield covers it. It never attacks.
+public struct DogmaBrain: Brain {
+    public init() {}
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        let others = allies.filter { $0.id != me.id && !$0.spec.immortal && $0.spec.wardRadius == 0 }
+        guard let ward = nearest(others, to: me) else { return .neutral }
+        let dx = ward.pos.x - me.pos.x
+        if abs(dx) <= tuning.dogmaFollowDistance { return .neutral }
+        return InputFrame(moveX: dx > 0 ? 1 : -1)
+    }
+}
+
 /// The Protocol: turns slowly, walks the hero down, and picks one of three attacks, each with a long warning.
 /// It slams what stands close; from further away it charges or sends a surge along the floor.
 public struct ProtocolBrain: Brain {
@@ -150,6 +186,7 @@ public struct PartnerBrain: Brain {
         let inReach = foes.filter { abs($0.pos.x - anchor.pos.x) <= tuning.partnerEngageRange }
         // The leader's mark comes before whatever happens to be nearest.
         let target = inReach.first { $0.markedFrames > 0 }
+            ?? inReach.first { $0.spec.wardRadius > 0 }
             ?? inReach.min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
         if let target {
             // Under AI, Caelen marks a tough enemy when nothing is marked yet.

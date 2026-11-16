@@ -249,6 +249,7 @@ public struct World: Sendable {
         if f.invulnerable > 0 { f.invulnerable -= 1 }
         if f.specialCooldown > 0 { f.specialCooldown -= 1 }
         if f.markedFrames > 0 { f.markedFrames -= 1 }
+        if f.slowFrames > 0 { f.slowFrames -= 1 }
 
         switch f.state {
         case .dead:
@@ -297,7 +298,8 @@ public struct World: Sendable {
 
         case .idle, .run, .air:
             if abs(inp.moveX) > 0.01 { f.facing = inp.moveX > 0 ? 1 : -1 }
-            let target = inp.moveX * f.spec.runSpeed * (f.onGround ? 1 : tuning.airControl)
+            let target = inp.moveX * f.spec.runSpeed * (f.onGround || f.spec.hovers ? 1 : tuning.airControl)
+                * (f.slowFrames > 0 ? tuning.slowFactor : 1)
             let rate: Double
             if abs(inp.moveX) <= 0.01 {
                 rate = f.onGround ? tuning.groundDecel : tuning.airDecel
@@ -375,7 +377,7 @@ public struct World: Sendable {
             f.pos.x += platformDeltas[g].x
             f.pos.y += platformDeltas[g].y
         }
-        if f.state == .dodge {
+        if f.state == .dodge || (f.spec.hovers && f.isAlive) {
             f.vel.y = 0
         } else if !f.onGround {
             let cut = f.vel.y > 0 && f.id == controlledID && !inp.jumpHeld
@@ -522,6 +524,15 @@ public struct World: Sendable {
         platformBoxes.contains { $0.minX <= x && x <= $0.maxX && $0.maxY <= y + 1 && $0.maxY >= y - 8 }
     }
 
+    /// True while a living Dogma Frame stands close enough to shield this machine.
+    public func isWarded(_ id: Int) -> Bool {
+        guard let f = fighter(id), f.isAlive, f.spec.wardRadius == 0, !f.spec.boss else { return false }
+        return fighters.contains {
+            $0.spec.wardRadius > 0 && $0.isAlive && $0.awake && $0.team == f.team
+                && abs($0.pos.x - f.pos.x) <= $0.spec.wardRadius && abs($0.pos.y - f.pos.y) <= tuning.wardHeight
+        }
+    }
+
     // MARK: Specials
 
     /// Caelen's Command: marks the nearest enemy in front, or the nearest at all when none is in front.
@@ -606,7 +617,7 @@ public struct World: Sendable {
         }
 
         let fromFront = (attacker.pos.x - target.pos.x) * target.facing >= 0
-        if !target.isOpen || (target.isGuarding && fromFront) {
+        if !target.isOpen || (target.isGuarding && fromFront) || isWarded(target.id) {
             events.append(.blocked(attacker: attacker.id, target: target.id, at: contact))
             return
         }
@@ -616,6 +627,10 @@ public struct World: Sendable {
         hurt(t, damage: attack.damage * attacker.swingScale * (ai ? tuning.partnerDamageScale : 1), by: attacker.id, at: contact, push: push * attack.knockback,
              hitstun: attack.hitstun, &events)
         hitStop = max(hitStop, target.team == .hero ? tuning.heroHurtHitStop : attack.hitStop)
+        if attack.slowFrames > 0, fighters[t].isAlive {
+            fighters[t].slowFrames = attack.slowFrames
+            events.append(.slowed(id: target.id))
+        }
     }
 
     private mutating func hurt(

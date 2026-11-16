@@ -46,6 +46,8 @@ public struct Fighter: Sendable, Identifiable {
     public internal(set) var specialCooldown = 0
     /// Frames left on Caelen's mark. While it lasts, hits on this fighter do more.
     public internal(set) var markedFrames = 0
+    /// Frames left of moving slowly, after a Sentry Core's beam.
+    public internal(set) var slowFrames = 0
     var markScale = 1.0
     /// Damage multiplier of the swing in progress; above 1 for the counter after an absorbed hit.
     var swingScale = 1.0

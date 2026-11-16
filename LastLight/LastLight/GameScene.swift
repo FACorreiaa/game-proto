@@ -392,7 +392,8 @@ final class GameScene: SKScene {
                 nodes[f.id] = created
                 return created
             }()
-            node.sync(f, frame: world.frame, controlled: f.id == world.controlledID)
+            node.sync(f, frame: world.frame, controlled: f.id == world.controlledID,
+                      warded: f.team == .enemy && world.isWarded(f.id))
             // A companion that has not joined yet stands dark.
             if f.team == .hero, !f.awake { node.alpha = 0.4 }
         }
@@ -637,6 +638,10 @@ final class GameScene: SKScene {
                 shake = max(shake, 5)
                 sound.play(.parry)
                 haptics.rigid()
+            case .slowed(let id):
+                if let f = world.fighter(id) {
+                    popup("SLOWED", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.ember, size: 14)
+                }
             case .scene(let id):
                 // The demo bot does not read.
                 if !demo { story.begin(id) }

@@ -19,9 +19,21 @@ public struct Autopilot: Sendable {
             return boss.isAlive ? bossInput(me, boss, frame: world.frame) : .neutral
         }
 
+        // A long attack about to land from further away, such as a Sentry Core's beam: dodge it.
+        let beam = world.fighters.contains { foe in
+            guard foe.team == .enemy, foe.isAlive, foe.awake, let attack = foe.currentAttack, attack.reach > 150,
+                  foe.attackPhase == .windup, attack.windup - foe.stateFrame <= 4 else { return false }
+            let ahead = (me.pos.x - foe.pos.x) * foe.facing
+            return ahead >= 0 && ahead <= foe.spec.width / 2 + attack.reach + half
+                && me.pos.y < foe.pos.y + attack.yOffset + attack.height && me.pos.y + me.spec.height > foe.pos.y + attack.yOffset
+        }
+        if beam, me.onGround { return InputFrame(moveX: 1, dodge: true) }
+
         if fights {
-            let foe = world.fighters
+            let nearby = world.fighters
                 .filter { $0.team == .enemy && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - me.pos.y) < 70 }
+            // A shielded machine cannot be hurt: go for the Dogma Frame that shields it.
+            let foe = nearby.filter { !world.isWarded($0.id) }
                 .min { abs($0.pos.x - me.pos.x) < abs($1.pos.x - me.pos.x) }
             if let foe, abs(foe.pos.x - me.pos.x) < 96 {
                 let dir: Double = foe.pos.x >= me.pos.x ? 1 : -1
