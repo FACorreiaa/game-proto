@@ -271,7 +271,7 @@ private struct ResultsScreen: View {
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                 if result.isLast {
-                    Text("The Protocol is silent. Somewhere past the Foundry, the Eclipse Engine is still turning.")
+                    Text("The Protocol is silent. It was only a voice. The Eclipse Engine has not stopped.")
                         .font(.system(size: 14))
                         .foregroundStyle(.white.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
