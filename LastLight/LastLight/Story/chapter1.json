@@ -224,6 +224,58 @@
           "text": "The Machine Hall. Stay close. They come in numbers here."
         }
       }
+    },
+    "protocol.end": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "That was the voice of this place. Not the hand that built it.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "trusted"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "It counted every hour the light has lost. I will carry that count home, whether they want it or not.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "trusted"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The line has stopped. Somewhere down it, my runners are walking out.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "trusted",
+          "next": "trusted"
+        },
+        "trusted": {
+          "speaker": "ORION",
+          "text": "You kept me beside you to the end. I would like to keep walking, if you will have me.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "You can stop watching me now. Or keep watching. I would understand either.",
+          "requires": {
+            "orion": "watched"
+          },
+          "otherwise": "quiet"
+        },
+        "quiet": {
+          "speaker": "ORION",
+          "text": "It is silent. Come. There is more of the Foundry than this room."
+        }
+      }
     }
   }
 }

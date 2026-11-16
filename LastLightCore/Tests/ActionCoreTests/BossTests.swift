@@ -182,7 +182,9 @@ private let slam = 0, charge = 1, surge = 2
     for _ in 0..<(60 * 240) where !world.isOver { events += world.step(pilot.input(for: world)) }
     #expect(world.isComplete)
     #expect(events.contains(.bossDefeated(id: world.bossID!)))
-    #expect(events.last == .levelComplete)
+    // Nothing happens after the end but the closing scene being cued.
+    #expect(events.drop { $0 != .levelComplete }.allSatisfy { if case .scene = $0 { true } else { $0 == .levelComplete } })
+    #expect(events.contains(.levelComplete))
     #expect(hero(world).isAlive)
 }
 

@@ -274,6 +274,7 @@ extension Level {
         var l = Level(name: "The Protocol", width: 1700, start: Vec2(140, 0), exitX: .infinity)
         l.partner = Placement(.orion, x: 80)
         l.scenes.append(SceneTrigger("protocol.wake", on: .bossWakes))
+        l.scenes.append(SceneTrigger("protocol.end", on: .complete))
         l.ground(-200, 1900)
         l.boss = Placement(.theProtocol, x: 1180)
         return l

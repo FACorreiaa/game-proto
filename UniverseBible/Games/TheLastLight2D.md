@@ -57,4 +57,11 @@ lead. The Machine Hall opens with one line per lead, read from a `lead` story fl
 7. Faction card for Caelen: "Find out what you built". This also leans on that backstory.
 8. Nimue's people are called "runners".
 
+9. Ending (scene `protocol.end`), Caelen: the Protocol was "the voice of this place. Not the hand that built it".
+   This fits SH-006 ("It was only a voice") and adds that something built the Foundry's voice.
+
+**Chapter ending (draft).** When The Protocol falls, the lead speaks one line, then Orion answers the choice made
+when they met: beside (`trusted`), ahead (`watched`), or a plain line for saves from before the choice. The results
+screen and its chapter-end text (SH-006) follow.
+
 Card names, titles, themes and quotes come from the concept art. The one-line motives on the cards are drafts.
