@@ -24,6 +24,7 @@ Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hos
 |---|---|---|
 | The Pilgrim Road | PROPOSED (DRAFT-008) | An ivory road through farmland, crossed by a river ferry |
 | The Sun Cloister | PROPOSED (DRAFT-008) | Galleries round a sunlit court; once open to runners in bad weather |
+| The Oracle's Terrace | PROPOSED (DRAFT-008) | The top of the Choir Stair, where the Last Oracle waits |
 | The Choir Stair | PROPOSED (DRAFT-008) | A long stair up a hill where the hours were once sung; the Last Oracle waits at the top |
 
 ## The Lantern Cities (ART; places WORKING)

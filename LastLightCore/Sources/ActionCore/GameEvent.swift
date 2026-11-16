@@ -51,6 +51,8 @@ public enum GameEvent: Equatable, Sendable {
     case healed(id: Int, amount: Double)
     /// A flare went off; `radius` is how far it reaches.
     case flared(id: Int, at: Vec2, radius: Double)
+    /// An eclipse went off: the dark counterpart of a flare.
+    case eclipsed(id: Int, at: Vec2, radius: Double)
     /// Caught looking into a flare.
     case dazed(id: Int)
     case decoyPlaced(id: Int, at: Vec2)

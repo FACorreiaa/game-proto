@@ -37,6 +37,8 @@ final class GameScene: SKScene {
     private let controls = TouchControls()
     private let hud = HUD()
     private let vignette = SKSpriteNode(texture: Effects.vignetteTexture)
+    /// Darkens the room while the Last Oracle's dusk holds.
+    private let dusk = SKSpriteNode(color: .black, size: .zero)
 
     private let farLayer = SKNode()
     private let midLayer = SKNode()
@@ -157,6 +159,10 @@ final class GameScene: SKScene {
         vignette.anchorPoint = .zero
         vignette.zPosition = 85
         addChild(vignette)
+        dusk.anchorPoint = .zero
+        dusk.zPosition = 84
+        dusk.alpha = 0
+        addChild(dusk)
         addChild(hud)
         #if os(iOS)
         if !demo { addChild(controls) }
@@ -183,6 +189,9 @@ final class GameScene: SKScene {
         case .lineWarden:
             ("THE LINE WARDEN", ["OVERDRIVE"],
              "Its guard faces forward.  Get behind it, or parry to break its stance.")
+        case .lastOracle:
+            ("THE LAST ORACLE", ["THE DUSK", "THE ENDING"],
+             "Gold light: look away.  Dark light: face her.")
         default:
             ("THE PROTOCOL", ["ASCENSION", "EXECUTION"], "Strike only when the core opens.  Jump the surge.  Dodge the charge.")
         }
@@ -208,6 +217,7 @@ final class GameScene: SKScene {
 
     private func layout() {
         vignette.size = size
+        dusk.size = size
         let insets = view?.insets ?? .zero
         controls.layout(size: size, insets: insets)
         hud.layout(size: size, insets: insets)
@@ -614,6 +624,12 @@ final class GameScene: SKScene {
                 partner: partner.map { ($0.kind.rawValue.uppercased(), $0.hp / $0.spec.maxHP) })
         }
         drawLevel()
+        // The Oracle's dusk darkens the room; in the ending it lifts halfway.
+        var duskTarget: CGFloat = 0
+        if let boss = world.boss, boss.kind == .lastOracle, boss.isAlive {
+            duskTarget = boss.phase == 2 ? 0.4 : (boss.phase >= 3 ? 0.18 : 0)
+        }
+        dusk.alpha += (duskTarget - dusk.alpha) * 0.04
         if let boss = world.boss, boss.awake, boss.isAlive {
             let title = bossTitle(boss.kind)
             let phase = boss.phase >= 2 ? " · " + title.phases[min(boss.phase - 2, title.phases.count - 1)] : ""
@@ -703,7 +719,7 @@ final class GameScene: SKScene {
     private func drawGroundStrike(_ node: SKShapeNode, _ s: Strike) {
         let color = s.kind == .fire ? Palette.ember : Palette.violet
         let rect = CGRect(x: s.box.minX, y: s.box.minY + 4, width: s.box.width, height: s.box.maxY - s.box.minY - 4)
-        if s.kind == .fire, s.isActive {
+        if s.kind == .fire || s.kind == .dark, s.isActive {
             // Flames: a jagged top that moves.
             let path = CGMutablePath()
             path.move(to: CGPoint(x: rect.minX, y: rect.minY))
@@ -716,8 +732,9 @@ final class GameScene: SKScene {
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
             path.closeSubpath()
             node.path = path
-            node.fillColor = color.withAlphaComponent(0.7)
-            node.strokeColor = Palette.gold
+            // The Oracle's dark is a black flame edged in violet.
+            node.fillColor = s.kind == .dark ? Palette.body.withAlphaComponent(0.92) : color.withAlphaComponent(0.7)
+            node.strokeColor = s.kind == .dark ? Palette.violet : Palette.gold
             node.glowWidth = 8
         } else if s.kind == .snare, s.isActive {
             // Threads pinned to the ground.
@@ -958,6 +975,10 @@ final class GameScene: SKScene {
                 ring(at: at, radius: radius, color: Palette.gold)
                 Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.gold, count: 26, speed: 260, life: 0.35, size: 10)
                 sound.play(.bossWake, volume: 0.35)
+            case .eclipsed(_, let at, let radius):
+                ring(at: at, radius: radius, color: Palette.violet)
+                Effects.burst(worldNode, at: CGPoint(x: at.x, y: at.y), color: Palette.violet, count: 26, speed: 260, life: 0.35, size: 10)
+                sound.play(.bossWake, volume: 0.35)
             case .dazed(let id):
                 if let f = world.fighter(id) {
                     popup("DAZED", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 14), color: Palette.gold, size: 14)
@@ -1015,6 +1036,11 @@ final class GameScene: SKScene {
                 case .snare:
                     sparks(at: Vec2(at.x, at.y + 4), color: Palette.violet, count: 6)
                     sound.play(.warning, volume: 0.4)
+                case .dark:
+                    sparks(at: Vec2(at.x, at.y + 8), color: Palette.violet, count: 12)
+                    Effects.dust(worldNode, at: CGPoint(x: at.x, y: at.y), amount: 6, spread: width / 2)
+                    shake = max(shake, 3)
+                    sound.play(.explosion, volume: 0.35)
                 }
             case .lobbed(let id, let kind, let at):
                 if let f = world.fighter(id) {

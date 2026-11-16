@@ -132,6 +132,101 @@
           "text": "Someone at the top has been listening to us all the way up. I will go first."
         }
       }
+    },
+    "oracle.wake": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "You were listening all the way up. Then you know why I came.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "oracle"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "The ledgers had our seal on them. I want to know what was bought with it.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "oracle"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "You've been listening. Then you know what I'm here for.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "oracle"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Someone is waiting for us.",
+          "next": "oracle"
+        },
+        "oracle": {
+          "speaker": "LAST ORACLE",
+          "text": "I have seen how this ends. The light goes out, and everyone is finally still.",
+          "next": "oracle2"
+        },
+        "oracle2": {
+          "speaker": "LAST ORACLE",
+          "text": "I will not stop it. I will only make it gentle."
+        }
+      }
+    },
+    "oracle.end": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "She was certain. That's what frightened me.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "orion"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "She spoke for the light as if it had already finished speaking.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "orion"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "No ledger up here. Nothing to buy. Just someone who wanted it all over.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral",
+          "next": "orion"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "She is beaten.",
+          "next": "orion"
+        },
+        "orion": {
+          "speaker": "ORION",
+          "text": "She was sure. Being sure is not the same as being right.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "orion2"
+        },
+        "orion2": {
+          "speaker": "ORION",
+          "text": "You watch me for lies. Watch the certain ones too."
+        }
+      }
     }
   }
 }

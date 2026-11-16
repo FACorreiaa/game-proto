@@ -392,6 +392,60 @@ public struct WardenBrain: Brain {
     }
 }
 
+/// The Last Oracle. Walks the hero down. Up close, her staff or her gaze; at mid range, her gaze; far off, a
+/// prophecy laid where the hero is heading or something from the ground.
+/// Dawn: the gaze is a flare (look away); sunfall. Dusk: Zealots when none are left; the gaze is an eclipse (look
+/// at her); the dark rises from the floor. The Ending: flare and eclipse alternate; everything comes faster.
+public struct OracleBrain: Brain {
+    public init() {}
+
+    static let staff = 0, flare = 1, sunfall = 2, prophecy = 3, faithful = 4, eclipse = 5, dark = 6
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < tuning.oracleTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        let close = gap < me.spec.attacks[Self.staff].reach - 10
+        let far = gap > tuning.oracleFar
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: gap > 40 ? dir : dir * facingNudge) }
+
+        let wait = Double(Int.random(in: tuning.oracleAttackGap, using: &rng))
+        me.aiCooldown = Int(wait * (me.phase >= 3 ? tuning.oracleEndingGapScale : 1))
+        let roll = Double.random(in: 0..<1, using: &rng)
+        let faithfulLeft = allies.contains { $0.kind == .zealot && $0.isAlive }
+        let last = me.nextAttack
+        // Her light and her dark, in this phase.
+        let gaze = me.phase == 1 ? Self.flare : (me.phase == 2 ? Self.eclipse : (last == Self.flare ? Self.eclipse : Self.flare))
+        let ground = me.phase == 1 ? Self.sunfall : Self.dark
+
+        if me.phase == 2, !faithfulLeft, last != Self.faithful {
+            me.nextAttack = Self.faithful
+        } else if close {
+            me.nextAttack = roll < tuning.oracleCloseChance ? Self.staff : gaze
+        } else if far {
+            me.nextAttack = roll < 0.5 ? Self.prophecy : ground
+        } else if roll < 0.45 {
+            me.nextAttack = gaze
+        } else {
+            // Mid range with nothing to throw: close in first.
+            me.aiCooldown = 10
+            return InputFrame(moveX: dir)
+        }
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
 /// The Cinder King, in three phases.
 /// Offer: walks the hero down; cane up close, lanterns from further off.
 /// Debt: calls Ratborn whenever none are left, who shield him; between calls, fire from the floor and lanterns.

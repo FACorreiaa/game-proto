@@ -116,6 +116,14 @@ public struct Tuning: Sendable {
     /// Frames someone has to stay close behind it before it spins.
     public var wardenSpinAfter = 50
 
+    // The Last Oracle.
+    public var oracleAttackGap = 80...120
+    public var oracleEndingGapScale = 0.75
+    public var oracleTurnDelay = 14
+    /// Beyond this gap she uses her far attacks; within it, the staff or a flare.
+    public var oracleFar = 220.0
+    public var oracleCloseChance = 0.7
+
     // The Cinder King.
     public var cinderAttackGap = 60...100
     /// In the last phase it acts this much sooner.
@@ -453,6 +461,46 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Last Oracle. Dawn: staff, flare (look away), sunfall, prophecy. Dusk: the arena darkens and her eclipse
+    /// dazes anyone looking away; she calls Zealots and raises the dark from the floor. The Ending: all of it, faster.
+    public var lastOracle: FighterSpec = {
+        var s = FighterSpec(width: 58, height: 140, maxHP: 900, runSpeed: 110)
+        let still = AttackSpec(windup: 0, active: 1, recovery: 0, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+        let staff = AttackSpec(windup: 24, active: 6, recovery: 32, damage: 15, reach: 100, height: 110,
+                               knockback: 320, lunge: 90, hitstun: 18, hitStop: 6)
+        let flare = still.with {
+            $0.windup = 56; $0.recovery = 46
+            $0.effect = .flare(radius: 420, daze: 50)
+        }
+        let sunfall = still.with {
+            $0.windup = 36; $0.recovery = 50
+            $0.effect = .rain(columns: 3, width: 70, warning: 54, active: 16, damage: 14)
+        }
+        let prophecy = still.with {
+            $0.windup = 30; $0.recovery = 44
+            $0.effect = .prophecy(width: 90, height: 160, warning: 48, active: 14, damage: 16)
+        }
+        let faithful = still.with {
+            $0.windup = 44; $0.recovery = 56
+            $0.effect = .summon(.zealot, count: 2)
+        }
+        let eclipse = flare.with { $0.effect = .eclipse(radius: 420, daze: 50) }
+        let dark = still.with {
+            $0.windup = 40; $0.recovery = 54
+            $0.effect = .eruption(columns: 4, width: 70, height: 180, warning: 56, active: 20, damage: 16, kind: .dark)
+        }
+        s.attacks = [staff, flare, sunfall, prophecy, faithful, eclipse, dark]
+        s.choosesAttacks = true
+        s.phaseThresholds = [0.66, 0.33]
+        s.boss = true
+        s.poise = true
+        s.unflinching = true
+        s.wakeDelay = 110
+        s.brain = OracleBrain()
+        return s
+    }()
+
     /// The Line Warden. A duellist: its guard faces forward, so it is hurt from behind, while it swings, or after a
     /// parry staggers it. Overdrive: turns faster and calls a Forged Soldier to the line.
     public var lineWarden: FighterSpec = {
@@ -540,6 +588,7 @@ public struct Tuning: Sendable {
         case .radiantAcolyte: radiantAcolyte
         case .solarGuard: solarGuard
         case .haloDisciple: haloDisciple
+        case .lastOracle: lastOracle
         }
     }
 }
