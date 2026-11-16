@@ -6,7 +6,7 @@ public enum Team: Sendable, Equatable {
 extension FighterKind {
     public var team: Team {
         switch self {
-        case .caelen, .orion: .hero
+        case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol: .enemy
         }
     }
@@ -15,6 +15,10 @@ extension FighterKind {
 public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case caelen
     case orion
+    case seraphine
+    case nimue
+    /// Nimue's Lantern Trick: a stand-in that draws enemies away. It is on the heroes' side but is not a hero.
+    case decoy
     case dummy
     case scrapDrone
     case forgedSoldier
@@ -116,10 +120,15 @@ public enum SpecialSpec: Sendable, Equatable {
     case command(range: Double, frames: Int, damageScale: Double, cooldown: Int)
     /// A short guard. A hit taken during it does nothing, staggers the attacker, and is answered with a counter.
     case adapt(window: Int, stagger: Int, counterScale: Double, cooldown: Int)
+    /// Heals every awake hero within range, the user included.
+    case heal(amount: Double, range: Double, cooldown: Int)
+    /// Leaves a decoy where the user stands. Enemies go for it until it breaks or its time runs out.
+    case decoy(frames: Int, cooldown: Int)
 
     public var cooldown: Int {
         switch self {
-        case .command(_, _, _, let cooldown), .adapt(_, _, _, let cooldown): cooldown
+        case .command(_, _, _, let cooldown), .adapt(_, _, _, let cooldown), .heal(_, _, let cooldown),
+             .decoy(_, let cooldown): cooldown
         }
     }
 
@@ -127,6 +136,8 @@ public enum SpecialSpec: Sendable, Equatable {
         switch self {
         case .command: "COMMAND"
         case .adapt: "ADAPT"
+        case .heal: "LIGHT LISTENS"
+        case .decoy: "LANTERN TRICK"
         }
     }
 }
@@ -152,6 +163,8 @@ public struct FighterSpec: Sendable {
     public var immortal = false
     public var rooted = false
     public var special: SpecialSpec?
+    /// A stand-in, not a person: it can't be controlled, picks nothing up and never ends the game by falling.
+    public var isDecoy = false
     /// Floats at the height it was placed at and ignores gravity while it lives.
     public var hovers = false
     /// Machines this close to it cannot be hurt while it lives. Zero means it shields nobody.

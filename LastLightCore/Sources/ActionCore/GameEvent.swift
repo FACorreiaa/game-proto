@@ -43,4 +43,9 @@ public enum GameEvent: Equatable, Sendable {
     case absorbed(by: Int, attacker: Int, at: Vec2)
     /// A story scene is due. The simulation only says so; showing it is the app's work.
     case scene(id: String)
+    /// A hero got health back from a heal.
+    case healed(id: Int, amount: Double)
+    case decoyPlaced(id: Int, at: Vec2)
+    /// A decoy broke or ran out.
+    case decoyGone(id: Int, at: Vec2)
 }

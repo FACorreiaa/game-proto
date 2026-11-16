@@ -178,7 +178,8 @@ public struct World: Sendable {
                     $0.team != f.team && $0.isAlive && !$0.spec.immortal && abs($0.pos.y - f.pos.y) <= sight
                         && ($0.team == .enemy || $0.awake)
                 }
-                let allies = snapshot.filter { $0.team == f.team && $0.isAlive }
+                // A decoy is nobody's ally: the partner neither follows it nor counts it.
+                let allies = snapshot.filter { $0.team == f.team && $0.isAlive && !$0.spec.isDecoy }
                 inp = brain.think(me: &f, foes: foes, allies: allies, tuning: tuning, rng: &rng)
                 if f.team == .hero, level != nil {
                     navigate(&f, &inp, leader: snapshot.first { $0.id == controlledID })
@@ -196,6 +197,7 @@ public struct World: Sendable {
         }
 
         resolveCommands(&events)
+        resolveSpecials(&events)
         resolveHits(&events)
         applyEffects(&events)
         updateStrikes(&events)
@@ -231,7 +233,7 @@ public struct World: Sendable {
 
     /// The living hero the player is not controlling, if there is one.
     private func otherHero() -> Int? {
-        fighters.first { $0.team == .hero && $0.isAlive && $0.awake && $0.id != controlledID }?.id
+        fighters.first { $0.team == .hero && $0.isAlive && $0.awake && !$0.spec.isDecoy && $0.id != controlledID }?.id
     }
 
     private mutating func passControl(to id: Int, _ events: inout [GameEvent]) {
@@ -339,6 +341,8 @@ public struct World: Sendable {
                     f.specialCooldown = cooldown
                     f.enter(.guardStance, duration: window)
                     events.append(.guarded(id: f.id))
+                case .heal, .decoy:
+                    f.wantsSpecial = true
                 }
             } else if canDodge(f) {
                 startDodge(&f, inp, &events)
@@ -519,7 +523,7 @@ public struct World: Sendable {
     private mutating func regroupPartner(_ events: inout [GameEvent]) {
         guard let lead = controlled, lead.isAlive, lead.onGround, let spot = lead.lastSafe else { return }
         for i in fighters.indices where fighters[i].team == .hero && fighters[i].id != controlledID
-            && fighters[i].isAlive && fighters[i].awake {
+            && fighters[i].isAlive && fighters[i].awake && !fighters[i].spec.isDecoy {
             var f = fighters[i]
             let apart = abs(f.pos.y - lead.pos.y) > tuning.partnerStrandedHeight && f.onGround
             f.strandedFrames = apart ? f.strandedFrames + 1 : 0
@@ -645,6 +649,51 @@ public struct World: Sendable {
             fighters[i].specialCooldown = cooldown
             events.append(.commanded(by: me.id, target: fighters[pick].id))
         }
+    }
+
+    /// Seraphine's heal and Nimue's decoy, and the decoys' clocks.
+    private mutating func resolveSpecials(_ events: inout [GameEvent]) {
+        var newDecoys: [(owner: Int, frames: Int)] = []
+        for i in fighters.indices where fighters[i].wantsSpecial {
+            fighters[i].wantsSpecial = false
+            let me = fighters[i]
+            switch me.spec.special {
+            case .heal(let amount, let range, let cooldown)?:
+                fighters[i].specialCooldown = cooldown
+                for t in fighters.indices where fighters[t].team == me.team && fighters[t].isAlive && fighters[t].awake
+                    && !fighters[t].spec.isDecoy && abs(fighters[t].pos.x - me.pos.x) <= range
+                    && abs(fighters[t].pos.y - me.pos.y) <= 220 {
+                    let gained = min(amount, fighters[t].spec.maxHP - fighters[t].hp)
+                    guard gained > 0 else { continue }
+                    fighters[t].hp += gained
+                    events.append(.healed(id: fighters[t].id, amount: gained))
+                }
+            case .decoy(let frames, let cooldown)?:
+                fighters[i].specialCooldown = cooldown
+                newDecoys.append((i, frames))
+            default:
+                break
+            }
+        }
+        for (owner, frames) in newDecoys {
+            let me = fighters[owner]
+            // One at a time: a new decoy replaces the old one.
+            for d in fighters.indices where fighters[d].spec.isDecoy { fighters[d].expires = 1 }
+            let id = spawn(.decoy, x: me.pos.x, y: me.pos.y, facing: me.facing)
+            if let d = index(of: id) {
+                fighters[d].expires = frames + 1
+                fighters[d].awake = true
+                fighters[d].onGround = me.onGround
+            }
+            events.append(.decoyPlaced(id: id, at: me.pos))
+        }
+        for d in fighters.indices where fighters[d].spec.isDecoy {
+            fighters[d].expires -= 1
+            if fighters[d].expires <= 0 || !fighters[d].isAlive {
+                events.append(.decoyGone(id: fighters[d].id, at: fighters[d].hurtbox.center))
+            }
+        }
+        fighters.removeAll { $0.spec.isDecoy && ($0.expires <= 0 || !$0.isAlive) }
     }
 
     // MARK: Hits
@@ -819,6 +868,11 @@ public struct World: Sendable {
             f.vel = .zero
             f.pos.y = level.killY
             guard f.isAlive else { continue }
+            // A decoy that falls is simply gone.
+            if f.spec.isDecoy {
+                f.hp = 0
+                continue
+            }
             if f.team == .enemy {
                 f.hp = 0
                 f.enter(.dead)
@@ -843,7 +897,8 @@ public struct World: Sendable {
         }
 
         for hazard in level.hazards where hazard.isOn(at: frame) {
-            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && fighters[i].awake {
+            for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && fighters[i].awake
+                && !fighters[i].spec.isDecoy {
                 let f = fighters[i]
                 guard f.invulnerable == 0, !f.isDodgeInvulnerable, hazard.box.intersects(f.hurtbox) else { continue }
                 let push: Double = f.pos.x >= hazard.box.center.x ? 1 : -1
@@ -852,7 +907,7 @@ public struct World: Sendable {
             }
         }
 
-        for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive {
+        for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && !fighters[i].spec.isDecoy {
             let reach = tuning.pickupReach
             let box = fighters[i].hurtbox
             for p in level.pickups where !collected.contains(p.id)

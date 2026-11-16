@@ -15,6 +15,7 @@ public struct Autopilot: Sendable {
         var inp = InputFrame(moveX: 1, jumpHeld: jumpHeld > 0)
         if jumpHeld > 0 { jumpHeld -= 1 }
 
+        if let special = kitSpecial(me, world: world) { return special }
         if let boss = world.boss {
             return boss.isAlive ? bossInput(me, boss, world: world) : .neutral
         }
@@ -147,6 +148,26 @@ public struct Autopilot: Sendable {
             return InputFrame(moveX: dir * 0.02, special: true)
         }
         return InputFrame(moveX: gap > 45 ? dir : (gap < 25 ? -dir : dir * 0.02))
+    }
+
+    /// Seraphine heals when someone is low; Nimue leaves a decoy when crowded. Caelen's Command is used in
+    /// the fights themselves.
+    private func kitSpecial(_ me: Fighter, world: World) -> InputFrame? {
+        guard me.specialCooldown == 0, me.isActionable else { return nil }
+        switch me.spec.special {
+        case .heal?:
+            let low = world.fighters.contains {
+                $0.team == .hero && $0.isAlive && $0.awake && !$0.spec.isDecoy && $0.hp < $0.spec.maxHP * 0.5
+            }
+            return low ? InputFrame(special: true) : nil
+        case .decoy?:
+            let crowd = world.fighters.filter {
+                $0.team == .enemy && $0.isAlive && $0.awake && !$0.spec.immortal && abs($0.pos.x - me.pos.x) < 160
+            }
+            return crowd.count >= 2 ? InputFrame(special: true) : nil
+        default:
+            return nil
+        }
     }
 
     private mutating func jump(_ inp: inout InputFrame) {

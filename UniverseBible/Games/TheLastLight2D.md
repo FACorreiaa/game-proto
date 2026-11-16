@@ -10,7 +10,7 @@ The first game. Stage-based 2D action-platformer for iPhone, iPad and Mac. The c
 |---|---|---|
 | The Foundry, its colours, its enemies, The Protocol | WORKING (ART) | Chapter 1 region and boss |
 | Caelen, Orion | WORKING (ART); backstory PROPOSED | Lead and companion |
-| Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Planned, stage 4 |
+| Seraphine, Nimue as other leads | WORKING (ART); arcs PROPOSED | Playable as a test in the Foundry levels. Kits are gameplay, not canon: Seraphine's **Light Listens** heals, Nimue's **Lantern Trick** leaves a decoy. Openings planned |
 | The AI's goal | WORKING (WC-010) | Implied: a line where the others never woke |
 | The Eclipse Engine | WORKING (ART); details UNKNOWN | Hook at the end of Chapter 1 (DEC-011) |
 
