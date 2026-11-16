@@ -20,6 +20,7 @@ final class GameScene: SKScene {
     private var hardware = HardwareInput()
     private let controls = TouchControls()
     private let hud = HUD()
+    private let vignette = SKSpriteNode(texture: Effects.vignetteTexture)
 
     private let farLayer = SKNode()
     private let midLayer = SKNode()
@@ -87,6 +88,9 @@ final class GameScene: SKScene {
         addChild(farLayer)
         addChild(midLayer)
         addChild(worldNode)
+        vignette.anchorPoint = .zero
+        vignette.zPosition = 85
+        addChild(vignette)
         addChild(hud)
         #if os(iOS)
         if !demo { addChild(controls) }
@@ -125,6 +129,7 @@ final class GameScene: SKScene {
     }
 
     private func layout() {
+        vignette.size = size
         let insets = view?.insets ?? .zero
         controls.layout(size: size, insets: insets)
         hud.layout(size: size, insets: insets)
@@ -187,6 +192,7 @@ final class GameScene: SKScene {
         pickupNodes = [:]
         strikeNodes = []
         buildBackdrop()
+        Effects.ambient(mid: midLayer, far: farLayer, width: CGFloat(world.arena.upperBound - world.arena.lowerBound))
         if let level = world.level { build(level) } else { buildRoomFloor() }
     }
 
@@ -545,6 +551,7 @@ final class GameScene: SKScene {
                 sound.play(.blocked)
                 haptics.rigid(0.5)
             case .parried(_, let attacker, let at):
+                Effects.flash(self, color: Palette.white, alpha: 0.14)
                 ring(at: at, radius: 70, color: Palette.white)
                 sparks(at: at, color: Palette.white, count: 14)
                 popup("PARRY", at: at, color: Palette.cyan, size: 20)
@@ -554,7 +561,7 @@ final class GameScene: SKScene {
                 haptics.rigid()
             case .exploded(let id, let at, let radius):
                 ring(at: at, radius: radius, color: Palette.ember)
-                sparks(at: at, color: Palette.ember, count: 18)
+                Effects.explosion(worldNode, at: CGPoint(x: at.x, y: at.y), radius: radius)
                 sound.play(.explosion)
                 shake = max(shake, 10)
                 nodes[id]?.vanish()
@@ -565,7 +572,13 @@ final class GameScene: SKScene {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + 60), color: Palette.red, size: 22)
                 }
             case .died(let id):
-                if world.fighter(id)?.team == .enemy { kills += 1 }
+                if let f = world.fighter(id), f.team == .enemy {
+                    kills += 1
+                    // A drone that exploded is already gone; the boss has its own ending.
+                    if nodes[id]?.parent != nil, !f.spec.boss {
+                        Effects.breakApart(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), size: f.spec.height)
+                    }
+                }
             case .waveStarted(let number):
                 hud.announce("WAVE \(number)")
             case .waveCleared:
@@ -593,6 +606,7 @@ final class GameScene: SKScene {
                     ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 60, color: Palette.white)
                 }
             case .checkpoint(let index):
+                if let c = world.level?.checkpoints[index] { Effects.motes(worldNode, at: CGPoint(x: c.x, y: c.y + 20), color: Palette.cyan, count: 26, width: 40) }
                 if let c = world.level?.checkpoints[index] {
                     ring(at: Vec2(c.x, c.y + 78), radius: 50, color: Palette.cyan)
                     popup("CHECKPOINT", at: Vec2(c.x, c.y + 90), color: Palette.cyan, size: 13)
@@ -600,6 +614,7 @@ final class GameScene: SKScene {
                 sound.play(.checkpoint)
                 haptics.light()
             case .collected(let id, let secret, let at):
+                Effects.motes(worldNode, at: CGPoint(x: at.x, y: at.y), color: secret ? Palette.gold : Palette.cyan)
                 pickupNodes[id]?.removeFromParent()
                 pickupNodes[id] = nil
                 sparks(at: at, color: secret ? Palette.gold : Palette.cyan, count: 8)
@@ -617,6 +632,7 @@ final class GameScene: SKScene {
                     popup("!", at: Vec2(f.pos.x, f.pos.y + f.spec.height), color: Palette.red, size: 16)
                 }
             case .joined(let id):
+                if let f = world.fighter(id) { Effects.motes(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y), color: Palette.cyan, count: 22, width: 30) }
                 sound.play(.join)
                 if let f = world.fighter(id) {
                     ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 90, color: Palette.cyan)
@@ -625,6 +641,11 @@ final class GameScene: SKScene {
                 }
                 haptics.rigid()
             case .bossDefeated(let id):
+                Effects.flash(self, color: Palette.white, alpha: 0.4, duration: 0.6)
+                if let f = world.fighter(id) {
+                    Effects.explosion(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), radius: 140)
+                    Effects.breakApart(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), size: f.spec.height)
+                }
                 if let f = world.fighter(id) {
                     let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)
                     sparks(at: centre, color: Palette.gold, count: 30)
@@ -650,10 +671,13 @@ final class GameScene: SKScene {
                     sound.play(heavy ? .heavySwing : .swing, volume: f.id == world.controlledID ? 1 : 0.5)
                 }
             case .jumped(let id):
+                dust(id, amount: 6)
                 if id == world.controlledID { sound.play(.jump) }
             case .landed(let id):
+                dust(id, amount: 10, spread: 34)
                 if id == world.controlledID { sound.play(.land) }
             case .dodged(let id):
+                dust(id, amount: 9, spread: 40)
                 sound.play(.dodge, volume: id == world.controlledID ? 1 : 0.5)
             case .commanded(_, let target):
                 if let f = world.fighter(target) {
@@ -669,6 +693,7 @@ final class GameScene: SKScene {
                 }
                 sound.play(.dodge)
             case .absorbed(_, let attacker, let at):
+                Effects.flash(self, color: Palette.cyan, alpha: 0.12)
                 ring(at: at, radius: 80, color: Palette.cyan)
                 sparks(at: at, color: Palette.cyan, count: 14)
                 popup("ADAPT", at: at, color: Palette.cyan, size: 20)
@@ -684,11 +709,14 @@ final class GameScene: SKScene {
                 // The demo bot does not read.
                 if !demo { story.begin(id) }
             case .bossPhase(_, let phase):
+                Effects.flash(self, color: Palette.gold, alpha: 0.3, duration: 0.4)
+                if let b = world.boss { Effects.motes(worldNode, at: CGPoint(x: b.pos.x, y: b.pos.y + 40), color: Palette.gold, count: 40, width: 140) }
                 hud.announce(phase == 2 ? "ASCENSION" : "EXECUTION")
                 shake = max(shake, 12)
                 sound.play(.bossWake)
                 haptics.heavy()
             case .bossLanded(let id):
+                dustCloud(id)
                 if let f = world.fighter(id) {
                     let feet = Vec2(f.pos.x, f.pos.y + 10)
                     ring(at: feet, radius: 170, color: Palette.red)
@@ -699,6 +727,7 @@ final class GameScene: SKScene {
                 sound.play(.explosion)
                 haptics.heavy()
             case .struck(let at, _):
+                if case .struck(_, let width) = event { Effects.column(worldNode, at: CGPoint(x: at.x, y: at.y), width: width) }
                 sparks(at: Vec2(at.x, at.y + 10), color: Palette.white, count: 10)
                 shake = max(shake, 4)
                 sound.play(.heavyHit, volume: 0.7)
@@ -713,25 +742,21 @@ final class GameScene: SKScene {
     }
 
     private func sparks(at point: Vec2, color: SKColor, count: Int) {
-        for _ in 0..<count {
-            let spark = SKShapeNode(rect: CGRect(x: -4, y: -1, width: 8, height: 2))
-            spark.fillColor = color
-            spark.strokeColor = .clear
-            spark.glowWidth = 1
-            spark.position = CGPoint(x: point.x, y: point.y)
-            spark.zPosition = 20
-            let angle = CGFloat.random(in: 0..<(2 * .pi))
-            let distance = CGFloat.random(in: 24...70)
-            spark.zRotation = angle
-            worldNode.addChild(spark)
-            spark.run(.sequence([
-                .group([
-                    .moveBy(x: cos(angle) * distance, y: sin(angle) * distance, duration: 0.22),
-                    .fadeOut(withDuration: 0.22),
-                ]),
-                .removeFromParent(),
-            ]))
-        }
+        Effects.burst(worldNode, at: CGPoint(x: point.x, y: point.y), color: color, count: count * 2, speed: 260,
+                      life: 0.28, size: 9)
+    }
+
+    /// The boss hitting the floor from the air.
+    private func dustCloud(_ id: Int) {
+        guard let f = world.fighter(id) else { return }
+        Effects.dust(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y), amount: 34, spread: f.spec.width * 1.4)
+        Effects.flash(self, color: Palette.ember, alpha: 0.12)
+    }
+
+    /// Dust at a hero's feet.
+    private func dust(_ id: Int, amount: Int, spread: CGFloat = 26) {
+        guard let f = world.fighter(id), f.team == .hero, f.awake else { return }
+        Effects.dust(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y), amount: amount, spread: spread)
     }
 
     private func ring(at point: Vec2, radius: CGFloat, color: SKColor) {

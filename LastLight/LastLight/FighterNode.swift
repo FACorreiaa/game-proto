@@ -31,6 +31,9 @@ final class FighterNode: SKNode {
     private var baseFill = Palette.body
     private let marker = SKShapeNode()
     private var gone = false
+    private var eyeGlow: SKSpriteNode?
+    private var coreGlow: SKSpriteNode?
+    private var lastGhostFrame = -1
 
     init(kind: FighterKind) {
         self.kind = kind
@@ -51,6 +54,7 @@ final class FighterNode: SKNode {
         case .sentryCore: buildSentry()
         case .dogmaFrame: buildDogma()
         }
+        addGlows()
     }
 
     @available(*, unavailable)
@@ -344,6 +348,48 @@ final class FighterNode: SKNode {
         core.setScale(open ? 1.15 + 0.12 * sin(CGFloat(frame) * 0.4) : 1)
     }
 
+    /// Soft light around the eyes, and behind The Protocol's core.
+    private func addGlows() {
+        if let eye, kind != .dummy {
+            let size: CGFloat = kind == .theProtocol ? 110 : (kind == .dogmaFrame ? 70 : 38)
+            let color = kind == .dogmaFrame ? Palette.ember : rim
+            let glow = Effects.glow(color: color, size: size, alpha: 0.45)
+            glow.position = CGPoint(x: eye.frame.midX, y: eye.frame.midY)
+            glow.zPosition = 1.5
+            figure.addChild(glow)
+            eyeGlow = glow
+        }
+        if let core {
+            let glow = Effects.glow(color: Palette.gold, size: 190, alpha: 0)
+            glow.position = core.position
+            glow.zPosition = 2.5
+            figure.addChild(glow)
+            coreGlow = glow
+        }
+    }
+
+    /// A fading copy of the figure, left behind by a dodge or a charge.
+    private func leaveGhost(frame: Int) {
+        guard frame != lastGhostFrame, frame % 3 == 0, let parent, let copy = figure.copy() as? SKNode else { return }
+        lastGhostFrame = frame
+        func tint(_ node: SKNode) {
+            if let shape = node as? SKShapeNode, shape.fillColor != .clear {
+                shape.fillColor = rim.withAlphaComponent(0.35)
+                shape.strokeColor = rim.withAlphaComponent(0.6)
+            }
+            node.children.forEach(tint)
+        }
+        tint(copy)
+        let ghost = SKNode()
+        ghost.position = position
+        ghost.xScale = xScale
+        ghost.zPosition = zPosition - 1
+        ghost.alpha = 0.5
+        ghost.addChild(copy)
+        parent.addChild(ghost)
+        ghost.run(.sequence([.fadeOut(withDuration: 0.22), .removeFromParent()]))
+    }
+
     // MARK: Per-frame
 
     func flash() {
@@ -442,6 +488,14 @@ final class FighterNode: SKNode {
         animateLegs(f, frame: frame)
         animateWeapon(f)
         animateTelegraph(f)
+        if f.isAlive, f.state == .dodge || (f.currentAttack?.holdsStill == true && f.attackPhase == .active) {
+            leaveGhost(frame: frame)
+        }
+        eyeGlow?.isHidden = !f.isAlive || (kind == .theProtocol && !f.awake)
+        if let coreGlow {
+            let open = f.isOpen && f.isAlive && f.awake
+            coreGlow.alpha = open ? 0.55 + 0.15 * sin(CGFloat(frame) * 0.4) : 0
+        }
         animateZone(f)
         animateCore(f, frame: frame)
         if kind == .theProtocol {
