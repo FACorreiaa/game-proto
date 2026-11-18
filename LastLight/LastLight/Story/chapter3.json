@@ -41,6 +41,57 @@
         }
       }
     },
+    "bells.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Bells, and no one ringing them.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "The hour bells. Once, everyone below knew the time by them.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Runners set their routes by these bells. They've been quiet a long time.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The bells where the hours were rung."
+        }
+      }
+    },
+    "bells.order": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "ORION",
+          "text": "Each bell carries its hour. Ring them in order, first to last. One out of turn, and they all fall silent."
+        }
+      }
+    },
+    "bells.race": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "ORION",
+          "text": "These fall silent on their own. Clear the way first, then ring all three before the first goes quiet."
+        }
+      }
+    },
     "cloister.arrive": {
       "start": "caelen",
       "lines": {
@@ -80,6 +131,82 @@
         "line": {
           "speaker": "ORION",
           "text": "Above us. When the light gathers on it, turn your back. Whoever looks at it will not see for a moment."
+        }
+      }
+    },
+    "sworn.wake": {
+      "start": "shield",
+      "lines": {
+        "shield": {
+          "speaker": "SWORN SHIELD",
+          "text": "We swore it together.",
+          "next": "spear"
+        },
+        "spear": {
+          "speaker": "SWORN SPEAR",
+          "text": "We keep it together.",
+          "next": "caelen"
+        },
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Two of them, and one oath.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "trusted"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "They mean every word of it. That's what frightens me.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "trusted"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "Bribe one, and the other still says no. That's why runners went round.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "trusted",
+          "next": "trusted"
+        },
+        "trusted": {
+          "speaker": "ORION",
+          "text": "If one falls alone, the other raises it. Wear them down evenly, and bring them down together.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "If one falls alone, the other raises it. They must fall within moments of each other.",
+          "requires": {
+            "orion": "watched"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "If one falls alone, the other raises it."
+        }
+      }
+    },
+    "sworn.raised": {
+      "start": "vow",
+      "lines": {
+        "vow": {
+          "speaker": "SWORN SHIELD",
+          "text": "Not while one of us stands.",
+          "next": "orion"
+        },
+        "orion": {
+          "speaker": "ORION",
+          "text": "Too far apart. Strike the one with more left, and finish them together."
         }
       }
     },

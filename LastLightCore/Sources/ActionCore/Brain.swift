@@ -448,6 +448,85 @@ public struct LamplighterBrain: Brain {
     }
 }
 
+/// Pause before a sworn fighter's next attack: shorter while the other lies down.
+private func swornGap(_ me: Fighter, allies: [Fighter], _ range: ClosedRange<Int>, tuning: Tuning,
+                      rng: inout SeededRandom) -> Int {
+    let gap = Int.random(in: range, using: &rng)
+    let alone = !allies.contains { $0.id != me.id && $0.spec.sworn }
+    return alone ? Int(Double(gap) * tuning.swornFuryScale) : gap
+}
+
+/// The Sworn Shield. Slow to turn, so a hero behind it has a moment. Bashes anyone in reach; calls light down on
+/// anyone who keeps away.
+public struct SwornShieldBrain: Brain {
+    public init() {}
+
+    static let bash = 0, light = 2
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        if dir != me.facing {
+            me.aiAux += 1
+            if me.aiAux < tuning.guardTurnDelay { return .neutral }
+        }
+        me.aiAux = 0
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        let close = gap < me.spec.attacks[Self.bash].reach - 10
+        guard me.aiCooldown == 0 else { return InputFrame(moveX: close ? dir * facingNudge : dir) }
+        if close {
+            me.nextAttack = Self.bash
+        } else if gap > tuning.swornLightFrom {
+            me.nextAttack = Self.light
+        } else {
+            return InputFrame(moveX: dir)
+        }
+        me.aiCooldown = swornGap(me, allies: allies, tuning.swornShieldAttackGap, tuning: tuning, rng: &rng)
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
+/// The Sworn Spear. Keeps its target at the end of its spear: thrusts from there, leaps in from far off, and
+/// sweeps round both sides when someone gets inside its reach, or gives ground when it cannot.
+public struct SwornSpearBrain: Brain {
+    public init() {}
+
+    static let thrust = 0, leap = 1, sweep = 2
+
+    public func think(
+        me: inout Fighter, foes: [Fighter], allies: [Fighter], tuning: Tuning, rng: inout SeededRandom
+    ) -> InputFrame {
+        guard let target = nearest(foes, to: me) else { return .neutral }
+        if me.aiCooldown > 0 { me.aiCooldown -= 1 }
+        guard me.isActionable else { return .neutral }
+        let dx = target.pos.x - me.pos.x
+        let dir: Double = dx >= 0 ? 1 : -1
+        let gap = abs(dx) - me.spec.width / 2 - target.spec.width / 2
+        let inside = gap < tuning.swornSpearKeep
+        let inReach = gap < me.spec.attacks[Self.thrust].reach - 10
+        guard me.aiCooldown == 0 else {
+            if inside { return InputFrame(moveX: -dir) }
+            return InputFrame(moveX: inReach ? dir * facingNudge : dir)
+        }
+        if inside {
+            me.nextAttack = Self.sweep
+        } else if inReach {
+            me.nextAttack = Self.thrust
+        } else if gap > tuning.swornLeapFrom {
+            me.nextAttack = Self.leap
+        } else {
+            return InputFrame(moveX: dir)
+        }
+        me.aiCooldown = swornGap(me, allies: allies, tuning.swornSpearAttackGap, tuning: tuning, rng: &rng)
+        return InputFrame(moveX: dir * facingNudge, attack: true)
+    }
+}
+
 /// The Last Oracle. Walks the hero down. Up close, her staff or her gaze; at mid range, her gaze; far off, a
 /// prophecy laid where the hero is heading or something from the ground.
 /// Dawn: the gaze is a flare (look away); sunfall. Dusk: Zealots when none are left; the gaze is an eclipse (look

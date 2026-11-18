@@ -9,7 +9,7 @@ extension FighterKind {
         case .caelen, .orion, .seraphine, .nimue, .decoy: .hero
         case .dummy, .scrapDrone, .forgedSoldier, .sentryCore, .dogmaFrame, .theProtocol, .lineWarden,
              .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing,
-             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle, .lamplighter: .enemy
+             .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle, .lamplighter, .swornShield, .swornSpear: .enemy
         }
     }
 }
@@ -40,6 +40,9 @@ public enum FighterKind: String, Sendable, Equatable, CaseIterable {
     case cinderKing
     /// Chapter 2's mid-boss: keeps the lamps on the Lamp Row, and puts them out.
     case lamplighter
+    /// Chapter 3's mid-boss, a pair: the Sworn Shield and the Sworn Spear.
+    case swornShield
+    case swornSpear
     // The Dawnfaith.
     case zealot
     case radiantAcolyte
@@ -260,6 +263,8 @@ public struct FighterSpec: Sendable {
     public var riposte: Int?
     /// Hits do nothing and never interrupt it, except while it recovers from its own attack or is staggered.
     public var armored = false
+    /// One of a sworn pair: it fights harder while the other is down.
+    public var sworn = false
     /// The level ends when it falls. It waits for the hero instead of patrolling, and its brain picks each attack.
     public var boss = false
     /// Frames it takes to rise after noticing a hero, before its first move.

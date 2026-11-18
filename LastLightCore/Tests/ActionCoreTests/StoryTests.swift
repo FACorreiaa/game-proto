@@ -369,3 +369,33 @@ private func shipped() throws -> StoryLibrary {
         }
     }
 }
+
+@Test func theSwornSpeakAsOneThenTheLeadThenOrionTellsHowToBeatThem() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        for choice in ["trusted", "watched"] {
+            var state = StoryState()
+            state.flags = ["lead": lead.rawValue, "orion": choice]
+            var runner = try #require(StoryRunner(sceneID: "sworn.wake", library: story, state: state))
+            var speakers: [String] = []
+            var last = ""
+            while let line = runner.line { speakers.append(line.speaker); last = line.text; runner.advance() }
+            #expect(speakers == ["SWORN SHIELD", "SWORN SPEAR", lead.rawValue.uppercased(), "ORION"], "\(lead) \(choice)")
+            #expect(last.contains("together") || last.contains("moments"))
+        }
+    }
+}
+
+@Test func theBellTowerGreetsWhoeverLeadsAndOrionExplainsTheBells() throws {
+    let story = try shipped()
+    for lead in [FighterKind.caelen, .seraphine, .nimue] {
+        var state = StoryState()
+        state.flags = ["lead": lead.rawValue]
+        var runner = try #require(StoryRunner(sceneID: "bells.arrive", library: story, state: state))
+        #expect(runner.line?.speaker == lead.rawValue.uppercased())
+    }
+    for scene in ["bells.order", "bells.race"] {
+        let runner = try #require(StoryRunner(sceneID: scene, library: story, state: StoryState()))
+        #expect(runner.line?.speaker == "ORION")
+    }
+}

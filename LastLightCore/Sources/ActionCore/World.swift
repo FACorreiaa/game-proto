@@ -31,6 +31,10 @@ public struct World: Sendable {
     public private(set) var collected: Set<Int> = []
     public private(set) var isComplete = false
     public private(set) var bossID: Int?
+    /// The boss sworn to the first one, in a level with a pair.
+    public private(set) var twinID: Int?
+    /// Frames one of a sworn pair has lain down while the other stands. At the tuning's limit it is raised.
+    public private(set) var vowFrames = 0
     var bossDownFrames = 0
     var firedScenes: Set<String> = []
     /// Columns of light a boss has called down.
@@ -100,10 +104,21 @@ public struct World: Sendable {
             bossID = spawn(b.kind, x: b.pos.x, y: b.pos.y, facing: -1)
             fighters[fighters.count - 1].awake = false
         }
+        if let t = level.twin {
+            twinID = spawn(t.kind, x: t.pos.x, y: t.pos.y, facing: -1)
+            fighters[fighters.count - 1].awake = false
+        }
     }
 
     public var controlled: Fighter? { fighter(controlledID) }
     public var boss: Fighter? { bossID.flatMap(fighter) }
+    public var twin: Fighter? { twinID.flatMap(fighter) }
+
+    /// The other one of a sworn pair, for either of them.
+    func swornPartner(of id: Int) -> Int? {
+        guard let bossID, let twinID else { return nil }
+        return id == bossID ? twinID : (id == twinID ? bossID : nil)
+    }
 
     public func fighter(_ id: Int) -> Fighter? {
         fighters.first { $0.id == id }
@@ -244,6 +259,7 @@ public struct World: Sendable {
             case .reach(let x): (controlled?.pos.x ?? -.infinity) >= x
             case .partnerJoins: events.contains { if case .joined = $0 { true } else { false } }
             case .bossWakes: bossID.map { events.contains(.woke(id: $0)) } ?? false
+            case .raised: events.contains { if case .raised = $0 { true } else { false } }
             case .complete: events.contains(.levelComplete)
             }
             if due {
@@ -612,10 +628,25 @@ public struct World: Sendable {
                 }
             }
             let tag = -1000 - lever.id
+            let bells = level.gates.filter { $0.inOrder && $0.opensWith.contains(lever.id) }
             for i in fighters.indices where fighters[i].team == .hero && fighters[i].isAlive && !fighters[i].spec.isDecoy {
                 guard let box = fighters[i].hitbox, box.intersects(lever.box), !fighters[i].hitIDs.contains(tag) else { continue }
+                // Only the lead rings a bell.
+                if !bells.isEmpty, fighters[i].id != controlledID { continue }
                 fighters[i].hitIDs.insert(tag)
                 if !signals.contains(lever.id) {
+                    if let gate = bells.first(where: { g in
+                        g.opensWith.firstIndex(of: lever.id).map { $0 > 0 && !signals.contains(g.opensWith[$0 - 1]) } ?? false
+                    }) {
+                        // Out of order: the bells of that gate fall silent.
+                        for id in gate.opensWith where signals.contains(id) {
+                            signals.remove(id)
+                            leverTimers[id] = nil
+                            events.append(.lever(id: id, on: false))
+                        }
+                        events.append(.discord(gate: gate.id))
+                        continue
+                    }
                     signals.insert(lever.id)
                     events.append(.lever(id: lever.id, on: true))
                 }
@@ -1028,7 +1059,8 @@ public struct World: Sendable {
             f.vel.x = push
             f.enter(.dead)
             events.append(.died(id: f.id))
-            if f.spec.boss { events.append(.bossDefeated(id: f.id)) }
+            let partnerStands = swornPartner(of: f.id).flatMap(fighter)?.isAlive ?? false
+            if f.spec.boss, !partnerStands { events.append(.bossDefeated(id: f.id)) }
         } else {
             if let sd = f.spec.selfDestruct, f.state != .fuse, f.hp <= f.spec.maxHP * sd.threshold {
                 f.enter(.fuse)
@@ -1086,6 +1118,7 @@ public struct World: Sendable {
     private mutating func levelRules(_ events: inout [GameEvent]) {
         guard let level else { return }
         regroupPartner(&events)
+        swornRules(&events)
 
         for i in fighters.indices where fighters[i].pos.y < level.killY {
             var f = fighters[i]
@@ -1151,7 +1184,8 @@ public struct World: Sendable {
             fighters[i].hp = min(hero.spec.maxHP, hero.hp + tuning.checkpointHeal)
             events.append(.checkpoint(index: n))
         }
-        if let bossID, let b = index(of: bossID), !fighters[b].isAlive {
+        let twinDown = twinID.flatMap(fighter).map { !$0.isAlive } ?? true
+        if let bossID, let b = index(of: bossID), !fighters[b].isAlive, twinDown {
             bossDownFrames += 1
             if bossDownFrames >= tuning.bossVictoryFrames {
                 isComplete = true
@@ -1163,6 +1197,33 @@ public struct World: Sendable {
             isOver = true
             events.append(.levelComplete)
         }
+    }
+
+    /// A sworn pair wakes together, and one left down alone too long is raised by the other.
+    private mutating func swornRules(_ events: inout [GameEvent]) {
+        guard let a = bossID.flatMap(index(of:)), let b = twinID.flatMap(index(of:)) else { return }
+        for (me, other) in [(a, b), (b, a)] where fighters[me].awake && !fighters[other].awake {
+            fighters[other].awake = true
+            fighters[other].aiCooldown = fighters[other].spec.wakeDelay
+            events.append(.woke(id: fighters[other].id))
+        }
+        let down = [a, b].filter { !fighters[$0].isAlive }
+        guard down.count == 1, let fallen = down.first else {
+            vowFrames = 0
+            return
+        }
+        vowFrames += 1
+        guard vowFrames >= tuning.swornRiseFrames else { return }
+        vowFrames = 0
+        let raiser = fallen == a ? b : a
+        var f = fighters[fallen]
+        f.hp = f.spec.maxHP * tuning.swornRiseShare
+        f.vel = .zero
+        f.aiCooldown = f.spec.wakeDelay
+        f.enter(.phaseShift, duration: tuning.bossPhaseShiftFrames)
+        f.invulnerable = tuning.bossPhaseShiftFrames
+        fighters[fallen] = f
+        events.append(.raised(id: f.id, by: fighters[raiser].id))
     }
 
     // MARK: Waves and endings

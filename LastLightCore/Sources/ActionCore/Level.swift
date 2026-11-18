@@ -70,12 +70,16 @@ public struct Gate: Sendable, Equatable {
     public var box: Box
     public var opensWith: [Int]
     public var inverted: Bool
+    /// Its levers are bells, rung in the order listed. A bell rung before the one listed ahead of it is ringing
+    /// silences all of them. Only the lead rings them.
+    public var inOrder: Bool
 
-    public init(id: Int, box: Box, opensWith: [Int], inverted: Bool = false) {
+    public init(id: Int, box: Box, opensWith: [Int], inverted: Bool = false, inOrder: Bool = false) {
         self.id = id
         self.box = box
         self.opensWith = opensWith
         self.inverted = inverted
+        self.inOrder = inOrder
     }
 }
 
@@ -155,6 +159,8 @@ public struct Level: Sendable, Equatable {
     public var partner: Placement?
     /// A level with a boss has no exit: it ends when the boss falls.
     public var boss: Placement?
+    /// A second boss sworn to the first: the level ends only when both are down.
+    public var twin: Placement?
     /// Story scenes and what sets each one off.
     public var scenes: [SceneTrigger] = []
     /// Reaching this x on the ground finishes the level.
@@ -176,9 +182,9 @@ public struct Level: Sendable, Equatable {
 
     /// A gate standing on a floor at `top`, `height` tall and 24 wide, centred on `x`.
     public mutating func gate(_ id: Int, x: Double, top: Double = 0, height: Double = 170, opensWith: [Int],
-                              inverted: Bool = false) {
+                              inverted: Bool = false, inOrder: Bool = false) {
         gates.append(Gate(id: id, box: Box(minX: x - 12, minY: top, maxX: x + 12, maxY: top + height),
-                          opensWith: opensWith, inverted: inverted))
+                          opensWith: opensWith, inverted: inverted, inOrder: inOrder))
     }
 
     public mutating func ledge(_ x0: Double, _ x1: Double, top: Double, travel: Vec2 = .zero, period: Int = 0) {
@@ -489,7 +495,7 @@ extension Level {
     public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .lockWorks, .wardensGate,
                                       .theProtocol,
                                       .emberMarket, .tollCanal, .lanternRoofs, .lampRow, .cinderDocks, .cinderVault,
-                                      .pilgrimRoad, .sunCloister, .choirStair, .oracleTerrace]
+                                      .pilgrimRoad, .bellTower, .sunCloister, .cloisterGate, .choirStair, .oracleTerrace]
 
     /// The Dawnfaith's boss room: the terrace at the top of the Choir Stair, where the Last Oracle waits.
     public static let oracleTerrace: Level = {
@@ -548,6 +554,55 @@ extension Level {
         return l
     }()
 
+    /// The bells where the hours were rung, between the road and the cloister. Each gate opens to its bells rung in
+    /// the order of the hours, marked on each bell; a bell out of turn silences them all. Then the same with bells
+    /// that fall silent on their own, a Solar Guard standing between them.
+    public static let bellTower: Level = {
+        var l = Level(name: "The Bell Tower", width: 4600, start: Vec2(120, 0), exitX: 4450)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("bells.arrive", on: .start))
+        l.ground(-200, 4800)
+
+        // 1. Three bells, out of place: the marks give the order.
+        l.scenes.append(SceneTrigger("bells.order", on: .reach(380)))
+        l.pickups.append(Pickup(id: 1, at: Vec2(300, 40)))
+        l.levers.append(Lever(id: 2, at: Vec2(480, 0)))
+        l.levers.append(Lever(id: 1, at: Vec2(680, 0)))
+        l.levers.append(Lever(id: 3, at: Vec2(880, 0)))
+        l.gate(10, x: 1100, opensWith: [1, 2, 3], inOrder: true)
+
+        // 2. Four bells, kept by Zealots, an Acolyte, and a Halo Disciple over them.
+        l.checkpoints.append(Vec2(1230, 0))
+        l.enemies.append(Placement(.zealot, x: 1450))
+        l.enemies.append(Placement(.zealot, x: 1520))
+        l.enemies.append(Placement(.radiantAcolyte, x: 1700))
+        l.enemies.append(Placement(.haloDisciple, x: 2150, y: 150))
+        l.pickups.append(Pickup(id: 2, at: Vec2(1620, 40)))
+        l.levers.append(Lever(id: 6, at: Vec2(1850, 0)))
+        l.levers.append(Lever(id: 4, at: Vec2(2050, 0)))
+        l.levers.append(Lever(id: 7, at: Vec2(2250, 0)))
+        l.levers.append(Lever(id: 5, at: Vec2(2450, 0)))
+        // Up the bell frame to the secret.
+        l.ledge(2280, 2400, top: 100)
+        l.ledge(2430, 2550, top: 190)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2490, 235), secret: true))
+        l.gate(11, x: 2650, opensWith: [4, 5, 6, 7], inOrder: true)
+
+        // 3. Three bells that fall silent on their own, a Solar Guard among them and a vent across the way.
+        l.checkpoints.append(Vec2(2800, 0))
+        l.scenes.append(SceneTrigger("bells.race", on: .reach(2880)))
+        l.enemies.append(Placement(.solarGuard, x: 3500))
+        l.enemies.append(Placement(.radiantAcolyte, x: 3850))
+        l.pickups.append(Pickup(id: 4, at: Vec2(2950, 40)))
+        l.levers.append(Lever(id: 9, at: Vec2(3020, 0), holdFrames: 420))
+        l.levers.append(Lever(id: 8, at: Vec2(3300, 0), holdFrames: 420))
+        l.levers.append(Lever(id: 10, at: Vec2(3720, 0), holdFrames: 420))
+        l.hazards.append(Hazard(Box(minX: 3150, minY: 0, maxX: 3182, maxY: 150), damage: 12, period: 140, onFrames: 60))
+        l.gate(12, x: 3980, opensWith: [8, 9, 10], inOrder: true)
+        l.pickups.append(Pickup(id: 5, at: Vec2(4200, 40)))
+        return l
+    }()
+
     /// Galleries round a sunlit court: Halo Disciples overhead, and Solar Guards shielding the Acolytes behind them.
     public static let sunCloister: Level = {
         var l = Level(name: "The Sun Cloister", width: 5200, start: Vec2(120, 0), exitX: 5000)
@@ -585,6 +640,19 @@ extension Level {
         l.checkpoints.append(Vec2(4570, 0))
         l.enemies.append(Placement(.radiantAcolyte, x: 4850))
         l.pickups.append(Pickup(id: 5, at: Vec2(4700, 40)))
+        return l
+    }()
+
+    /// Chapter 3's mid-boss: the cloister's far gate, kept by a sworn pair. One that falls alone is raised by the
+    /// other, so they must fall together.
+    public static let cloisterGate: Level = {
+        var l = Level(name: "The Cloister Gate", width: 1800, start: Vec2(140, 0), exitX: .infinity)
+        l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("sworn.wake", on: .bossWakes))
+        l.scenes.append(SceneTrigger("sworn.raised", on: .raised))
+        l.ground(-200, 2000)
+        l.boss = Placement(.swornShield, x: 1150)
+        l.twin = Placement(.swornSpear, x: 1350)
         return l
     }()
 
