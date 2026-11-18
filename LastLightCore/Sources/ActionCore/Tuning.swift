@@ -119,6 +119,12 @@ public struct Tuning: Sendable {
     public var wardenThrustChance = 0.35
     /// Frames someone has to stay close behind it before it spins.
     public var wardenSpinAfter = 50
+    /// The Lamplighter: frames between his attacks, how long after putting a lamp out before he can again (the
+    /// hero's window), and how far off he starts throwing embers instead of closing in.
+    public var lamplighterAttackGap = 50...85
+    public var lamplighterDouseRest = 130
+    public var lamplighterEmberFrom = 260.0
+    public var lamplighterEmberChance = 0.65
 
     // The Last Oracle.
     public var oracleAttackGap = 80...120
@@ -535,6 +541,35 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Lamplighter. A hooked pole up close, embers thrown from the dark, and he puts out any lamp he stands by.
+    /// Overdrive: he snuffs the whole row at once and calls Ratborn.
+    public var lamplighter: FighterSpec = {
+        var s = FighterSpec(width: 52, height: 124, maxHP: 460, runSpeed: 140)
+        let hook = AttackSpec(windup: 18, active: 5, recovery: 24, damage: 17, reach: 96, height: 90,
+                              knockback: 300, lunge: 70, hitstun: 18, hitStop: 6)
+        let douse = AttackSpec(windup: 36, active: 1, recovery: 30, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .douse(range: 170) }
+        let ember = AttackSpec(windup: 30, active: 1, recovery: 44, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .lob(Lob(.fire, width: 80, height: 26, warning: 46, active: 70, damage: 10, range: 600)) }
+        let call = AttackSpec(windup: 44, active: 1, recovery: 56, damage: 0, reach: 0, height: 0,
+                              knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .summon(.ratborn, count: 2) }
+        let snuff = AttackSpec(windup: 60, active: 1, recovery: 50, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .douse(range: 5000) }
+        s.attacks = [hook, douse, ember, call, snuff]
+        s.needsLight = true
+        s.unflinching = true
+        s.poise = true
+        s.phaseThresholds = [0.5]
+        s.boss = true
+        s.wakeDelay = 70
+        s.brain = LamplighterBrain()
+        return s
+    }()
+
     /// The Cinder King. Offer: a cane and thrown lanterns. Debt: calls Ratborn, who shield him while they live,
     /// and fire bursts from the floor. Price: faster, with a sweep on both sides and wider eruptions.
     public var cinderKing: FighterSpec = {
@@ -582,6 +617,7 @@ public struct Tuning: Sendable {
         case .dogmaFrame: dogmaFrame
         case .theProtocol: theProtocol
         case .lineWarden: lineWarden
+        case .lamplighter: lamplighter
         case .ratborn: ratborn
         case .lanternGunner: lanternGunner
         case .smugglerBrute: smugglerBrute

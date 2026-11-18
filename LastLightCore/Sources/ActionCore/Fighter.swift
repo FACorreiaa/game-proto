@@ -61,6 +61,8 @@ public struct Fighter: Sendable, Identifiable {
     var aiAux3 = 0
     /// A partner left standing on a plate when control passed away from it: it stays there and holds it down.
     public internal(set) var holding = false
+    /// Set by the world for a fighter that needs light: true while it stands in a lit lamp's glow.
+    public internal(set) var inLight = false
     /// An attack whose effect the world applies after this frame.
     var pendingEffect: Int?
     var markScale = 1.0

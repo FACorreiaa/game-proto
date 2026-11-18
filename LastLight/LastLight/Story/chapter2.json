@@ -86,6 +86,62 @@
         }
       }
     },
+    "canal.arrive": {
+      "start": "caelen",
+      "lines": {
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "Locks on a canal. Somebody here charges for water too.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "Every gate on this canal has a price painted on it.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The Toll Canal. Runners swam it at night so nobody could make them pay.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "The Toll Canal. Every gate here is paid for."
+        }
+      }
+    },
+    "canal.toll": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "ORION",
+          "text": "That plate opens the first gate and shuts the second. I will hold it while you pass, then step off.",
+          "next": "after"
+        },
+        "after": {
+          "speaker": "ORION",
+          "text": "Someone always stays behind at a toll. I will find you after."
+        }
+      }
+    },
+    "canal.lamps": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "ORION",
+          "text": "The gate wants both lamps burning at once, and neither burns for long. Light one, and run for the other."
+        }
+      }
+    },
     "roofs.arrive": {
       "start": "caelen",
       "lines": {
@@ -269,6 +325,63 @@
         "orion2": {
           "speaker": "ORION",
           "text": "Someone was always buying from the other side. You will want to watch me read these."
+        }
+      }
+    },
+    "lamp.wake": {
+      "start": "open",
+      "lines": {
+        "open": {
+          "speaker": "LAMPLIGHTER",
+          "text": "Light costs. This row hasn't paid.",
+          "next": "caelen"
+        },
+        "caelen": {
+          "speaker": "CAELEN",
+          "text": "A whole street in the dark, and one man with a pole.",
+          "requires": {
+            "lead": "caelen"
+          },
+          "otherwise": "seraphine",
+          "next": "trusted"
+        },
+        "seraphine": {
+          "speaker": "SERAPHINE",
+          "text": "He puts them out one by one. As if light were his to take back.",
+          "requires": {
+            "lead": "seraphine"
+          },
+          "otherwise": "nimue",
+          "next": "trusted"
+        },
+        "nimue": {
+          "speaker": "NIMUE",
+          "text": "The Lamplighter. Runners used to pay him to leave a street dark. Tonight he's charging the other way.",
+          "requires": {
+            "lead": "nimue"
+          },
+          "otherwise": "trusted",
+          "next": "trusted"
+        },
+        "trusted": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Strike a lamp to light it, and hit him while he stands in it. I will drive him toward the light.",
+          "requires": {
+            "orion": "trusted"
+          },
+          "otherwise": "watched"
+        },
+        "watched": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Light a lamp near him and strike before he puts it out. Every lamp burns down.",
+          "requires": {
+            "orion": "watched"
+          },
+          "otherwise": "neutral"
+        },
+        "neutral": {
+          "speaker": "ORION",
+          "text": "Nothing touches him in the dark. Light a lamp near him and strike before he puts it out."
         }
       }
     }

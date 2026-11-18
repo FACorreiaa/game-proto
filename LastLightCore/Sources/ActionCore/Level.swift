@@ -34,11 +34,14 @@ public struct Lever: Sendable, Equatable {
     /// The foot of the lever, on the floor.
     public var pos: Vec2
     public var holdFrames: Int
+    /// A lamp: while it is on, its light reaches this far either side. Zero for a plain lever.
+    public var glow: Double
 
-    public init(id: Int, at pos: Vec2, holdFrames: Int = 0) {
+    public init(id: Int, at pos: Vec2, holdFrames: Int = 0, glow: Double = 0) {
         self.id = id
         self.pos = pos
         self.holdFrames = holdFrames
+        self.glow = glow
     }
 
     public var box: Box { Box(minX: pos.x - 14, minY: pos.y, maxX: pos.x + 14, maxY: pos.y + 56) }
@@ -485,7 +488,7 @@ extension Level {
     /// Every level once: Chapter 1's three openings and the levels all three share, then Chapter 2.
     public static let all: [Level] = [.awakening, .sunGauges, .undercroft, .foundryYard, .machineHall, .lockWorks, .wardensGate,
                                       .theProtocol,
-                                      .emberMarket, .lanternRoofs, .cinderDocks, .cinderVault,
+                                      .emberMarket, .tollCanal, .lanternRoofs, .lampRow, .cinderDocks, .cinderVault,
                                       .pilgrimRoad, .sunCloister, .choirStair, .oracleTerrace]
 
     /// The Dawnfaith's boss room: the terrace at the top of the Choir Stair, where the Last Oracle waits.
@@ -782,6 +785,66 @@ extension Level {
 }
 
 extension Level {
+    /// Chapter 2's puzzle level: the canal locks below the market. A lever that springs back, with a vent between it
+    /// and its gate; the toll, where the plate that opens one gate shuts the next, so Orion is left behind; and two
+    /// lamps that must burn at once, with a Smuggler Brute between them.
+    public static let tollCanal: Level = {
+        var l = Level(name: "The Toll Canal", width: 4700, start: Vec2(120, 0), exitX: 4550)
+        l.partner = Placement(.orion, x: 60)
+        l.scenes.append(SceneTrigger("canal.arrive", on: .start))
+        l.ground(-200, 4900)
+
+        // 1. A lever that springs back, and a vent to time between it and the gate.
+        l.enemies.append(Placement(.ratborn, x: 420))
+        l.pickups.append(Pickup(id: 1, at: Vec2(300, 40)))
+        l.levers.append(Lever(id: 1, at: Vec2(620, 0), holdFrames: 360))
+        l.hazards.append(Hazard(Box(minX: 880, minY: 0, maxX: 912, maxY: 150), damage: 12, period: 150, onFrames: 70))
+        l.gate(10, x: 1150, opensWith: [1])
+
+        // 2. The toll: the plate that opens the first gate shuts the second.
+        l.checkpoints.append(Vec2(1260, 0))
+        l.scenes.append(SceneTrigger("canal.toll", on: .reach(1350)))
+        l.plates.append(Plate(id: 2, x0: 1450, x1: 1520))
+        l.gate(11, x: 1750, opensWith: [2])
+        l.enemies.append(Placement(.lanternGunner, x: 1950))
+        l.pickups.append(Pickup(id: 2, at: Vec2(1880, 40)))
+        l.gate(12, x: 2100, opensWith: [2], inverted: true)
+
+        // A fight on the quay, and a secret over the moored boats.
+        l.checkpoints.append(Vec2(2250, 0))
+        l.enemies.append(Placement(.ratborn, x: 2550))
+        l.enemies.append(Placement(.nightWeaver, x: 2700))
+        l.ledge(2400, 2520, top: 90)
+        l.ledge(2560, 2680, top: 175)
+        l.pickups.append(Pickup(id: 3, at: Vec2(2620, 220), secret: true))
+
+        // 3. Two lamps that must burn at once, a Brute between them.
+        l.checkpoints.append(Vec2(2950, 0))
+        l.scenes.append(SceneTrigger("canal.lamps", on: .reach(3000)))
+        l.levers.append(Lever(id: 3, at: Vec2(3100, 0), holdFrames: 480, glow: 90))
+        l.enemies.append(Placement(.smugglerBrute, x: 3400))
+        l.levers.append(Lever(id: 4, at: Vec2(3750, 0), holdFrames: 480, glow: 90))
+        l.gate(13, x: 3950, opensWith: [3, 4])
+        l.pickups.append(Pickup(id: 4, at: Vec2(3600, 40)))
+        l.pickups.append(Pickup(id: 5, at: Vec2(4200, 40)))
+        return l
+    }()
+
+    /// Chapter 2's mid-boss: a dark street of lamps, and the Lamplighter, who can be hurt only in their light. The
+    /// lamps start out: he has put them out.
+    public static let lampRow: Level = {
+        var l = Level(name: "The Lamp Row", width: 1800, start: Vec2(140, 0), exitX: .infinity)
+        l.partner = Placement(.orion, x: 80)
+        l.scenes.append(SceneTrigger("lamp.wake", on: .bossWakes))
+        l.ground(-200, 2000)
+        for (n, x) in [420.0, 820, 1220, 1600].enumerated() {
+            // Light here is paid for by the hour: a lamp burns out on its own.
+            l.levers.append(Lever(id: n + 1, at: Vec2(x, 0), holdFrames: 480, glow: 150))
+        }
+        l.boss = Placement(.lamplighter, x: 1250)
+        return l
+    }()
+
     /// Chapter 2's last room: the Cinder King's vault behind the docks.
     public static let cinderVault: Level = {
         var l = Level(name: "The Cinder Vault", width: 1700, start: Vec2(140, 0), exitX: .infinity)

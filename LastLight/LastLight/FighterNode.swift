@@ -43,7 +43,7 @@ final class FighterNode: SKNode {
         case .seraphine: Palette.gold
         case .nimue, .decoy: Palette.violet
         // The Lantern Cities' people are lit by their lanterns, not by machine red.
-        case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing: Palette.ember
+        case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing, .lamplighter: Palette.ember
         // The Dawnfaith's believers carry their own light: gold, not machine red.
         case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle: Palette.gold
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
@@ -74,6 +74,7 @@ final class FighterNode: SKNode {
         case .weaverImage: buildWeaverImage()
         case .cinderKing: buildCinderKing()
         case .lineWarden: buildWarden()
+        case .lamplighter: buildLamplighter()
         case .zealot: buildZealot()
         case .radiantAcolyte: buildAcolyte()
         case .solarGuard: buildSolarGuard()
@@ -268,6 +269,31 @@ final class FighterNode: SKNode {
         tower.addChild(boss)
         figure.addChild(tower)
         shield = tower
+    }
+
+    /// The Lamplighter: tall and thin in a long coat and a wide hat, a hooked pole with a snuffer, and a shuttered
+    /// lantern at his hip that is the only light he keeps.
+    private func buildLamplighter() {
+        leg(x: -7, hipY: 46, length: 46, width: 9)
+        leg(x: 7, hipY: 46, length: 46, width: 9)
+        let coat = CGMutablePath()
+        coat.addLines(between: [CGPoint(x: -13, y: 98), CGPoint(x: 13, y: 98), CGPoint(x: 20, y: 30), CGPoint(x: -20, y: 30)])
+        coat.closeSubpath()
+        _ = part(coat)
+        _ = part(CGPath(ellipseIn: CGRect(x: -9, y: 96, width: 18, height: 18), transform: nil), z: 1)
+        // The brim, wide enough to keep his face in shadow.
+        _ = part(CGPath(roundedRect: CGRect(x: -22, y: 110, width: 44, height: 5), cornerWidth: 2, cornerHeight: 2, transform: nil), z: 2)
+        _ = part(CGPath(roundedRect: CGRect(x: -10, y: 114, width: 20, height: 10), cornerWidth: 3, cornerHeight: 3, transform: nil), z: 2)
+        let eyes = SKShapeNode(rect: CGRect(x: 1, y: 103, width: 7, height: 2))
+        light(eyes, color: Palette.ember, glow: 3)
+        figure.addChild(eyes)
+        eye = eyes
+        let lantern = SKShapeNode(rect: CGRect(x: -4, y: -6, width: 8, height: 12), cornerRadius: 2)
+        lantern.position = CGPoint(x: -16, y: 44)
+        light(lantern, color: Palette.ember, glow: 4)
+        lantern.zPosition = 3
+        figure.addChild(lantern)
+        blade(length: 100, color: Palette.ember, at: CGPoint(x: 8, y: 80))
     }
 
     /// A small gold sun on the chest: the Dawnfaith's mark.
@@ -1038,6 +1064,7 @@ final class FighterNode: SKNode {
         case .smugglerBrute: 70
         case .cinderKing: 110
         case .lineWarden: 96
+        case .lamplighter: 100
         case .zealot: 50
         case .radiantAcolyte: 54
         case .solarGuard: 58

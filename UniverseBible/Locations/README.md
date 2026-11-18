@@ -35,7 +35,9 @@ Ember and amber, coal black, copper, fabric awnings, hanging lanterns, rooftops,
 | Place | Status | Notes |
 |---|---|---|
 | The Ember Market | WORKING (DEC-013) | A market street under awnings, crossed by a canal |
+| The Toll Canal | PROPOSED (DRAFT-010) | Canal locks with prices painted on the gates; between the Ember Market and the Lantern Roofs |
 | The Lantern Roofs | WORKING (DEC-013) | Rooftops, cargo lines, chimneys; Night Weavers |
+| The Lamp Row | PROPOSED (DRAFT-010) | A street of lamps the Lamplighter puts out; between the Lantern Roofs and the Cinder Docks |
 | The Cinder Docks | WORKING (DEC-013) | Warehouses and furnace vents; where the Cities' trade passes |
 | The Cinder Vault | WORKING (DEC-013) | Behind the docks; the Cinder King's ledgers |
 | The Undercroft | WORKING (DEC-012) | Nimue's route under the Foundry |
