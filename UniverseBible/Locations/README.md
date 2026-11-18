@@ -24,7 +24,9 @@ Ivory and gold, warm stone, radiant architecture, sanctuaries that double as hos
 | Place | Status | Notes |
 |---|---|---|
 | The Pilgrim Road | WORKING (DEC-015) | An ivory road through farmland, crossed by a river ferry |
+| The Bell Tower | PROPOSED (DRAFT-011) | Hour bells between the Pilgrim Road and the Sun Cloister; quiet a long time |
 | The Sun Cloister | WORKING (DEC-015) | Galleries round a sunlit court; once open to runners in bad weather |
+| The Cloister Gate | PROPOSED (DRAFT-011) | The cloister's far gate, kept by a sworn pair; between the Sun Cloister and the Choir Stair |
 | The Oracle's Terrace | WORKING (DEC-015) | The top of the Choir Stair, where the Last Oracle waits |
 | The Choir Stair | WORKING (DEC-015) | A long stair up a hill where the hours were once sung; the Last Oracle waits at the top |
 

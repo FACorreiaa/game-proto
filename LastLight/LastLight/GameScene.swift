@@ -581,7 +581,7 @@ final class GameScene: SKScene {
                 handle.zRotation += (swing - handle.zRotation) * 0.25
                 if let body = handle.childNode(withName: "bell") as? SKShapeNode {
                     body.fillColor = on ? puzzleColour(lever.id, in: level) : Palette.body
-                    body.glowWidth = on ? 6 : 0
+                    body.glowWidth = on ? 3 : 0
                 }
             } else {
                 let target: CGFloat = on ? -0.6 : 0.6
@@ -1148,6 +1148,11 @@ final class GameScene: SKScene {
                 if let f = world.fighter(id) {
                     Effects.explosion(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), radius: 140)
                     Effects.breakApart(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), size: f.spec.height)
+                }
+                // The other of a sworn pair, already down, goes with it.
+                if let other = world.swornPartner(of: id).flatMap(world.fighter) {
+                    Effects.breakApart(worldNode, at: CGPoint(x: other.pos.x, y: other.pos.y + other.spec.height / 2), size: other.spec.height)
+                    sparks(at: Vec2(other.pos.x, other.pos.y + other.spec.height / 2), color: Palette.gold, count: 20)
                 }
                 if let f = world.fighter(id) {
                     let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)

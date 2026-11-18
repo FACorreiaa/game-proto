@@ -115,7 +115,7 @@ public struct World: Sendable {
     public var twin: Fighter? { twinID.flatMap(fighter) }
 
     /// The other one of a sworn pair, for either of them.
-    func swornPartner(of id: Int) -> Int? {
+    public func swornPartner(of id: Int) -> Int? {
         guard let bossID, let twinID else { return nil }
         return id == bossID ? twinID : (id == twinID ? bossID : nil)
     }

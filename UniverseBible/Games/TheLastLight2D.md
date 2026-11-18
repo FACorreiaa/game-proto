@@ -123,6 +123,33 @@ is a mid-boss fight against the Lamplighter, who can only be hurt in lamplight (
 
 Guards kept: nothing says why the light fails (LC-002) or who governs the Cities (open question 7).
 
+## Draft: The Bell Tower and the Sworn (DRAFT-011, PROPOSED)
+
+Two Chapter 3 levels for every lead. The route becomes **The Pilgrim Road**, **The Bell Tower**, **The Sun
+Cloister**, **The Cloister Gate**, **The Choir Stair**, **The Oracle's Terrace**.
+
+Gameplay (not canon): the Bell Tower's gates open to their bells rung in the order of the hours marked on them; a bell
+out of turn silences them all, and only the lead rings them. The last three bells fall silent on their own, with a
+Solar Guard among them. The Cloister Gate is a mid-boss fight against the Sworn (see `../Bestiary/Dawnfaith.md`).
+
+**New world claims in this draft, each needing a verdict:**
+
+1. A **Bell Tower** of hour bells between the road and the cloister; "once, everyone below knew the time by them"
+   (Seraphine). Consistent with "the hours were once sung" (DEC-015).
+2. Caelen: "Bells, and no one ringing them."
+3. Nimue: runners set their routes by these bells; they have been quiet a long time.
+4. Orion: each bell carries its hour, rung first to last.
+5. **The Cloister Gate**, the cloister's far gate, kept by two wardens sworn together: **the Sworn Shield** and
+   **the Sworn Spear**.
+6. Their lines: "We swore it together." / "We keep it together." / "Not while one of us stands."
+7. Caelen: "Two of them, and one oath."
+8. Seraphine: "They mean every word of it. That's what frightens me." (No claim that she knew them.)
+9. Nimue: "Bribe one, and the other still says no. That's why runners went round."
+10. Orion: if one falls alone, the other raises it.
+
+Guards kept: nothing says how the Dawnfaith is organised (open question 6) or whether wardens always swear in
+pairs; nothing links the Sworn to the Last Oracle or to Seraphine (open question 9).
+
 ## Chapter 3, The Dawnfaith (DEC-015, WORKING)
 
 Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**, and the
