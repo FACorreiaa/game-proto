@@ -179,3 +179,31 @@ private func gateBox(_ world: World, _ id: Int) -> Box { world.platformBoxes[wor
         }
     }
 }
+
+@Test func anInvertedGateStartsOpenWithoutMoving() {
+    var world = room(partner: false, invertB: true)
+    #expect(world.gateOpen[11] == 1)
+    let events = run(&world, frames: 5)
+    #expect(!events.contains { if case .gate(11, _) = $0 { true } else { false } })
+}
+
+@Test func theTollCanalCanBeSolvedByEveryLeadAndTheTollLeavesOrionBehind() {
+    for fights in [false, true] {
+        for lead in [FighterKind.caelen, .seraphine, .nimue] {
+            var world = World(level: .tollCanal, hero: lead, seed: 1)
+            var pilot = Autopilot(fights: fights)
+            var opened: Set<Int> = []
+            var tollShut = false
+            while !world.isOver, world.frame < 60 * 180 {
+                for e in world.step(pilot.input(for: world)) {
+                    if case .gate(let id, true) = e { opened.insert(id) }
+                    if case .gate(12, false) = e { tollShut = true }
+                }
+            }
+            #expect(world.isComplete, "\(lead) fights: \(fights)")
+            #expect(opened.isSuperset(of: [10, 11, 12, 13]), "\(lead) fights: \(fights)")
+            // Orion on the plate shut the toll gate before it let the lead through.
+            #expect(tollShut, "\(lead) fights: \(fights)")
+        }
+    }
+}

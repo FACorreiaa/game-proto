@@ -98,6 +98,31 @@ each lock.
 4. Nimue: "Runners went under this place, never through it. Now I see why." Her runners had a way under the Lock
    Works; it says nothing about whether that way is still open.
 
+## Draft: The Toll Canal and the Lamplighter (DRAFT-010, PROPOSED)
+
+Two Chapter 2 levels for every lead. The route becomes **The Ember Market**, **The Toll Canal**, **The Lantern
+Roofs**, **The Lamp Row**, **The Cinder Docks**, **The Cinder Vault**.
+
+Gameplay (not canon): the Toll Canal is a puzzle level. A timed lever races a fire vent; a "toll" plate opens one gate
+and shuts the next, so whoever holds it stays behind; and the last gate needs two lamps burning at once. The Lamp Row
+is a mid-boss fight against the Lamplighter, who can only be hurt in lamplight (see `../Bestiary/LanternCities.md`).
+
+**New world claims in this draft, each needing a verdict:**
+
+1. A canal in the Lantern Cities called **the Toll Canal**, whose gates have prices painted on them (Seraphine; Orion:
+   "Every gate here is paid for").
+2. Caelen: "Locks on a canal. Somebody here charges for water too."
+3. Nimue: runners swam the Toll Canal at night so nobody could make them pay.
+4. Orion: "Someone always stays behind at a toll." (A saying, not a law of the world.)
+5. A street called **the Lamp Row**, and a man the game calls **the Lamplighter**, who puts its lamps out.
+6. The Lamplighter: "Light costs. This row hasn't paid." (Echoes the Cinder King's line; it doesn't say they are
+   linked.)
+7. Caelen: "A whole street in the dark, and one man with a pole."
+8. Seraphine: "He puts them out one by one. As if light were his to take back."
+9. Nimue: runners used to pay the Lamplighter to leave a street dark; "tonight he's charging the other way".
+
+Guards kept: nothing says why the light fails (LC-002) or who governs the Cities (open question 7).
+
 ## Chapter 3, The Dawnfaith (DEC-015, WORKING)
 
 Chosen by the creator on 2026-11-16. Levels: **The Pilgrim Road**, **The Sun Cloister**, **The Choir Stair**, and the

@@ -168,10 +168,25 @@ public struct Autopilot: Sendable {
         let ahead = level.gates.filter { $0.box.minX > me.pos.x - 10 && (world.gateOpen[$0.id] ?? 1) < 1 }
 
         if me.kind == .orion {
-            if world.plate(under: me) != nil { return InputFrame(switchHero: world.frame % 20 == 0) }
+            let leadX = world.fighters
+                .first { $0.team == .hero && $0.kind != .orion && !$0.spec.isDecoy && $0.isAlive }?.pos.x ?? me.pos.x
+            // A plate is worth holding while a shut gate it opens still stands ahead of the lead, and worth
+            // leaving once all it does is hold shut an inverted gate ahead of the lead.
+            let needed = { (id: Int) in
+                level.gates.contains { !$0.inverted && $0.opensWith.contains(id) && $0.box.minX > leadX - 10 }
+            }
+            let blocking = { (id: Int) in
+                level.gates.contains {
+                    $0.inverted && $0.opensWith.contains(id) && $0.box.minX > leadX - 10 && (world.gateOpen[$0.id] ?? 1) < 1
+                }
+            }
+            if let plate = world.plate(under: me) {
+                if blocking(plate.id), !needed(plate.id) { return InputFrame(moveX: leadX >= me.pos.x ? -1 : 1) }
+                return InputFrame(switchHero: world.frame % 20 == 0)
+            }
             let wanted = ahead.filter { $0.box.minX - me.pos.x < 700 }
                 .flatMap(\.opensWith)
-                .compactMap { id in level.plates.first { $0.id == id && !world.signals.contains(id) } }
+                .compactMap { id in level.plates.first { $0.id == id && !world.signals.contains(id) && needed(id) } }
                 .first
             guard let plate = wanted else { return InputFrame(switchHero: world.frame % 20 == 0) }
             let dx = (plate.x0 + plate.x1) / 2 - me.pos.x
@@ -196,7 +211,12 @@ public struct Autopilot: Sendable {
         if world.wantsOpen(gate) {
             return gate.box.minX - (me.pos.x + me.spec.width / 2) < 40 ? InputFrame() : nil
         }
-        guard !gate.inverted, let missing = gate.opensWith.first(where: { !world.signals.contains($0) }) else { return nil }
+        if gate.inverted {
+            // Shut because a plate is down: hand over to whoever holds it, to step off.
+            let held = gate.opensWith.contains { id in level.plates.contains { $0.id == id } && world.signals.contains(id) }
+            return held ? InputFrame(switchHero: world.frame % 20 == 0) : nil
+        }
+        guard let missing = gate.opensWith.first(where: { !world.signals.contains($0) }) else { return nil }
         if level.plates.contains(where: { $0.id == missing }) {
             // Hand over to Orion to put him on it.
             let orion = world.fighters.contains { $0.kind == .orion && $0.isAlive && $0.awake }

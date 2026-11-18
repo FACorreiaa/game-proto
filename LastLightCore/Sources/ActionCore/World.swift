@@ -74,9 +74,13 @@ public struct World: Sendable {
         platforms = level.platforms + level.gates.map { Platform($0.box) }
         for (n, g) in level.gates.enumerated() {
             gatePlatform[g.id] = level.platforms.count + n
-            gateOpen[g.id] = 0
+            // Nothing is on at the start, so an inverted gate starts open.
+            gateOpen[g.id] = g.inverted ? 1 : 0
         }
         platformBoxes = platforms.map { $0.box(at: 0) }
+        for g in level.gates where g.inverted {
+            if let p = gatePlatform[g.id] { platformBoxes[p] = g.box.offset(by: Vec2(0, g.box.maxY - g.box.minY + 20)) }
+        }
         platformDeltas = platforms.map { _ in .zero }
         self.collected = collected
         checkpointIndex = min(fromCheckpoint, level.checkpoints.count - 1)
