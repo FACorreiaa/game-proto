@@ -16,6 +16,9 @@ final class HUD: SKNode {
     private let bossBack = SKShapeNode(rect: CGRect(x: -160, y: 0, width: 320, height: 9), cornerRadius: 3)
     private let bossFill = SKSpriteNode(color: Palette.red, size: CGSize(width: 316, height: 5))
     private let bossName = SKLabelNode(text: "")
+    /// A second, thinner bar under the boss bar, for the other one of a sworn pair.
+    private let twinBack = SKShapeNode(rect: CGRect(x: -160, y: 0, width: 320, height: 6), cornerRadius: 2)
+    private let twinFill = SKSpriteNode(color: Palette.red, size: CGSize(width: 316, height: 3))
     private let special = SKLabelNode(text: "")
     private let pauseButton = SKShapeNode(rectOf: CGSize(width: 34, height: 30), cornerRadius: 6)
 
@@ -50,6 +53,14 @@ final class HUD: SKNode {
         bossFill.position = CGPoint(x: -158, y: 2)
         bossBack.addChild(bossFill)
         addChild(bossBack)
+        twinBack.fillColor = Palette.body.withAlphaComponent(0.85)
+        twinBack.strokeColor = Palette.red.withAlphaComponent(0.4)
+        twinBack.lineWidth = 1
+        twinBack.isHidden = true
+        twinFill.anchorPoint = CGPoint(x: 0, y: 0)
+        twinFill.position = CGPoint(x: -158, y: 1.5)
+        twinBack.addChild(twinFill)
+        addChild(twinBack)
         bossName.fontName = "AvenirNext-DemiBold"
         bossName.fontSize = 10
         bossName.fontColor = Palette.red
@@ -129,6 +140,7 @@ final class HUD: SKNode {
         damage.size = size
         special.position = CGPoint(x: left, y: top - 54)
         bossBack.position = CGPoint(x: size.width / 2, y: top - 30)
+        twinBack.position = CGPoint(x: size.width / 2, y: top - 39)
         bossName.position = CGPoint(x: size.width / 2, y: top - 34)
         pauseButton.position = CGPoint(x: right - 17, y: top - 30)
         debug.position = CGPoint(x: right, y: top - 52)
@@ -160,9 +172,16 @@ final class HUD: SKNode {
     }
 
     /// The boss bar, top centre. Nil hides it.
-    func setBoss(_ boss: (name: String, health: Double, open: Bool)?) {
+    func setBoss(_ boss: (name: String, health: Double, open: Bool)?, twin: (health: Double, open: Bool)? = nil) {
         bossBack.isHidden = boss == nil
         bossName.isHidden = boss == nil
+        twinBack.isHidden = boss == nil || twin == nil
+        // The name sits under whichever bar is lowest.
+        bossName.position.y = bossBack.position.y - (twin == nil ? 4 : 13)
+        if let twin {
+            twinFill.xScale = CGFloat(max(0, min(1, twin.health)))
+            twinFill.color = twin.open ? Palette.gold : Palette.red
+        }
         guard let boss else { return }
         let text = boss.open ? "\(boss.name)   OPEN" : boss.name
         if bossName.text != text { bossName.text = text }

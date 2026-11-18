@@ -17,7 +17,15 @@ public struct Autopilot: Sendable {
 
         if let special = kitSpecial(me, world: world) { return special }
         if let boss = world.boss {
-            return boss.isAlive ? bossInput(me, boss, world: world) : .neutral
+            // A sworn pair has to fall together: wear down whichever has more left, so neither lies down long alone.
+            let pair = [boss, world.twin].compactMap { $0 }.filter(\.isAlive)
+            let share = { (f: Fighter) in f.hp / f.spec.maxHP }
+            let target = pair.max { a, b in
+                abs(share(a) - share(b)) < 0.08
+                    ? abs(a.pos.x - me.pos.x) > abs(b.pos.x - me.pos.x)
+                    : share(a) < share(b)
+            }
+            return target.map { bossInput(me, $0, world: world) } ?? .neutral
         }
 
         // A long attack about to land from further away, such as a Sentry Core's beam: dodge it.
@@ -114,6 +122,17 @@ public struct Autopilot: Sendable {
             return InputFrame(moveX: away)
         }
 
+        // Either of a pair may be about to swing.
+        let swinging = [boss, world.twin].compactMap { $0 }.first { $0.isAlive && $0.attackPhase == .windup }
+        if let swinging, swinging.id != boss.id, let attack = swinging.currentAttack, attack.effect == .strike {
+            let sdx = swinging.pos.x - me.pos.x
+            let inFront = attack.bothSides || (me.pos.x - swinging.pos.x) * swinging.facing >= 0
+            let travel = attack.holdsStill ? attack.lunge * Double(attack.active) / 60 : 0
+            let reach = swinging.spec.width / 2 + attack.reach + travel + half
+            if inFront, abs(sdx) <= reach, attack.windup - swinging.stateFrame <= 4 {
+                return InputFrame(moveX: sdx >= 0 ? 1 : -1, dodge: true)
+            }
+        }
         if let attack = boss.currentAttack, boss.attackPhase == .windup, attack.effect == .strike {
             let inFront = attack.bothSides || (me.pos.x - boss.pos.x) * boss.facing >= 0
             let travel = attack.holdsStill ? attack.lunge * Double(attack.active) / 60 : 0
@@ -196,6 +215,8 @@ public struct Autopilot: Sendable {
         for lever in level.levers where !world.signals.contains(lever.id)
             && abs(lever.pos.x - me.pos.x) < 34 && abs(lever.pos.y - me.pos.y) < 10 {
             guard let gate = ahead.first(where: { $0.opensWith.contains(lever.id) }) else { continue }
+            // A bell rings only after the one before it.
+            if gate.inOrder, gate.opensWith.first(where: { !world.signals.contains($0) }) != lever.id { continue }
             let othersOn = gate.opensWith.allSatisfy { input in
                 input == lever.id || world.signals.contains(input) || level.levers.contains { $0.id == input }
             }
@@ -206,7 +227,7 @@ public struct Autopilot: Sendable {
         }
 
         guard let gate = ahead.filter({ g in
-            g.box.minX - me.pos.x < 260 && g.box.minY <= me.pos.y + 1 && g.box.maxY > me.pos.y + 1
+            g.box.minX - me.pos.x < (g.inOrder ? 1000 : 260) && g.box.minY <= me.pos.y + 1 && g.box.maxY > me.pos.y + 1
         }).min(by: { $0.box.minX < $1.box.minX }) else { return nil }
         if world.wantsOpen(gate) {
             return gate.box.minX - (me.pos.x + me.spec.width / 2) < 40 ? InputFrame() : nil

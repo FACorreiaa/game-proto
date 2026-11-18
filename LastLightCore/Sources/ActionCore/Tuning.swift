@@ -126,6 +126,19 @@ public struct Tuning: Sendable {
     public var lamplighterEmberFrom = 260.0
     public var lamplighterEmberChance = 0.65
 
+    /// The Sworn. Frames one may lie down alone before the other raises it, and the share of health it rises with.
+    public var swornRiseFrames = 300
+    public var swornRiseShare = 0.5
+    /// Pause between attacks; scaled down while the other is down.
+    public var swornShieldAttackGap = 55...90
+    public var swornSpearAttackGap = 40...70
+    public var swornFuryScale = 0.55
+    /// The Spear keeps about this far from its target: inside it, it gives ground or sweeps.
+    public var swornSpearKeep = 70.0
+    /// Beyond this, the Spear leaps; the Shield calls light down.
+    public var swornLeapFrom = 240.0
+    public var swornLightFrom = 280.0
+
     // The Last Oracle.
     public var oracleAttackGap = 80...120
     public var oracleEndingGapScale = 0.75
@@ -570,6 +583,50 @@ public struct Tuning: Sendable {
         return s
     }()
 
+    /// The Sworn Shield. Slow to turn, a shield held forward that answers a blow on it with a bash, and light called
+    /// down on anyone who keeps away.
+    public var swornShield: FighterSpec = {
+        var s = FighterSpec(width: 62, height: 130, maxHP: 480, runSpeed: 95)
+        let bash = AttackSpec(windup: 26, active: 6, recovery: 34, damage: 16, reach: 86, height: 110,
+                              knockback: 360, lunge: 90, hitstun: 20, hitStop: 6)
+        let answer = AttackSpec(windup: 7, active: 5, recovery: 28, damage: 11, reach: 60, height: 100,
+                                knockback: 400, lunge: 140, hitstun: 22, hitStop: 6)
+        let light = AttackSpec(windup: 34, active: 1, recovery: 50, damage: 0, reach: 0, height: 0,
+                               knockback: 0, lunge: 0, hitstun: 0, hitStop: 0)
+            .with { $0.effect = .lob(Lob(.light, width: 70, height: 110, warning: 44, active: 16, damage: 12, range: 560)) }
+        s.attacks = [bash, answer, light]
+        s.frontalBlock = true
+        s.riposte = 1
+        s.poise = true
+        s.unflinching = true
+        s.sworn = true
+        s.boss = true
+        s.wakeDelay = 80
+        s.brain = SwornShieldBrain()
+        return s
+    }()
+
+    /// The Sworn Spear. Quick, and keeps at the length of its spear: a long thrust, a leap across the room, and a
+    /// sweep round both sides for anyone who gets inside it.
+    public var swornSpear: FighterSpec = {
+        var s = FighterSpec(width: 44, height: 126, maxHP: 360, runSpeed: 185)
+        let thrust = AttackSpec(windup: 17, active: 5, recovery: 22, damage: 13, reach: 132, height: 44, yOffset: 52,
+                                knockback: 260, lunge: 60, hitstun: 16, hitStop: 5)
+        let leap = AttackSpec(windup: 30, active: 14, recovery: 44, damage: 18, reach: 46, height: 110,
+                              knockback: 400, lunge: 540, hitstun: 22, hitStop: 7)
+            .with { $0.holdsStill = true }
+        let sweep = AttackSpec(windup: 22, active: 6, recovery: 30, damage: 12, reach: 100, height: 70,
+                               knockback: 340, lunge: 0, hitstun: 18, hitStop: 6)
+            .with { $0.bothSides = true }
+        s.attacks = [thrust, leap, sweep]
+        s.poise = true
+        s.sworn = true
+        s.boss = true
+        s.wakeDelay = 80
+        s.brain = SwornSpearBrain()
+        return s
+    }()
+
     /// The Cinder King. Offer: a cane and thrown lanterns. Debt: calls Ratborn, who shield him while they live,
     /// and fire bursts from the floor. Price: faster, with a sweep on both sides and wider eruptions.
     public var cinderKing: FighterSpec = {
@@ -618,6 +675,8 @@ public struct Tuning: Sendable {
         case .theProtocol: theProtocol
         case .lineWarden: lineWarden
         case .lamplighter: lamplighter
+        case .swornShield: swornShield
+        case .swornSpear: swornSpear
         case .ratborn: ratborn
         case .lanternGunner: lanternGunner
         case .smugglerBrute: smugglerBrute

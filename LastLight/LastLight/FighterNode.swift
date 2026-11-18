@@ -45,7 +45,7 @@ final class FighterNode: SKNode {
         // The Lantern Cities' people are lit by their lanterns, not by machine red.
         case .ratborn, .lanternGunner, .smugglerBrute, .nightWeaver, .weaverImage, .cinderKing, .lamplighter: Palette.ember
         // The Dawnfaith's believers carry their own light: gold, not machine red.
-        case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle: Palette.gold
+        case .zealot, .radiantAcolyte, .solarGuard, .haloDisciple, .lastOracle, .swornShield, .swornSpear: Palette.gold
         default: kind.team == .hero ? Palette.cyan : (kind == .dummy ? Palette.steel : Palette.red)
         }
         if kind == .orion { baseFill = Palette.plate }
@@ -75,6 +75,8 @@ final class FighterNode: SKNode {
         case .cinderKing: buildCinderKing()
         case .lineWarden: buildWarden()
         case .lamplighter: buildLamplighter()
+        case .swornShield: buildSwornShield()
+        case .swornSpear: buildSwornSpear()
         case .zealot: buildZealot()
         case .radiantAcolyte: buildAcolyte()
         case .solarGuard: buildSolarGuard()
@@ -377,6 +379,90 @@ final class FighterNode: SKNode {
         disc.addChild(boss)
         figure.addChild(disc)
         shield = disc
+    }
+
+    /// The Sworn Shield: broad plate under a gold sash, a crested helm, a short blade, and a great round shield with a
+    /// sun on its boss. The sash is the half of the vow the Spear wears too.
+    private func buildSwornShield() {
+        leg(x: -12, hipY: 50, length: 50, width: 15)
+        leg(x: 12, hipY: 50, length: 50, width: 15)
+        _ = part(CGPath(roundedRect: CGRect(x: -25, y: 48, width: 50, height: 54), cornerWidth: 7, cornerHeight: 7, transform: nil))
+        _ = part(CGPath(roundedRect: CGRect(x: -31, y: 92, width: 62, height: 14), cornerWidth: 6, cornerHeight: 6, transform: nil), z: 1)
+        _ = part(CGPath(roundedRect: CGRect(x: -11, y: 104, width: 23, height: 24), cornerWidth: 7, cornerHeight: 7, transform: nil), z: 1)
+        // A crest along the helm.
+        let crest = SKShapeNode(rect: CGRect(x: -9, y: 127, width: 18, height: 4), cornerRadius: 2)
+        light(crest, color: Palette.gold, glow: 2)
+        figure.addChild(crest)
+        let visor = SKShapeNode(rect: CGRect(x: 1, y: 114, width: 10, height: 2.5))
+        light(visor, color: Palette.gold, glow: 3)
+        figure.addChild(visor)
+        eye = visor
+        let sash = CGMutablePath()
+        sash.addLines(between: [CGPoint(x: -22, y: 98), CGPoint(x: -14, y: 100), CGPoint(x: 22, y: 56), CGPoint(x: 14, y: 54)])
+        sash.closeSubpath()
+        let band = SKShapeNode(path: sash)
+        light(band, color: Palette.gold, glow: 2)
+        band.zPosition = 2
+        figure.addChild(band)
+        blade(length: 60, color: Palette.gold, at: CGPoint(x: 4, y: 72))
+        let disc = SKShapeNode(circleOfRadius: 34)
+        disc.position = CGPoint(x: 30, y: 66)
+        disc.fillColor = Palette.body
+        disc.strokeColor = Palette.gold
+        disc.lineWidth = 3
+        disc.zPosition = 4
+        let sun = SKShapeNode(circleOfRadius: 8)
+        light(sun, color: Palette.gold, glow: 5)
+        disc.addChild(sun)
+        for n in 0..<8 {
+            let a = CGFloat(n) * .pi / 4
+            let ray = CGMutablePath()
+            ray.move(to: CGPoint(x: cos(a) * 12, y: sin(a) * 12))
+            ray.addLine(to: CGPoint(x: cos(a) * 24, y: sin(a) * 24))
+            let r = SKShapeNode(path: ray)
+            r.strokeColor = Palette.gold.withAlphaComponent(0.7)
+            r.lineWidth = 2
+            disc.addChild(r)
+        }
+        figure.addChild(disc)
+        shield = disc
+    }
+
+    /// The Sworn Spear: lean, in a long tabard under the same gold sash, a tall crested helm, and a spear longer than
+    /// it is tall.
+    private func buildSwornSpear() {
+        leg(x: -7, hipY: 48, length: 48, width: 10)
+        leg(x: 7, hipY: 48, length: 48, width: 10)
+        let tabard = CGMutablePath()
+        tabard.addLines(between: [CGPoint(x: -15, y: 102), CGPoint(x: 15, y: 102), CGPoint(x: 18, y: 26), CGPoint(x: -18, y: 26)])
+        tabard.closeSubpath()
+        _ = part(tabard)
+        _ = part(CGPath(roundedRect: CGRect(x: -20, y: 92, width: 40, height: 11), cornerWidth: 5, cornerHeight: 5, transform: nil), z: 1)
+        _ = part(CGPath(roundedRect: CGRect(x: -9, y: 101, width: 19, height: 25), cornerWidth: 6, cornerHeight: 6, transform: nil), z: 1)
+        let plume = CGMutablePath()
+        plume.addLines(between: [CGPoint(x: -4, y: 124), CGPoint(x: 4, y: 124), CGPoint(x: -10, y: 142)])
+        plume.closeSubpath()
+        let crest = SKShapeNode(path: plume)
+        light(crest, color: Palette.gold, glow: 2)
+        figure.addChild(crest)
+        let visor = SKShapeNode(rect: CGRect(x: 1, y: 112, width: 9, height: 2.5))
+        light(visor, color: Palette.gold, glow: 3)
+        figure.addChild(visor)
+        eye = visor
+        let sash = CGMutablePath()
+        sash.addLines(between: [CGPoint(x: 15, y: 98), CGPoint(x: 8, y: 100), CGPoint(x: -18, y: 56), CGPoint(x: -11, y: 54)])
+        sash.closeSubpath()
+        let band = SKShapeNode(path: sash)
+        light(band, color: Palette.gold, glow: 2)
+        band.zPosition = 2
+        figure.addChild(band)
+        blade(length: 140, color: Palette.gold, at: CGPoint(x: 6, y: 70))
+        let head = CGMutablePath()
+        head.addLines(between: [CGPoint(x: -5, y: 136), CGPoint(x: 0, y: 156), CGPoint(x: 5, y: 136)])
+        head.closeSubpath()
+        let point = SKShapeNode(path: head)
+        light(point, color: Palette.gold, glow: 4)
+        weapon?.addChild(point)
     }
 
     /// Halo Disciple: a robed figure that floats, its robe trailing to a point, under a wide halo.
@@ -1065,6 +1151,8 @@ final class FighterNode: SKNode {
         case .cinderKing: 110
         case .lineWarden: 96
         case .lamplighter: 100
+        case .swornShield: 60
+        case .swornSpear: 140
         case .zealot: 50
         case .radiantAcolyte: 54
         case .solarGuard: 58

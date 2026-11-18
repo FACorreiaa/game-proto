@@ -66,4 +66,8 @@ public enum GameEvent: Equatable, Sendable {
     case decoyPlaced(id: Int, at: Vec2)
     /// A decoy broke or ran out.
     case decoyGone(id: Int, at: Vec2)
+    /// A bell rung out of order: every bell of that gate falls silent.
+    case discord(gate: Int)
+    /// One of a sworn pair, down alone too long, was raised by the other.
+    case raised(id: Int, by: Int)
 }

@@ -53,6 +53,8 @@ final class GameScene: SKScene {
     /// Each gate's lamps, one per lever or plate it needs, by gate id.
     private var gateLamps: [Int: [(input: Int, node: SKShapeNode)]] = [:]
     private var leverNodes: [Int: (handle: SKNode, ring: SKShapeNode)] = [:]
+    /// Levers that are bells, rung in order: they swing while ringing instead of throwing over.
+    private var bellIDs: Set<Int> = []
     private var plateNodes: [Int: SKShapeNode] = [:]
     /// Each lamp's head and the light it throws, by lever id.
     private var lampNodes: [Int: (head: SKShapeNode, pool: SKShapeNode)] = [:]
@@ -195,6 +197,9 @@ final class GameScene: SKScene {
         case .lamplighter:
             ("THE LAMPLIGHTER", ["LIGHTS OUT"],
              "Nothing touches him in the dark.  Strike a lamp, then strike him in its light.")
+        case .swornShield, .swornSpear:
+            ("THE SWORN", ["RISING"],
+             "If one falls alone, the other raises it.  Bring them down together.")
         case .lineWarden:
             ("THE LINE WARDEN", ["OVERDRIVE"],
              "Its guard faces forward.  Get behind it, or parry to break its stance.")
@@ -379,6 +384,7 @@ final class GameScene: SKScene {
         platformNodes = [:]
         gateLamps = [:]
         leverNodes = [:]
+        bellIDs = []
         plateNodes = [:]
         lampNodes = [:]
         hazardNodes = []
@@ -453,7 +459,65 @@ final class GameScene: SKScene {
             leverNodes[lever.id] = (SKNode(), ring)
             lampNodes[lever.id] = (head, pool)
         }
-        for lever in level.levers where lever.glow == 0 {
+        let hours = ["I", "II", "III", "IV", "V", "VI"]
+        for gate in level.gates where gate.inOrder {
+            let colour = puzzleColour(gate.id, in: level)
+            for (n, id) in gate.opensWith.enumerated() {
+                guard let lever = level.levers.first(where: { $0.id == id }) else { continue }
+                bellIDs.insert(id)
+                let frame = SKNode()
+                frame.position = CGPoint(x: lever.pos.x, y: lever.pos.y)
+                frame.zPosition = -1
+                worldNode.addChild(frame)
+                for x in [-24.0, 21] {
+                    let post = SKShapeNode(rect: CGRect(x: x, y: 0, width: 3, height: 96))
+                    post.fillColor = Palette.mid
+                    post.strokeColor = .clear
+                    frame.addChild(post)
+                }
+                let beam = SKShapeNode(rect: CGRect(x: -28, y: 94, width: 56, height: 5), cornerRadius: 2)
+                beam.fillColor = Palette.body
+                beam.strokeColor = colour.withAlphaComponent(0.7)
+                frame.addChild(beam)
+                // The bell's hour, plain above the beam: the order to ring them in.
+                let mark = SKLabelNode(text: hours[min(n, hours.count - 1)])
+                mark.fontName = "AvenirNext-DemiBold"
+                mark.fontSize = 15
+                mark.fontColor = colour
+                mark.position = CGPoint(x: 0, y: 106)
+                frame.addChild(mark)
+                let bell = SKNode()
+                bell.position = CGPoint(x: 0, y: 92)
+                let shape = CGMutablePath()
+                shape.move(to: CGPoint(x: -6, y: 0))
+                shape.addLine(to: CGPoint(x: 6, y: 0))
+                shape.addQuadCurve(to: CGPoint(x: 18, y: -40), control: CGPoint(x: 14, y: -6))
+                shape.addLine(to: CGPoint(x: -18, y: -40))
+                shape.addQuadCurve(to: CGPoint(x: -6, y: 0), control: CGPoint(x: -14, y: -6))
+                shape.closeSubpath()
+                let body = SKShapeNode(path: shape)
+                body.fillColor = Palette.body
+                body.strokeColor = colour
+                body.lineWidth = 2
+                body.name = "bell"
+                bell.addChild(body)
+                let clapper = SKShapeNode(circleOfRadius: 4)
+                clapper.position = CGPoint(x: 0, y: -42)
+                clapper.fillColor = colour
+                clapper.strokeColor = .clear
+                bell.addChild(clapper)
+                frame.addChild(bell)
+                let ring = SKShapeNode()
+                ring.position = CGPoint(x: 0, y: 72)
+                ring.strokeColor = colour
+                ring.lineWidth = 3
+                ring.glowWidth = 3
+                ring.fillColor = .clear
+                frame.addChild(ring)
+                leverNodes[id] = (bell, ring)
+            }
+        }
+        for lever in level.levers where lever.glow == 0 && !bellIDs.contains(lever.id) {
             let colour = puzzleColour(lever.id, in: level)
             let base = SKShapeNode(rect: CGRect(x: -12, y: 0, width: 24, height: 10), cornerRadius: 2)
             base.position = CGPoint(x: lever.pos.x, y: lever.pos.y)
@@ -511,8 +575,18 @@ final class GameScene: SKScene {
         for lever in level.levers {
             guard let (handle, ring) = leverNodes[lever.id] else { continue }
             let on = world.signals.contains(lever.id)
-            let target: CGFloat = on ? -0.6 : 0.6
-            handle.zRotation += (target - handle.zRotation) * 0.3
+            if bellIDs.contains(lever.id) {
+                // A ringing bell swings and glows; a silent one hangs still and dark.
+                let swing: CGFloat = on ? 0.32 * sin(CGFloat(world.frame) * 0.16) : 0
+                handle.zRotation += (swing - handle.zRotation) * 0.25
+                if let body = handle.childNode(withName: "bell") as? SKShapeNode {
+                    body.fillColor = on ? puzzleColour(lever.id, in: level) : Palette.body
+                    body.glowWidth = on ? 3 : 0
+                }
+            } else {
+                let target: CGFloat = on ? -0.6 : 0.6
+                handle.zRotation += (target - handle.zRotation) * 0.3
+            }
             if let left = world.leverTimers[lever.id], lever.holdFrames > 0 {
                 let t = CGFloat(left) / CGFloat(lever.holdFrames)
                 ring.path = CGPath(ellipseIn: CGRect(x: -18, y: -18, width: 36, height: 36), transform: nil)
@@ -798,7 +872,18 @@ final class GameScene: SKScene {
         if let boss = world.boss, boss.awake, boss.isAlive {
             let title = bossTitle(boss.kind)
             let phase = boss.phase >= 2 ? " · " + title.phases[min(boss.phase - 2, title.phases.count - 1)] : ""
-            hud.setBoss((title.name + phase, boss.hp / boss.spec.maxHP, boss.isOpen && !boss.isGuarding && !world.isWarded(boss.id)))
+            if let twin = world.twin {
+                // A sworn pair: one bar each; the name says when one is down and about to be raised.
+                let open = { (f: Fighter) in f.isAlive && f.isOpen && !f.isGuarding }
+                let rising = world.vowFrames > 0 ? " · RISING" : ""
+                hud.setBoss((title.name + rising, boss.hp / boss.spec.maxHP, open(boss)),
+                            twin: (twin.hp / twin.spec.maxHP, open(twin)))
+            } else {
+                hud.setBoss((title.name + phase, boss.hp / boss.spec.maxHP, boss.isOpen && !boss.isGuarding && !world.isWarded(boss.id)))
+            }
+        } else if let twin = world.twin, twin.awake, twin.isAlive {
+            hud.setBoss((bossTitle(twin.kind).name + (world.vowFrames > 0 ? " · RISING" : ""), 0, false),
+                        twin: (twin.hp / twin.spec.maxHP, twin.isOpen))
         } else {
             hud.setBoss(nil)
         }
@@ -1064,6 +1149,11 @@ final class GameScene: SKScene {
                     Effects.explosion(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), radius: 140)
                     Effects.breakApart(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y + f.spec.height / 2), size: f.spec.height)
                 }
+                // The other of a sworn pair, already down, goes with it.
+                if let other = world.swornPartner(of: id).flatMap(world.fighter) {
+                    Effects.breakApart(worldNode, at: CGPoint(x: other.pos.x, y: other.pos.y + other.spec.height / 2), size: other.spec.height)
+                    sparks(at: Vec2(other.pos.x, other.pos.y + other.spec.height / 2), color: Palette.gold, count: 20)
+                }
                 if let f = world.fighter(id) {
                     let centre = Vec2(f.pos.x, f.pos.y + f.spec.height / 2)
                     sparks(at: centre, color: Palette.gold, count: 30)
@@ -1147,8 +1237,8 @@ final class GameScene: SKScene {
                 sound.play(.bossWake, volume: 0.35)
             case .lever(let id, let on):
                 if let lever = world.level?.levers.first(where: { $0.id == id }) {
-                    // A lamp sparks at its head; a lever at its knob.
-                    let y = lever.glow > 0 ? 128.0 : 44
+                    // A lamp sparks at its head; a bell at its mouth; a lever at its knob.
+                    let y = lever.glow > 0 ? 128.0 : (bellIDs.contains(id) ? 52 : 44)
                     sparks(at: Vec2(lever.pos.x, lever.pos.y + y), color: on ? Palette.gold : Palette.steel, count: on ? 10 : 4)
                 }
                 sound.play(on ? .checkpoint : .blocked, volume: on ? 0.6 : 0.4)
@@ -1162,6 +1252,30 @@ final class GameScene: SKScene {
                 }
                 shake = max(shake, opening ? 3 : 2)
                 sound.play(.heavyHit, volume: 0.35)
+            case .discord(let gate):
+                // Out of turn: every bell of that gate falls silent with a jangle.
+                if let g = world.level?.gates.first(where: { $0.id == gate }) {
+                    for lever in world.level?.levers ?? [] where g.opensWith.contains(lever.id) {
+                        sparks(at: Vec2(lever.pos.x, lever.pos.y + 60), color: Palette.red, count: 6)
+                    }
+                    if let hero = world.controlled {
+                        popup("OUT OF TURN", at: Vec2(hero.pos.x, hero.pos.y + hero.spec.height + 16), color: Palette.red, size: 14)
+                    }
+                }
+                shake = max(shake, 5)
+                sound.play(.blocked)
+                haptics.heavy()
+            case .raised(let id, let by):
+                if let f = world.fighter(id), let r = world.fighter(by) {
+                    Effects.motes(worldNode, at: CGPoint(x: f.pos.x, y: f.pos.y), color: Palette.gold, count: 40, width: 60)
+                    ring(at: Vec2(f.pos.x, f.pos.y + f.spec.height / 2), radius: 110, color: Palette.gold)
+                    sparks(at: Vec2(r.pos.x, r.pos.y + r.spec.height), color: Palette.gold, count: 12)
+                }
+                hud.announce("RAISED")
+                Effects.flash(self, color: Palette.gold, alpha: 0.25, duration: 0.4)
+                shake = max(shake, 10)
+                sound.play(.bossWake)
+                haptics.heavy()
             case .holding(let id):
                 if let f = world.fighter(id) {
                     popup("HOLDING", at: Vec2(f.pos.x, f.pos.y + f.spec.height + 14), color: Palette.cyan, size: 13)

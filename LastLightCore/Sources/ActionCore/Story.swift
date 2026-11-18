@@ -135,6 +135,8 @@ public enum SceneCue: Sendable, Equatable {
     case reach(Double)
     case partnerJoins
     case bossWakes
+    /// One of a sworn pair is raised by the other, the first time.
+    case raised
     case complete
 }
 
